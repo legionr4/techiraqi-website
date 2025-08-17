@@ -38,7 +38,6 @@ body.dark-mode {
 
 header {
     display: flex;
-    justify-content: space-between;
     align-items: center;
     background-color: var(--header-footer-bg);
     color: var(--header-footer-text);
@@ -61,9 +60,7 @@ h1 a {
 }
 
 header nav {
-    /* display: inline-block; */ /* تم الإزالة لإصلاح التوزيع في flexbox */
-    flex-grow: 1; /* جعل شريط التنقل يأخذ المساحة المتاحة */
-    text-align: center; /* توسيط روابط التنقل */
+    margin: 0 auto; /* توسيط شريط التنقل تلقائياً ويدفع العناصر الأخرى للأطراف */
 }
 
 header nav a {
