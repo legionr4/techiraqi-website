@@ -109,6 +109,13 @@ header nav.active {
     align-items: center;
     gap: 1.2rem; /* إضافة مسافة بين العناصر */
 }
+
+/* إخفاء عناصر القائمة المخصصة للجوال على الشاشات الكبيرة */
+.mobile-nav-item,
+.login-container-mobile {
+    display: none;
+}
+
 .login-container-desktop .netlify-identity-button {
     background-color: var(--primary-color) !important;
 }
