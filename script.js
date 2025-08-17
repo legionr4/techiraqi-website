@@ -1,5 +1,15 @@
 document.addEventListener('DOMContentLoaded', function() {
 
+    // --- Preloader Logic ---
+    const preloader = document.getElementById('preloader');
+
+    // We use the window.load event to ensure all content (images, etc.) is loaded
+    if (preloader) {
+        window.addEventListener('load', () => {
+            preloader.classList.add('hidden');
+        });
+    }
+
     // --- Hamburger Menu Logic ---
     const hamburgerButton = document.getElementById('hamburger-button');
     const mainNav = document.getElementById('main-nav');
@@ -8,6 +18,9 @@ document.addEventListener('DOMContentLoaded', function() {
         hamburgerButton.addEventListener('click', function() {
             // Toggle the .active class on the navigation menu
             mainNav.classList.toggle('active');
+
+            // Prevent body from scrolling when menu is open
+            document.body.classList.toggle('body-no-scroll');
 
             // Toggle the aria-expanded attribute for accessibility
             const isExpanded = hamburgerButton.getAttribute('aria-expanded') === 'true';
@@ -68,6 +81,32 @@ document.addEventListener('DOMContentLoaded', function() {
         backToTopButton.addEventListener('click', (e) => {
             e.preventDefault(); // Prevent default anchor behavior
             window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    }
+
+    // --- FAQ Accordion Logic ---
+    const faqItems = document.querySelectorAll('.faq-question');
+
+    if (faqItems.length > 0) {
+        faqItems.forEach(item => {
+            item.addEventListener('click', function() {
+                // Toggle active class for accessibility and styling
+                this.classList.toggle('active');
+                this.setAttribute('aria-expanded', this.classList.contains('active'));
+
+                const answer = this.nextElementSibling;
+                const icon = this.querySelector('i');
+
+                if (this.classList.contains('active')) {
+                    answer.style.maxHeight = answer.scrollHeight + 'px';
+                    icon.classList.remove('fa-plus');
+                    icon.classList.add('fa-minus');
+                } else {
+                    answer.style.maxHeight = null;
+                    icon.classList.remove('fa-minus');
+                    icon.classList.add('fa-plus');
+                }
+            });
         });
     }
 

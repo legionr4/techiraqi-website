@@ -37,8 +37,13 @@
 </head>
 <body>
 
+    <!-- Preloader -->
+    <div id="preloader">
+        <div class="spinner"></div>
+    </div>
+
     <header>
-        <h1><a href="index.html">Tech_Iraqi</a></h1>
+        <div class="site-title"><a href="index.html">Tech_Iraqi</a></div>
         <button class="hamburger-menu" id="hamburger-button" aria-label="فتح القائمة" aria-expanded="false">
             <i class="fas fa-bars"></i>
         </button>
@@ -70,7 +75,7 @@
                 <!-- المتصفحات القديمة ستحمل هذا الملف. تمت إضافة loading="lazy" و أبعاد الصورة لتحسين الأداء -->
                 <img src="FOX.png" alt="شعار الثعلب" class="profile-image" loading="lazy" width="150" height="150">
             </picture>
-            <p>موقع تكنلوجياالمعلومات تحميل برامج حصرية للكمبيوتر</p>
+            <h1>موقع تكنلوجيا المعلومات لتحميل برامج حصرية للكمبيوتر</h1>
         </div>
 
         <!-- هذا المحتوى سيظهر فقط للمستخدمين المسجلين -->
@@ -79,30 +84,81 @@
             <p>هذا المحتوى لا يراه إلا المستخدمون المسجلون. شكراً لانضمامك!</p>
         </div>
 
-        <h2 data-aos="zoom-in-up" data-aos-delay="200">برامجي</h2>
-        <ul class="program-list">
-            <li data-aos="fade-right" data-aos-delay="300">
-                <span>برنامج تنظيم حضورالموظفين HR </span>
-                <a href="https://www.mediafire.com/folder/1cmv0ok5dvpl3/HR_Manage" class="download-button" title="تحميل البرنامج تنظيم حضورالموظفين HR" target="_blank" rel="noopener noreferrer"><img src="Download.png" alt="أيقونة تحميل"></a>
-            </li>
-            <li data-aos="fade-right" data-aos-delay="400">
-                <span>البرنامج الثاني</span>
-                <a href="#" class="download-button" title="تحميل البرنامج الثاني"><img src="Download.png" alt="أيقونة تحميل"></a>
-            </li>
-            <li data-aos="fade-right" data-aos-delay="500">
-                <span>البرنامج الثالث</span>
-                <a href="#" class="download-button" title="تحميل البرنامج الثالث"><img src="Download.png" alt="أيقونة تحميل"></a>
-            </li>
-        </ul>
+        <h2 data-aos="zoom-in-up" data-aos-delay="200">أبرز البرامج</h2>
+        <div class="programs-grid">
+            <!-- Program Card 1 -->
+            <div class="program-card" data-aos="fade-up" data-aos-delay="300">
+                <picture>
+                    <source srcset="images/IconLogo.webp" type="image/webp">
+                    <img src="images/IconLogo.png" alt="شعار برنامج تنظيم حضور الموظفين" class="program-image" loading="lazy">
+                </picture>
+                <div class="program-card-content">
+                    <h3>برنامج تنظيم حضور الموظفين HR</h3>
+                    <p>أداة فعالة لإدارة ومتابعة حضور وانصراف الموظفين بسهولة ودقة.</p>
+                    <a href="https://www.mediafire.com/folder/1cmv0ok5dvpl3/HR_Manage" class="download-button-new" target="_blank" rel="noopener noreferrer">
+                        <i class="fas fa-download"></i> تحميل
+                    </a>
+                </div>
+            </div>
+            <!-- Program Card 2 -->
+            <div class="program-card" data-aos="fade-up" data-aos-delay="400">
+                <img src="https://placehold.co/400x225/2c3e50/ecf0f1?text=Program+2" alt="صورة البرنامج الثاني" class="program-image" loading="lazy">
+                 <div class="program-card-content">
+                    <h3>البرنامج الثاني</h3>
+                    <p>وصف قصير وموجز للبرنامج الثاني يوضح أهم مميزاته وفوائده.</p>
+                    <a href="#" class="download-button-new" target="_blank" rel="noopener noreferrer">
+                        <i class="fas fa-download"></i> تحميل
+                    </a>
+                </div>
+            </div>
+            <!-- يمكنك إضافة المزيد من البطاقات هنا بنفس الهيكل -->
+        </div>
+
+        <!-- FAQ Section -->
+        <section class="faq-section" data-aos="fade-up">
+            <h2 class="section-title">الأسئلة الشائعة</h2>
+            <div class="faq-container">
+                <div class="faq-item">
+                    <button class="faq-question" aria-expanded="false">
+                        <span>هل البرامج المعروضة مجانية؟</span>
+                        <i class="fas fa-plus"></i>
+                    </button>
+                    <div class="faq-answer">
+                        <p>نعم، جميع البرامج المعروضة في قسم "أبرز البرامج" متاحة للتحميل والاستخدام بشكل مجاني تمامًا.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-question" aria-expanded="false">
+                        <span>كيف يمكنني التأكد من أن الملفات آمنة؟</span>
+                        <i class="fas fa-plus"></i>
+                    </button>
+                    <div class="faq-answer">
+                        <p>نحن نحرص على فحص جميع الملفات قبل رفعها للتأكد من خلوها من أي برمجيات ضارة. ومع ذلك، نوصي دائمًا بوجود برنامج حماية محدث على جهازك كخطوة إضافية للأمان.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-question" aria-expanded="false">
+                        <span>هل أحتاج إلى تسجيل الدخول لتحميل البرامج؟</span>
+                        <i class="fas fa-plus"></i>
+                    </button>
+                    <div class="faq-answer">
+                        <p>لا، يمكنك تحميل البرامج مباشرة دون الحاجة إلى تسجيل الدخول. ميزة تسجيل الدخول مخصصة للوصول إلى محتوى خاص والتعليق في المدونة.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
     </main>
 
     <button class="back-to-top" title="العودة إلى الأعلى" aria-label="العودة إلى الأعلى"><i class="fas fa-arrow-up"></i></button>
 
     <footer>
         <div class="social-icons">
-            <a href="https://twitter.com/[ادخل-حسابك-هنا]" target="_blank" rel="noopener noreferrer" aria-label="Twitter"><i class="fa-brands fa-twitter"></i></a>
-            <a href="https://linkedin.com/in/[ادخل-حسابك-هنا]" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"><i class="fa-brands fa-linkedin-in"></i></a>
+            <a href="#" title="قم بتحديث الرابط لحسابك على تويتر" target="_blank" rel="noopener noreferrer" aria-label="Twitter"><i class="fa-brands fa-twitter"></i></a>
+            <a href="#" title="قم بتحديث الرابط لحسابك على لينكد إن" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"><i class="fa-brands fa-linkedin-in"></i></a>
             <a href="https://github.com/legionr4" target="_blank" rel="noopener noreferrer" aria-label="GitHub"><i class="fa-brands fa-github"></i></a>
+        </div>
+        <div class="footer-links">
+            <a href="privacy-policy.html">سياسة الخصوصية</a>
         </div>
         <p class="copyright">جميع الحقوق محفوظة &copy; <span id="copyright-year">2024</span></p>
     </footer>

@@ -25,6 +25,40 @@ body {
     transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+/* Class to prevent body scroll when mobile menu is open */
+.body-no-scroll {
+    overflow: hidden;
+}
+
+/* --- Preloader Styles --- */
+#preloader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--background-color); /* Use body background color */
+    z-index: 9999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: opacity 0.75s ease, visibility 0.75s ease;
+}
+
+#preloader.hidden {
+    opacity: 0;
+    visibility: hidden;
+}
+
+.spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid rgba(0, 123, 255, 0.3); /* A lighter shade of primary color */
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
 /* --- Dark Mode Variables --- */
 body.dark-mode {
     --primary-color: #0091ff; /* A slightly brighter blue for dark mode */
@@ -50,12 +84,12 @@ header {
     box-sizing: border-box;
 }
 
-h1 {
+.site-title {
     margin: 0;
     font-size: 1.8rem; /* تكبير حجم الخط قليلاً */
 }
 
-h1 a {
+.site-title a {
     color: inherit; /* ليرث اللون من الهيدر */
     text-decoration: none;
 }
@@ -140,9 +174,10 @@ header nav.active {
 
 main {
     flex: 1;
-    padding: 2rem; /* استخدام وحدات نسبية */
+    padding: 2rem;
+    padding-top: 5rem; /* Add padding to prevent content from being hidden by the sticky header */
     max-width: 800px;
-    margin: 0 auto; /* إزالة الهامش العلوي لأن الـ padding يقوم بالمهمة */
+    margin: 0 auto;
 }
 
 /* هذا هو الكرت الأبيض الذي يحتوي على النص */
@@ -158,6 +193,13 @@ main {
     transform: translateY(-5px);
 }
 
+/* --- Section Title --- */
+.section-title {
+    text-align: center;
+    margin-bottom: 40px;
+    color: var(--primary-color);
+}
+
 /* --- Blog Page Styles --- */
 .page-header {
     text-align: center;
@@ -167,7 +209,7 @@ main {
     border-radius: 10px;
 }
 
-.page-header h2 {
+.page-header h1 {
     margin-bottom: 10px;
     color: var(--primary-color);
 }
@@ -231,6 +273,16 @@ body.dark-mode .search-form:focus-within {
     gap: 30px;
 }
 
+.article-card-image {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 10px 10px 0 0; /* Rounded corners only at the top */
+    margin-bottom: 20px;
+    display: block;
+    border-bottom: 3px solid var(--primary-color);
+}
+
 .article-card {
     background-color: var(--card-background);
     padding: 25px;
@@ -238,6 +290,7 @@ body.dark-mode .search-form:focus-within {
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
     text-align: right;
+    padding-top: 0; /* Remove top padding to let the image touch the top edge */
 }
 
 .article-card:hover {
@@ -289,8 +342,16 @@ body.dark-mode .article-meta {
     text-align: right;
 }
 
-.article-title {
+.article-title, .content-card h1 {
     margin-bottom: 10px;
+}
+
+.article-featured-image {
+    width: 100%;
+    max-height: 400px;
+    object-fit: cover;
+    border-radius: 10px;
+    margin-bottom: 25px;
 }
 
 .article-content h3 {
@@ -307,6 +368,78 @@ body.dark-mode .article-meta {
 .comments-section h3 {
     margin-bottom: 20px;
     color: var(--primary-color);
+}
+
+/* --- Social Share Section --- */
+.share-section {
+    margin-top: 40px;
+    text-align: right;
+}
+.share-section h3 {
+    margin-bottom: 20px;
+    color: var(--primary-color);
+}
+.share-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: flex-start; /* Aligns buttons to the right in RTL */
+}
+.share-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 15px;
+    border-radius: 5px;
+    text-decoration: none;
+    color: white !important; /* Ensure text is white */
+    border: none;
+    cursor: pointer;
+    transition: opacity 0.3s ease;
+}
+.share-btn:hover {
+    opacity: 0.85;
+    transform: none; /* Override global button hover */
+    color: white !important;
+}
+.share-btn i {
+    font-size: 1.1em;
+}
+.share-btn.twitter { background-color: #1DA1F2; }
+.share-btn.facebook { background-color: #1877F2; }
+.share-btn.linkedin { background-color: #0A66C2; }
+.share-btn.whatsapp { background-color: #25D366; }
+.share-btn.copy-link { background-color: #6c757d; }
+
+.copy-success {
+    margin-top: 10px;
+    color: #28a745;
+    font-weight: bold;
+}
+body.dark-mode .copy-success {
+    color: #34d399;
+}
+
+/* --- Article Navigation --- */
+.article-navigation {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 40px;
+}
+.nav-link {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: bold;
+    padding: 10px 15px;
+    border: 2px solid var(--primary-color);
+    border-radius: 5px;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+.nav-link:hover {
+    background-color: var(--primary-color);
+    color: white;
+    transform: none; /* Override button hover */
 }
 
 .no-results {
@@ -365,6 +498,22 @@ footer {
     transform: translateY(-5px); /* تحريك الأيقونة للأعلى قليلاً */
 }
 
+.footer-links {
+    margin-bottom: 1rem;
+}
+
+.footer-links a {
+    color: var(--header-footer-text);
+    text-decoration: none;
+    margin: 0 10px;
+    font-size: 0.9rem;
+    transition: color 0.3s ease;
+}
+
+.footer-links a:hover {
+    color: var(--primary-color);
+}
+
 .copyright {
     margin: 0;
     font-size: 0.9rem;
@@ -378,39 +527,6 @@ footer {
     object-fit: cover; /* لضمان ملء الصورة للدائرة دون تشويه أبعادها */
     border: 4px solid var(--primary-color); /* إضافة إطار ملون حول الصورة */
     margin-bottom: 20px; /* إضافة مسافة أسفل الصورة لفصلها عن النص */
-}
-
-/* تنسيق قائمة البرامج */
-.program-list {
-    list-style: none; /* إزالة النقاط من القائمة */
-    padding: 0;
-}
-
-.program-list li {
-    display: flex; /* استخدام Flexbox لتوزيع العناصر */
-    justify-content: space-between; /* توزيع العناصر على الأطراف */
-    align-items: center; /* توسيط العناصر عمودياً */
-    padding: 10px 0;
-    border-bottom: 1px solid #eee; /* خط فاصل بين العناصر */
-}
-
-body.dark-mode .program-list li {
-    border-bottom-color: #444;
-}
-
-.download-button {
-    /* تم إزالة التنسيقات القديمة لأننا نستخدم صورة الآن */
-    text-decoration: none; /* إزالة الخط من الرابط */
-    display: inline-block; /* ضروري لتطبيق تأثيرات التحريك */
-}
-
-.download-button img {
-    width: 32px; /* تحديد عرض أيقونة التحميل */
-    height: 32px; /* تحديد ارتفاع أيقونة التحميل */
-    transition: transform 0.2s ease;
-}
-.download-button:hover img {
-    transform: scale(1.1); /* تكبير الأيقونة عند مرور الفأرة */
 }
 
 /* --- تصميم متجاوب للشاشات الصغيرة (Responsive Design) --- */
@@ -474,18 +590,12 @@ body.dark-mode .program-list li {
     }
 
     main {
-        padding: 80px 15px 15px; /* تعديل المسافة العلوية لتناسب الهيدر في وضع الموبايل */
+        padding: 1rem;
+        padding-top: 5rem; /* Ensure enough space for the sticky header on mobile */
     }
 
     .content-card {
         padding: 20px; /* تقليل الحشو داخل الكروت */
-    }
-
-    .program-list li {
-        flex-direction: column; /* جعل عناصر القائمة تحت بعضها */
-        gap: 10px; /* إضافة مسافة بين اسم البرنامج وزر التحميل */
-        align-items: center;
-        text-align: center;
     }
 
     .blog-container {
@@ -496,6 +606,133 @@ body.dark-mode .program-list li {
         padding: 10px 15px;
         font-size: 0.9rem;
     }
+}
+
+/* --- قسم البرامج الجديد (Programs Section New) --- */
+.programs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* شبكة متجاوبة */
+    gap: 30px; /* مسافة بين البطاقات */
+    margin-top: 20px;
+}
+
+.program-card {
+    background-color: var(--card-background);
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    overflow: hidden; /* لإخفاء أي أجزاء من الصورة تتجاوز الحواف الدائرية */
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.program-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+}
+
+.program-image {
+    width: 100%;
+    height: 180px; /* ارتفاع ثابت للصور لتوحيد شكل البطاقات */
+    object-fit: cover; /* لضمان ملء الصورة للمساحة دون تشويه */
+}
+
+.program-card-content {
+    padding: 20px;
+    flex-grow: 1; /* يسمح للمحتوى بملء المساحة المتبقية */
+    display: flex;
+    flex-direction: column;
+    text-align: right; /* محاذاة النص لليمين */
+}
+
+.program-card-content h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: var(--primary-color);
+}
+
+.program-card-content p {
+    margin-bottom: 20px;
+    flex-grow: 1; /* يدفع الزر إلى الأسفل */
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.download-button-new {
+    display: inline-block;
+    background-color: var(--primary-color);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 5px;
+    text-decoration: none;
+    transition: background-color 0.3s ease;
+    align-self: flex-start; /* محاذاة الزر لبداية المحور (اليمين في حالة RTL) */
+    margin-top: auto; /* يدفع الزر إلى الأسفل */
+}
+
+/* --- FAQ Section --- */
+.faq-section {
+    margin-top: 60px;
+    background-color: var(--card-background);
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+}
+
+.faq-container {
+    max-width: 700px;
+    margin: 0 auto;
+}
+
+.faq-item {
+    border-bottom: 1px solid #e0e0e0;
+}
+body.dark-mode .faq-item {
+    border-bottom-color: #444;
+}
+.faq-item:last-child {
+    border-bottom: none;
+}
+
+.faq-question {
+    width: 100%;
+    background-color: transparent;
+    border: none;
+    padding: 20px 0;
+    text-align: right;
+    font-family: 'Cairo', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-color);
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: color 0.3s ease;
+}
+
+.faq-question:hover {
+    color: var(--primary-color);
+    transform: none; /* Override default button hover */
+    background-color: transparent; /* Override default button hover */
+}
+
+.faq-question i {
+    transition: transform 0.3s ease;
+    color: var(--primary-color);
+}
+
+.faq-answer {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease-out;
+    text-align: right;
+}
+
+.faq-answer p {
+    padding: 0 10px 20px;
+    margin: 0;
+    line-height: 1.7;
 }
 
 /* --- تنسيق نموذج الاتصال --- */
@@ -597,6 +834,12 @@ form button[type="submit"] {
 }
 
 /* --- Keyframes for Animations --- */
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 @keyframes floatAnimation {
     0% {
         transform: translateY(0);

@@ -30,14 +30,19 @@
 </head>
 <body>
 
+    <!-- Preloader -->
+    <div id="preloader">
+        <div class="spinner"></div>
+    </div>
+
     <header>
-        <h1><a href="index.html">Tech_Iraqi</a></h1>
+        <div class="site-title"><a href="index.html">Tech_Iraqi</a></div>
         <button class="hamburger-menu" id="hamburger-button" aria-label="فتح القائمة" aria-expanded="false">
             <i class="fas fa-bars"></i>
         </button>
         <nav id="main-nav">
             <a href="index.html">الرئيسية</a>
-            <a href="blog.html">المدونة</a>
+            <a href="blog.html" class="active">المدونة</a>
             <a href="contact.html">اتصل بنا</a>
             <!-- زر الوضع الليلي لنسخة الموبايل -->
             <div class="mobile-nav-item">
@@ -56,8 +61,11 @@
 
     <main>
         <article class="article-content content-card" data-aos="fade-up">
-            <h2 class="article-title">أهمية أمن المعلومات في العصر الرقمي</h2>
+            <h1 class="article-title">أهمية أمن المعلومات في العصر الرقمي</h1>
             <p class="article-meta">نُشر في: 18 مايو 2024 | بواسطة: فريق Tech_Iraqi</p>
+
+            <!-- Featured Image -->
+            <img src="https://placehold.co/800x400/e74c3c/white?text=Security" alt="صورة توضيحية لأمن المعلومات" class="article-featured-image" loading="lazy">
             
             <p>في عالم أصبحت فيه البيانات هي "النفط الجديد"، لم يعد أمن المعلومات رفاهية، بل ضرورة قصوى للأفراد والشركات على حد سواء. كل يوم، نتعامل مع كم هائل من البيانات الحساسة، وحمايتها هي مسؤوليتنا جميعًا.</p>
             
@@ -123,9 +131,12 @@
 
     <footer>
         <div class="social-icons">
-            <a href="https://twitter.com/[ادخل-حسابك-هنا]" target="_blank" rel="noopener noreferrer" aria-label="Twitter"><i class="fa-brands fa-twitter"></i></a>
-            <a href="https://linkedin.com/in/[ادخل-حسابك-هنا]" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"><i class="fa-brands fa-linkedin-in"></i></a>
+            <a href="#" title="قم بتحديث الرابط لحسابك على تويتر" target="_blank" rel="noopener noreferrer" aria-label="Twitter"><i class="fa-brands fa-twitter"></i></a>
+            <a href="#" title="قم بتحديث الرابط لحسابك على لينكد إن" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"><i class="fa-brands fa-linkedin-in"></i></a>
             <a href="https://github.com/legionr4" target="_blank" rel="noopener noreferrer" aria-label="GitHub"><i class="fa-brands fa-github"></i></a>
+        </div>
+        <div class="footer-links">
+            <a href="privacy-policy.html">سياسة الخصوصية</a>
         </div>
         <p class="copyright">جميع الحقوق محفوظة &copy; <span id="copyright-year">2024</span></p>
     </footer>

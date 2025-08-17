@@ -16,8 +16,13 @@
 </head>
 <body>
 
+    <!-- Preloader -->
+    <div id="preloader">
+        <div class="spinner"></div>
+    </div>
+
     <header>
-        <h1><a href="index.html">Tech_Iraqi</a></h1>
+        <div class="site-title"><a href="index.html">Tech_Iraqi</a></div>
         <button class="hamburger-menu" id="hamburger-button" aria-label="فتح القائمة" aria-expanded="false">
             <i class="fas fa-bars"></i>
         </button>
@@ -42,7 +47,7 @@
 
     <main>
         <div class="page-header" data-aos="fade-in">
-            <h2>المدونة</h2>
+            <h1>المدونة</h1>
             <p>أحدث المقالات والأخبار في عالم التقنية</p>
         </div>
 
@@ -56,34 +61,54 @@
         <div class="blog-container">
             <!-- Article Card 1 -->
             <article class="article-card" data-aos="fade-up">
-                <h3><a href="article1.html">5 نصائح لتسريع حاسوبك</a></h3>
-                <p class="article-meta">نُشر في: 22 مايو 2024</p>
-                <p class="article-excerpt">هل يعاني حاسوبك من البطء؟ في هذا المقال، نستعرض خمس نصائح بسيطة وفعالة يمكنك تطبيقها اليوم لتعزيز أداء جهازك...</p>
-                <a href="article1.html" class="read-more-btn">اقرأ المزيد</a>
+                <a href="article1.html" aria-label="قراءة مقال 5 نصائح لتسريع حاسوبك">
+                    <img src="https://placehold.co/800x400/007BFF/white?text=PC+Speed" alt="صورة مصغرة لمقال 5 نصائح لتسريع حاسوبك" class="article-card-image" loading="lazy">
+                </a>
+                <div class="article-card-content">
+                    <h3><a href="article1.html">5 نصائح لتسريع حاسوبك</a></h3>
+                    <p class="article-meta">نُشر في: 22 مايو 2024</p>
+                    <p class="article-excerpt">هل يعاني حاسوبك من البطء؟ في هذا المقال، نستعرض خمس نصائح بسيطة وفعالة يمكنك تطبيقها اليوم لتعزيز أداء جهازك...</p>
+                    <a href="article1.html" class="read-more-btn">اقرأ المزيد</a>
+                </div>
             </article>
 
             <!-- Article Card 2 (Placeholder) -->
             <article class="article-card" data-aos="fade-up" data-aos-delay="100">
-                <h3><a href="article2.html">مستقبل البرامج الحاسوبية مع الذكاء الاصطناعي</a></h3>
-                <p class="article-meta">نُشر في: 20 مايو 2024</p>
-                <p class="article-excerpt">لم يعد الذكاء الاصطناعي مجرد مفهوم نظري، بل أصبح أداة قوية تعيد تشكيل كيفية بناء البرامج واختبارها وتفاعلها مع المستخدمين...</p>
-                <a href="article2.html" class="read-more-btn">اقرأ المزيد</a>
+                <a href="article2.html" aria-label="قراءة مقال مستقبل البرامج الحاسوبية مع الذكاء الاصطناعي">
+                    <img src="https://placehold.co/800x400/2c3e50/white?text=AI+Future" alt="صورة مصغرة لمقال مستقبل البرامج الحاسوبية مع الذكاء الاصطناعي" class="article-card-image" loading="lazy">
+                </a>
+                <div class="article-card-content">
+                    <h3><a href="article2.html">مستقبل البرامج الحاسوبية مع الذكاء الاصطناعي</a></h3>
+                    <p class="article-meta">نُشر في: 20 مايو 2024</p>
+                    <p class="article-excerpt">لم يعد الذكاء الاصطناعي مجرد مفهوم نظري، بل أصبح أداة قوية تعيد تشكيل كيفية بناء البرامج واختبارها وتفاعلها مع المستخدمين...</p>
+                    <a href="article2.html" class="read-more-btn">اقرأ المزيد</a>
+                </div>
             </article>
 
             <!-- Article Card 3 (Placeholder) -->
             <article class="article-card" data-aos="fade-up" data-aos-delay="200">
-                <h3><a href="article3.html">أهمية أمن المعلومات في العصر الرقمي</a></h3>
-                <p class="article-meta">نُشر في: 18 مايو 2024</p>
-                <p class="article-excerpt">في عالم أصبحت فيه البيانات هي "النفط الجديد"، لم يعد أمن المعلومات رفاهية، بل ضرورة قصوى للأفراد والشركات على حد سواء...</p>
-                <a href="article3.html" class="read-more-btn">اقرأ المزيد</a>
+                <a href="article3.html" aria-label="قراءة مقال أهمية أمن المعلومات في العصر الرقمي">
+                    <img src="https://placehold.co/800x400/e74c3c/white?text=Security" alt="صورة مصغرة لمقال أهمية أمن المعلومات" class="article-card-image" loading="lazy">
+                </a>
+                <div class="article-card-content">
+                    <h3><a href="article3.html">أهمية أمن المعلومات في العصر الرقمي</a></h3>
+                    <p class="article-meta">نُشر في: 18 مايو 2024</p>
+                    <p class="article-excerpt">في عالم أصبحت فيه البيانات هي "النفط الجديد"، لم يعد أمن المعلومات رفاهية، بل ضرورة قصوى للأفراد والشركات على حد سواء...</p>
+                    <a href="article3.html" class="read-more-btn">اقرأ المزيد</a>
+                </div>
             </article>
 
             <!-- Article Card 4 (Placeholder) -->
             <article class="article-card" data-aos="fade-up" data-aos-delay="300">
-                <h3><a href="article4.html">ما هي الحوسبة السحابية؟ مقدمة للمبتدئين</a></h3>
-                <p class="article-meta">نُشر في: 16 مايو 2024</p>
-                <p class="article-excerpt">اكتشف مفهوم الحوسبة السحابية (Cloud Computing)، وكيف غيرت عالم التكنولوجيا عبر توفير خدمات مثل التخزين والبرامج عبر الإنترنت...</p>
-                <a href="article4.html" class="read-more-btn">اقرأ المزيد</a>
+                <a href="article4.html" aria-label="قراءة مقال ما هي الحوسبة السحابية؟">
+                    <img src="https://placehold.co/800x400/1abc9c/white?text=Cloud" alt="صورة مصغرة لمقال الحوسبة السحابية" class="article-card-image" loading="lazy">
+                </a>
+                <div class="article-card-content">
+                    <h3><a href="article4.html">ما هي الحوسبة السحابية؟ مقدمة للمبتدئين</a></h3>
+                    <p class="article-meta">نُشر في: 16 مايو 2024</p>
+                    <p class="article-excerpt">اكتشف مفهوم الحوسبة السحابية (Cloud Computing)، وكيف غيرت عالم التكنولوجيا عبر توفير خدمات مثل التخزين والبرامج عبر الإنترنت...</p>
+                    <a href="article4.html" class="read-more-btn">اقرأ المزيد</a>
+                </div>
             </article>
 
             <!-- Message for no results -->
@@ -95,9 +120,12 @@
 
     <footer>
         <div class="social-icons">
-            <a href="https://twitter.com/[ادخل-حسابك-هنا]" target="_blank" rel="noopener noreferrer" aria-label="Twitter"><i class="fa-brands fa-twitter"></i></a>
-            <a href="https://linkedin.com/in/[ادخل-حسابك-هنا]" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"><i class="fa-brands fa-linkedin-in"></i></a>
+            <a href="#" title="قم بتحديث الرابط لحسابك على تويتر" target="_blank" rel="noopener noreferrer" aria-label="Twitter"><i class="fa-brands fa-twitter"></i></a>
+            <a href="#" title="قم بتحديث الرابط لحسابك على لينكد إن" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"><i class="fa-brands fa-linkedin-in"></i></a>
             <a href="https://github.com/legionr4" target="_blank" rel="noopener noreferrer" aria-label="GitHub"><i class="fa-brands fa-github"></i></a>
+        </div>
+        <div class="footer-links">
+            <a href="privacy-policy.html">سياسة الخصوصية</a>
         </div>
         <p class="copyright">جميع الحقوق محفوظة &copy; <span id="copyright-year">2024</span></p>
     </footer>
