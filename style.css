@@ -37,20 +37,22 @@ body.dark-mode {
 }
 
 header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     background-color: var(--header-footer-bg);
     color: var(--header-footer-text);
-    padding: 1rem 20px;
-    position: sticky; /* جعل الشريط العلوي يلتصق بأعلى الصفحة */
-    top: 0; /* تحديد مكان الالتصاق */
+    padding: 0.75rem 2rem; /* تعديل الحشو ليتناسب مع flexbox */
+    position: sticky;
+    top: 0;
     width: 100%;
-    z-index: 1050; /* ضمان بقاء الشريط فوق المحتوى الآخر */
-    box-sizing: border-box; /* لضمان حساب العرض بشكل صحيح مع الـ padding */
-    text-align: center; /* التأكد من أن العنوان في المنتصف */
+    z-index: 1050;
+    box-sizing: border-box;
 }
 
 h1 {
     margin: 0;
-    display: inline-block; /* للسماح بوضع قائمة التنقل بجانبه */
+    font-size: 1.8rem; /* تكبير حجم الخط قليلاً */
 }
 
 h1 a {
@@ -59,8 +61,9 @@ h1 a {
 }
 
 header nav {
-    display: inline-block;
-    margin-right: 30px;
+    /* display: inline-block; */ /* تم الإزالة لإصلاح التوزيع في flexbox */
+    flex-grow: 1; /* جعل شريط التنقل يأخذ المساحة المتاحة */
+    text-align: center; /* توسيط روابط التنقل */
 }
 
 header nav a {
@@ -72,11 +75,20 @@ header nav a {
     transition: color 0.3s ease;
 }
 
+header nav a.active {
+    color: var(--primary-color);
+    border-bottom: 2px solid var(--primary-color);
+}
+
+header nav a:hover {
+    color: var(--primary-color);
+}
+
 /* --- Hamburger Menu --- */
 .hamburger-menu {
     display: none; /* إخفاء الزر على الشاشات الكبيرة */
     position: absolute;
-    left: 20px; /* وضعه في الجهة اليسرى (بداية الصفحة في التصميم العربي) */
+    left: 2rem;
     top: 50%;
     transform: translateY(-50%);
     background: none;
@@ -89,6 +101,16 @@ header nav a {
 
 header nav.active {
     display: flex; /* سيتم تفعيل هذا الكلاس عبر جافاسكريبت */
+}
+
+/* --- Header Actions (Desktop) --- */
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem; /* إضافة مسافة بين العناصر */
+}
+.login-container-desktop .netlify-identity-button {
+    background-color: var(--primary-color) !important;
 }
 
 /* --- Theme Toggle Button --- */
@@ -111,7 +133,7 @@ header nav.active {
 
 main {
     flex: 1;
-    padding: 90px 20px 20px; /* إضافة مسافة علوية لتجنب اختفاء المحتوى خلف الهيدر */
+    padding: 2rem; /* استخدام وحدات نسبية */
     max-width: 800px;
     margin: 0 auto; /* إزالة الهامش العلوي لأن الـ padding يقوم بالمهمة */
 }
@@ -384,21 +406,21 @@ body.dark-mode .program-list li {
     transform: scale(1.1); /* تكبير الأيقونة عند مرور الفأرة */
 }
 
-/* تحديد مكان زر تسجيل الدخول */
-.login-container {
-    position: absolute;
-    top: 20px;
-    right: 20px; /* تغيير من left إلى right لتناسب التصميم العربي */
-}
-
 /* --- تصميم متجاوب للشاشات الصغيرة (Responsive Design) --- */
 @media (max-width: 768px) {
+    header {
+        padding: 0.75rem 1rem; /* تقليل الحشو في شاشات الجوال */
+    }
     h1 {
         font-size: 1.5rem; /* تصغير حجم العنوان الرئيسي */
     }
 
     .hamburger-menu {
         display: block; /* إظهار زر الهمبرغر */
+    }
+
+    .header-actions {
+        display: none; /* إخفاء أزرار الهيدر لنسخة سطح المكتب */
     }
 
     header nav {
@@ -414,16 +436,28 @@ body.dark-mode .program-list li {
         z-index: 1000;
     }
 
-    header nav a {
+    header nav a,
+    .mobile-nav-item,
+    .login-container-mobile {
         margin: 0;
         padding: 1rem;
         text-align: right;
         border-bottom: 1px solid #4a627b;
         width: 100%;
         box-sizing: border-box;
+        display: block; /* لضمان أن كل العناصر تأخذ السطر كاملاً */
     }
 
-    header nav a:last-child {
+    .mobile-nav-item .theme-toggle-button {
+        background: transparent;
+        padding: 0;
+        margin: 0;
+        font-size: 1.1rem; /* توحيد حجم الخط مع الروابط */
+        width: 100%;
+        text-align: right;
+    }
+
+    .login-container-mobile {
         border-bottom: none;
     }
 
@@ -445,11 +479,6 @@ body.dark-mode .program-list li {
         gap: 10px; /* إضافة مسافة بين اسم البرنامج وزر التحميل */
         align-items: center;
         text-align: center;
-    }
-
-    .header-flag {
-        height: 30px; /* تصغير ارتفاع العلم */
-        margin-left: 10px; /* تقليل الهامش ليتناسب مع الحجم الجديد */
     }
 
     .blog-container {
