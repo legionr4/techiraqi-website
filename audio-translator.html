@@ -342,8 +342,8 @@
 
             const xhr = new XMLHttpRequest();
             // !!! هام: تأكد من أن هذا هو رابط خادمك الصحيح على Render
-            // وتأكد من أنك أضفت رابط موقعك (https://techiraqi.netlify.app) إلى قائمة origins في ملف app.py على الخادم
-            const backendUrl = 'https://audio-translator-backend.onrender.com/translate-audio/';
+            // !!! تم التحديث: هذا هو الرابط الجديد لخادمك على PythonAnywhere
+            const backendUrl = 'http://ToperRx.pythonanywhere.com/translate-audio/';
             xhr.open('POST', backendUrl, true);
 
             // تتبع تقدم الرفع
