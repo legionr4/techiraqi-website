@@ -7,6 +7,8 @@ from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from faster_whisper import WhisperModel
 from gtts import gTTS
+# !!! هام: تحديد المنطقة الافتراضية لمكتبة translators لتجنب مشاكل الاتصال بالإنترنت في PythonAnywhere
+os.environ["translators_default_region"] = "EN"
 import translators as ts
 
 # --- الإعدادات الأولية ---
@@ -14,24 +16,28 @@ import translators as ts
 TEMP_DIR = "temp_audio"
 os.makedirs(TEMP_DIR, exist_ok=True)
 
+# !!! هام: تحديد مسار دائم لذاكرة التخزين المؤقت لنماذج Hugging Face داخل مجلدك الرئيسي
+CACHE_DIR = "/home/ToperRx/hf_cache"
+os.makedirs(CACHE_DIR, exist_ok=True)
+
 # تحميل نموذج التعرف على الكلام. يمكنك اختيار حجم النموذج حسب قوة جهازك
 # "tiny", "base", "small", "medium", "large-v3"
 # النموذج "base" جيد كنقطة بداية
 print("تحميل نموذج Whisper...")
 model_size = "base" 
 # استخدم "cuda" إذا كان لديك كرت شاشة NVIDIA، أو "cpu"
-model = WhisperModel(model_size, device="cpu", compute_type="int8")
+model = WhisperModel(model_size, device="cpu", compute_type="int8", cache_dir=CACHE_DIR, local_files_only=True)
 print("تم تحميل نموذج Whisper بنجاح.")
 
 app = FastAPI()
 
 # السماح بالطلبات من واجهة الموقع (مهم جداً)
-# !!! تم إضافة رابط موقعك على Netlify هنا
 origins = [
     "http://127.0.0.1:5500",  # لبيئة التطوير المحلية
     "http://localhost",
     "null",  # للسماح بالطلبات من ملفات HTML المفتوحة مباشرة
-    "https://techiraqi.netlify.app" # رابط موقعك المباشر
+    "https://techiraqi.netlify.app", # رابط موقعك على Netlify
+    "http://ToperRx.pythonanywhere.com" # رابط خادمك على PythonAnywhere
 ]
 
 app.add_middleware(
@@ -56,7 +62,7 @@ def health_check():
 @app.post("/translate-audio/")
 async def translate_audio(
     file: UploadFile = File(...),
-    target_lang: str = Form("en"), # اللغة الهدف الافتراضية هي الإنجليزية
+    target_lang: str = Form("en"),
     slow_speech: str = Form("false") # المعلمة الجديدة لسرعة الكلام
 ):
     # إنشاء اسم فريد للملف لتجنب التضارب
@@ -95,7 +101,6 @@ async def translate_audio(
 
         # 4. تحويل النص المترجم إلى صوت (TTS)
         print("بدء عملية تحويل النص إلى كلام...")
-        # تحويل قيمة النص "true" أو "false" إلى قيمة منطقية (boolean)
         is_slow = slow_speech.lower() == 'true'
         tts = gTTS(text=translated_text, lang=target_lang, slow=is_slow)
         tts.save(output_path)
@@ -103,11 +108,8 @@ async def translate_audio(
 
         # 5. إرجاع الملف الصوتي المترجم مع النصوص في الترويسات (Headers)
         response = FileResponse(path=output_path, media_type="audio/mpeg", filename="translated_audio.mp3")
-        
-        # إضافة النصوص كترويسات مخصصة (يجب ترميزها لتجنب المشاكل مع الأحرف الخاصة)
         response.headers["X-Original-Text"] = urllib.parse.quote(original_text)
         response.headers["X-Translated-Text"] = urllib.parse.quote(translated_text)
-        
         return response
 
     except Exception as e:
@@ -117,4 +119,3 @@ async def translate_audio(
         # تنظيف الملفات المؤقتة بعد الانتهاء
         if os.path.exists(input_path):
             os.remove(input_path)
-        # لا تحذف ملف الإخراج فوراً، المتصفح يحتاج وقتاً لتحميله
