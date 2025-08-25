@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مترجم الصوت - Tech_Iraqi</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .translator-card {
+            background-color: var(--card-bg-color);
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 600px;
+            margin: 2rem auto;
+        }
+        .translator-card h1 {
+            margin-bottom: 1.5rem;
+        }
+        .translator-form .form-group {
+            margin-bottom: 1.5rem;
+        }
+        .translator-form label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+        .translator-form select, .translator-form input[type="file"] {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background-color: var(--input-bg-color);
+            color: var(--text-color);
+        }
+        .translator-form button {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s;
+        }
+        .translator-form button:hover {
+            background-color: var(--primary-hover-color);
+        }
+        .translator-form button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        #status {
+            margin-top: 1.5rem;
+            font-weight: bold;
+        }
+        /* New styles for progress bar */
+        .progress-container {
+            width: 100%;
+            background-color: var(--input-bg-color, #f0f0f0);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-top: 1.5rem;
+            overflow: hidden; /* To keep the inner bar rounded */
+        }
+        .progress-bar {
+            width: 0%;
+            height: 24px;
+            background-color: var(--primary-color);
+            text-align: center;
+            line-height: 24px;
+            color: white;
+            font-weight: bold;
+            transition: width 0.4s ease;
+        }
+        /* New styles for text results */
+        .text-results {
+            margin-top: 2rem;
+            text-align: right; /* Align text to the right for Arabic */
+            border-top: 1px solid var(--border-color);
+            padding-top: 1.5rem;
+        }
+        .text-box {
+            background-color: var(--input-bg-color, #f9f9f9);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        .text-box-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        .text-box-header h3 {
+            margin-top: 0;
+            margin-bottom: 0;
+            color: var(--primary-color);
+        }
+        .copy-btn {
+            background: none;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            cursor: pointer;
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            transition: background-color 0.2s, color 0.2s;
+        }
+        .copy-btn:hover {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        .text-box p {
+            margin: 0;
+            line-height: 1.6;
+        }
+        /* New styles for recording feature */
+        .or-separator {
+            text-align: center;
+            font-weight: bold;
+            margin: 1.5rem 0;
+            color: var(--text-color);
+        }
+        .recording-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+        }
+        .recording-controls button {
+            padding: 0.75rem 1rem;
+        }
+        .record-button {
+            background-color: #28a745; /* Green */
+        }
+        .record-button:hover {
+            background-color: #218838;
+        }
+        .stop-button {
+            background-color: #dc3545; /* Red */
+        }
+        #result-audio {
+            margin-top: 1.5rem;
+            width: 100%;
+        }
+        .download-button {
+            display: inline-block;
+            background-color: #007bff; /* لون أزرق مميز */
+            color: white !important;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            text-decoration: none;
+            margin-top: 1rem;
+            transition: background-color 0.3s;
+            font-weight: bold;
+        }
+        .download-button:hover {
+            background-color: #0056b3;
+            color: white;
+        }
+        /* Dark Mode Styles */
+        body.dark-mode {
+            background-color: #1a202c;
+            color: #e2e8f0;
+            --card-bg-color: #2d3748;
+            --border-color: #4a5568;
+            --input-bg-color: #2d3748;
+            --text-color: #e2e8f0;
+            --primary-hover-color: #3182ce; /* A slightly lighter blue for hover in dark mode */
+        }
+        body.dark-mode .translator-card {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+        }
+        body.dark-mode .copy-btn:hover {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+    </style>
+</head>
+<body>
+    <!-- Preloader -->
+    <div id="preloader">
+        <div class="spinner"></div>
+    </div>
+
+    <header>
+        <!-- نفس الهيدر الموجود في الصفحات الأخرى -->
+        <div class="site-title"><a href="index.html">Tech_Iraqi</a></div>
+        <button class="hamburger-menu" id="hamburger-button" aria-label="فتح القائمة" aria-expanded="false">
+            <i class="fas fa-bars"></i>
+        </button>
+        <nav id="main-nav">
+            <a href="index.html">الرئيسية</a>
+            <a href="blog.html">المدونة</a>
+            <a href="audio-translator.html" class="active">مترجم الصوت</a> <!-- رابط الصفحة الجديدة -->
+            <a href="contact.html">اتصل بنا</a>
+        </nav>
+        <div class="header-actions">
+            <button class="theme-toggle-button desktop-theme-toggle" title="تفعيل الوضع الليلي"><i class="fas fa-moon"></i></button>
+            <img src="iraqFlog.gif" alt="علم العراق" class="header-flag">
+        </div>
+    </header>
+
+    <main>
+        <div class="translator-card">
+            <h1>مترجم الصوت الفوري</h1>
+            <p>ارفع ملفاً صوتياً، وسنقوم بترجمته لك إلى اللغة التي تختارها.</p>
+            <form id="translator-form" class="translator-form">
+                <div class="form-group">
+                    <label for="target-lang">اختر اللغة الهدف:</label>
+                    <select id="target-lang" name="target-lang" aria-label="اختر اللغة الهدف">
+                        <option value="en" selected>الإنجليزية (English)</option>
+                        <option value="ar">العربية (Arabic)</option>
+                        <option value="es">الإسبانية (Spanish)</option>
+                        <option value="fr">الفرنسية (French)</option>
+                        <option value="de">الألمانية (German)</option>
+                        <option value="tr">التركية (Turkish)</option>
+                        <option value="hi">الهندية (Hindi)</option>
+                        <option value="it">الإيطالية (Italian)</option>
+                        <!-- يمكنك إضافة المزيد من اللغات هنا -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="audio-speed">سرعة الصوت الناتج:</label>
+                    <select id="audio-speed" name="audio-speed" aria-label="اختر سرعة الصوت الناتج">
+                        <option value="false" selected>عادية</option>
+                        <option value="true">بطيئة</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="audio-file">1. ارفع ملفاً صوتياً:</label>
+                    <input type="file" id="audio-file" name="audio-file" accept="audio/*">
+                </div>
+                <button type="submit" id="submit-btn">ترجمة الملف المرفوع</button>
+
+                <div class="or-separator">أو</div>
+
+                <div class="form-group">
+                    <label>2. سجل الصوت مباشرة:</label>
+                    <div class="recording-controls">
+                        <button type="button" id="record-btn" class="record-button" title="بدء التسجيل"><i class="fas fa-microphone"></i></button>
+                        <button type="button" id="stop-btn" class="stop-button" title="إيقاف التسجيل" style="display: none;"><i class="fas fa-stop"></i></button>
+                        <span id="recording-status"></span>
+                    </div>
+                </div>
+            </form>
+            <div class="progress-container" id="progress-container" style="display: none;">
+                <div class="progress-bar" id="progress-bar">0%</div>
+            </div>
+            <div id="status"></div>
+            <audio id="result-audio" controls style="display: none;"></audio>
+            <a id="download-btn" class="download-button" style="display: none;" download="translated_audio.mp3">
+                <i class="fas fa-download"></i> تنزيل الملف الصوتي
+            </a>
+
+            <div id="text-results" class="text-results" style="display: none;">
+                <div class="text-box">
+                    <div class="text-box-header">
+                        <h3>النص الأصلي:</h3>
+                        <button class="copy-btn" id="copy-original-btn" title="نسخ النص"><i class="fas fa-copy"></i></button>
+                    </div>
+                    <p id="original-text"></p>
+                </div>
+                <div class="text-box">
+                    <div class="text-box-header">
+                        <h3>النص المترجم:</h3>
+                        <button class="copy-btn" id="copy-translated-btn" title="نسخ النص"><i class="fas fa-copy"></i></button>
+                    </div>
+                    <p id="translated-text"></p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <!-- نفس الفوتر الموجود في الصفحات الأخرى -->
+    </footer>
+
+    <!-- Audio elements for sound effects -->
+    <audio id="click-sound" src="sounds/click.mp3" preload="auto"></audio>
+    <audio id="success-sound" src="sounds/success.mp3" preload="auto"></audio>
+
+    <script src="script.js"></script>
+    <script>
+        // --- Global Variables & Element References ---
+        const translatorForm = document.getElementById('translator-form');
+        const fileInput = document.getElementById('audio-file');
+        const submitBtn = document.getElementById('submit-btn');
+        const statusDiv = document.getElementById('status');
+        const audioPlayer = document.getElementById('result-audio');
+        const progressContainer = document.getElementById('progress-container');
+        const progressBar = document.getElementById('progress-bar');
+        const recordBtn = document.getElementById('record-btn');
+        const stopBtn = document.getElementById('stop-btn');
+        const textResultsDiv = document.getElementById('text-results');
+        const recordingStatus = document.getElementById('recording-status');
+        const downloadBtn = document.getElementById('download-btn');
+        const copyOriginalBtn = document.getElementById('copy-original-btn');
+        const copyTranslatedBtn = document.getElementById('copy-translated-btn');
+
+        let mediaRecorder;
+        let audioChunks = [];
+
+        // --- Sound Effects Function ---
+        function playSound(soundId) {
+            const sound = document.getElementById(soundId);
+            if (sound) {
+                sound.currentTime = 0; // Rewind to the start
+                sound.play().catch(e => console.error("Error playing sound:", e));
+            }
+        }
+
+        // --- Core Translation Function ---
+        function startTranslation(audioFile) {
+            const targetLang = document.getElementById('target-lang').value;
+            const audioSpeed = document.getElementById('audio-speed').value;
+
+            // Reset UI
+            submitBtn.disabled = true;
+            audioPlayer.style.display = 'none';
+            downloadBtn.style.display = 'none';
+            textResultsDiv.style.display = 'none';
+            statusDiv.textContent = '';
+            progressContainer.style.display = 'block';
+            progressBar.style.width = '0%';
+            progressBar.textContent = '0%';
+            progressBar.style.backgroundColor = 'var(--primary-color)';
+            document.getElementById('original-text').textContent = '';
+            document.getElementById('translated-text').textContent = '';
+            recordBtn.disabled = true;
+
+            const formData = new FormData();
+            formData.append('file', audioFile);
+            formData.append('target_lang', targetLang);
+            formData.append('slow_speech', audioSpeed);
+
+            const xhr = new XMLHttpRequest();
+            // !!! هام: تأكد من أن هذا هو رابط خادمك الصحيح على Render
+            // وتأكد من أنك أضفت رابط موقعك (https://techiraqi.netlify.app) إلى قائمة origins في ملف app.py على الخادم
+            const backendUrl = 'https://audio-translator-backend.onrender.com/translate-audio/';
+            xhr.open('POST', backendUrl, true);
+
+            // تتبع تقدم الرفع
+            xhr.upload.onprogress = function(event) {
+                if (event.lengthComputable) {
+                    const percentComplete = Math.round((event.loaded / event.total) * 100);
+                    progressBar.style.width = percentComplete + '%';
+                    progressBar.textContent = percentComplete + '%';
+                    if (percentComplete < 100) {
+                        statusDiv.textContent = 'جاري رفع الملف...';
+                    }
+                }
+            };
+
+            // عند اكتمال الرفع وبدء المعالجة
+            xhr.upload.onload = function() {
+                statusDiv.textContent = 'تم الرفع. جاري المعالجة الآن... قد تستغرق هذه العملية بعض الوقت.';
+            };
+
+            // عند استلام الرد من الخادم
+            xhr.onload = function() {
+                submitBtn.disabled = false;
+                recordBtn.disabled = false;
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    const audioBlob = xhr.response;
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    audioPlayer.src = audioUrl;
+                    audioPlayer.style.display = 'block';
+                    statusDiv.textContent = 'تمت الترجمة بنجاح!';
+                    downloadBtn.href = audioUrl;
+                    downloadBtn.style.display = 'inline-block';
+
+                    progressContainer.style.display = 'none';
+
+                    // --- NEW: Get headers and display text ---
+                    const originalTextEncoded = xhr.getResponseHeader('X-Original-Text');
+                    const translatedTextEncoded = xhr.getResponseHeader('X-Translated-Text');
+
+                    if (originalTextEncoded && translatedTextEncoded) {
+                        document.getElementById('original-text').textContent = decodeURIComponent(originalTextEncoded);
+                        document.getElementById('translated-text').textContent = decodeURIComponent(translatedTextEncoded);
+                        textResultsDiv.style.display = 'block';
+                    }
+
+                } else {
+                    progressBar.style.backgroundColor = '#dc3545'; // اللون الأحمر للخطأ
+                    // Attempt to read the detailed error message from the server response
+                    const errorBlob = xhr.response;
+                    if (errorBlob && errorBlob.size > 0 && errorBlob.type.includes('application/json')) {
+                        errorBlob.text().then(errorText => {
+                            try {
+                                const errorJson = JSON.parse(errorText);
+                                statusDiv.textContent = `حدث خطأ: ${errorJson.detail || xhr.statusText}`;
+                            } catch (e) {
+                                statusDiv.textContent = `حدث خطأ: ${xhr.statusText}`;
+                            }
+                        });
+                    } else {
+                        statusDiv.textContent = `حدث خطأ: ${xhr.statusText}`;
+                    }
+                }
+            };
+
+            // عند حدوث خطأ في الشبكة
+            xhr.onerror = function() {
+                submitBtn.disabled = false;
+                recordBtn.disabled = false;
+                progressBar.style.backgroundColor = '#dc3545';
+                statusDiv.textContent = 'حدث خطأ في الشبكة. الرجاء التأكد من اتصالك بالإنترنت والمحاولة مرة أخرى.';
+            };
+
+            xhr.responseType = 'blob';
+            xhr.send(formData);
+        }
+
+        // --- Event Listeners ---
+
+        // 1. For File Upload
+        translatorForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            playSound('click-sound');
+            if (fileInput.files.length === 0) {
+                statusDiv.textContent = 'الرجاء اختيار ملف صوتي أولاً للترجمة.';
+                return;
+            }
+            startTranslation(fileInput.files[0]);
+        });
+
+        // 2. For Recording
+        recordBtn.addEventListener('click', async () => {
+            playSound('click-sound');
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    
+                    recordBtn.style.display = 'none';
+                    stopBtn.style.display = 'inline-block';
+                    recordingStatus.textContent = 'جاري التسجيل...';
+                    submitBtn.disabled = true;
+                    audioChunks = [];
+
+                    mediaRecorder = new MediaRecorder(stream);
+                    mediaRecorder.start();
+
+                    mediaRecorder.addEventListener("dataavailable", event => {
+                        audioChunks.push(event.data);
+                    });
+
+                    mediaRecorder.addEventListener("stop", () => {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                        
+                        const recordedFile = new File([audioBlob], "recording.wav", { type: audioBlob.type });
+                        startTranslation(recordedFile);
+
+                        // Stop all tracks on the stream to turn off the mic indicator
+                        stream.getTracks().forEach(track => track.stop());
+                    });
+
+                } catch (err) {
+                    statusDiv.textContent = 'لم يتم السماح بالوصول إلى الميكروفون.';
+                    console.error("Error accessing microphone:", err);
+                }
+            } else {
+                statusDiv.textContent = 'متصفحك لا يدعم ميزة التسجيل الصوتي.';
+            }
+        });
+
+        stopBtn.addEventListener('click', () => {
+            playSound('click-sound');
+            mediaRecorder.stop();
+            recordBtn.style.display = 'inline-block';
+            stopBtn.style.display = 'none';
+            recordingStatus.textContent = '';
+        });
+
+        // 3. For Copy Buttons
+        function handleCopyClick(textElementId, buttonElement) {
+            playSound('click-sound');
+            const textToCopy = document.getElementById(textElementId).textContent;
+            if (!textToCopy) return;
+
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                playSound('success-sound');
+                // Success feedback
+                const originalIcon = buttonElement.innerHTML;
+                buttonElement.innerHTML = '<i class="fas fa-check"></i> تم النسخ';
+                buttonElement.disabled = true;
+
+                setTimeout(() => {
+                    buttonElement.innerHTML = originalIcon;
+                    buttonElement.disabled = false;
+                }, 2000); // Revert after 2 seconds
+            }).catch(err => {
+                console.error('Failed to copy text: ', err);
+                alert('فشل نسخ النص.');
+            });
+        }
+
+        copyOriginalBtn.addEventListener('click', () => {
+            handleCopyClick('original-text', copyOriginalBtn);
+        });
+
+        copyTranslatedBtn.addEventListener('click', () => {
+            handleCopyClick('translated-text', copyTranslatedBtn);
+        });
+
+        // 4. For Download Button
+        downloadBtn.addEventListener('click', () => {
+            playSound('click-sound');
+        });
+
+        // --- Dark Mode Logic ---
+        const themeToggleButtons = document.querySelectorAll('.theme-toggle-button');
+        const body = document.body;
+
+        const applyTheme = (theme) => {
+            if (theme === 'dark') {
+                body.classList.add('dark-mode');
+                themeToggleButtons.forEach(btn => {
+                    btn.innerHTML = '<i class="fas fa-sun"></i>';
+                    btn.title = 'تفعيل الوضع الفاتح';
+                });
+            } else {
+                body.classList.remove('dark-mode');
+                themeToggleButtons.forEach(btn => {
+                    btn.innerHTML = '<i class="fas fa-moon"></i>';
+                    btn.title = 'تفعيل الوضع الليلي';
+                });
+            }
+        };
+
+        const toggleTheme = () => {
+            const currentTheme = body.classList.contains('dark-mode') ? 'light' : 'dark';
+            localStorage.setItem('theme', currentTheme);
+            applyTheme(currentTheme);
+        };
+
+        themeToggleButtons.forEach(btn => btn.addEventListener('click', () => {
+            playSound('click-sound');
+            toggleTheme();
+        }));
+
+        // Load saved theme on page load or respect system preference
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) {
+            applyTheme(savedTheme);
+        } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            applyTheme('dark');
+        }
+    </script>
+</body>
+</html>
