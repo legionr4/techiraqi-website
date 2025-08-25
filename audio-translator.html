@@ -341,9 +341,8 @@
             formData.append('slow_speech', audioSpeed);
 
             const xhr = new XMLHttpRequest();
-            // !!! هام: تأكد من أن هذا هو رابط خادمك الصحيح على Render
-            // !!! تم التحديث: هذا هو الرابط الجديد لخادمك على PythonAnywhere
-            const backendUrl = 'http://ToperRx.pythonanywhere.com/translate-audio/';
+            // !!! هام: تم التحديث للاتصال بالخادم الجديد على Hugging Face Spaces
+            const backendUrl = 'https://toprn-audio-translator-space.hf.space/translate-audio/';
             xhr.open('POST', backendUrl, true);
 
             // تتبع تقدم الرفع
