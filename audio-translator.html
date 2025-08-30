@@ -385,6 +385,7 @@
                     <div class="input-group">
                         <label for="language-select">2. اختر لغة الترجمة:</label>
                         <select id="language-select">
+                            <option value="Arabic">Arabic</option>
                             <option value="English">English</option>
                             <option value="French">French</option>
                             <option value="German">German</option>
@@ -395,13 +396,16 @@
                             <option value="Italian">Italian</option>
                         </select>
                     </div>
-                    <div class="input-group">
+                    <div id="voice-selection-group" class="input-group">
                         <label for="voice-select">اختر صوت الترجمة:</label>
                         <select id="voice-select">
                             <option value="female" selected>صوت امرأة</option>
                             <option value="male">صوت رجل</option>
                             <option value="child">صوت طفل</option>
                         </select>
+                    </div>
+                    <div id="arabic-tts-note" class="input-group hidden" style="color: var(--text-secondary-color); font-size: 0.9rem; margin-top: -1rem; margin-bottom: 1rem;">
+                        ملاحظة: اختيار الصوت غير متاح حاليًا للغة العربية.
                     </div>
                     <div class="input-group">
                         <label for="speed-select">سرعة صوت الترجمة:</label>
@@ -504,6 +508,8 @@
             const audioTimeDisplay = document.querySelector('.audio-time-display');
             const audioPreviewContainer = document.getElementById('audio-preview-container');
             const clearAudioBtn = document.getElementById('clear-audio-btn');
+            const voiceSelectionGroup = document.getElementById('voice-selection-group');
+            const arabicTtsNote = document.getElementById('arabic-tts-note');
 
             // --- State Variables ---
             let mediaRecorder;
@@ -671,6 +677,17 @@
                 updateTranslateButtonState();
             };
 
+            const handleLanguageChange = () => {
+                if (languageSelect.value === 'Arabic') {
+                    voiceSelectionGroup.classList.add('hidden');
+                    arabicTtsNote.classList.remove('hidden');
+                } else {
+                    voiceSelectionGroup.classList.remove('hidden');
+                    arabicTtsNote.classList.add('hidden');
+                }
+                savePreferences();
+            };
+
             // --- User Preferences ---
             const loadPreferences = () => {
                 const savedLanguage = localStorage.getItem('translator_last_language');
@@ -688,6 +705,8 @@
                 }
                 // Set the initial playback rate from the current selection
                 ttsAudioPlayer.playbackRate = parseFloat(speedSelect.value);
+                // Set initial visibility of voice selection
+                handleLanguageChange();
             };
 
             const savePreferences = () => {
@@ -737,7 +756,7 @@
                 }
             });
 
-            languageSelect.addEventListener('change', savePreferences);
+            languageSelect.addEventListener('change', handleLanguageChange);
 
             voiceSelect.addEventListener('change', savePreferences);
 
