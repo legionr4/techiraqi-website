@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- TODO: قم بتحديث العنوان والوصف ليتناسب مع مقالك الجديد -->
+    <title>ما هي الحوسبة السحابية؟ مقدمة للمبتدئين - Tech_Iraqi</title>
+    <meta name="description" content="اكتشف مفهوم الحوسبة السحابية (Cloud Computing)، وأنواعها المختلفة (IaaS, PaaS, SaaS)، وأبرز فوائدها التي غيرت عالم التكنولوجيا.">
+
+    <!-- كود التحقق من ملكية الموقع لـ Google -->
+    <meta name="google-site-verification" content="QCFsZaYKVYl0pqKAMSIPZA_25MW0knzooU-6VbQjxK4" />
+
+    <!-- SEO: Open Graph / Facebook & WhatsApp -->
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://techiraqi.netlify.app/article4.html">
+    <meta property="og:title" content="ما هي الحوسبة السحابية؟ مقدمة للمبتدئين - Tech_Iraqi">
+    <meta property="og:description" content="اكتشف مفهوم الحوسبة السحابية (Cloud Computing)، وأنواعها المختلفة (IaaS, PaaS, SaaS)، وأبرز فوائدها التي غيرت عالم التكنولوجيا.">
+    <meta property="og:image" content="https://techiraqi.netlify.app/FOX.png">
+
+    <!-- SEO: Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://techiraqi.netlify.app/article4.html">
+    <meta property="twitter:title" content="ما هي الحوسبة السحابية؟ مقدمة للمبتدئين - Tech_Iraqi">
+    <meta property="twitter:description" content="اكتشف مفهوم الحوسبة السحابية (Cloud Computing)، وأنواعها المختلفة (IaaS, PaaS, SaaS)، وأبرز فوائدها التي غيرت عالم التكنولوجيا.">
+    <meta property="twitter:image" content="https://techiraqi.netlify.app/FOX.png">
+    
+    <!-- Favicon and Libraries -->
+    <link rel="icon" type="image/png" href="assets/favicon.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Preloader -->
+    <div id="preloader">
+        <div class="spinner"></div>
+    </div>
+
+    <header>
+        <div class="site-title"><a href="index.html">Tech_Iraqi</a></div>
+        <button class="hamburger-menu" id="hamburger-button" aria-label="فتح أو إغلاق القائمة" aria-expanded="false">
+            <i class="fas fa-bars"></i>
+        </button>
+        <nav id="main-nav">
+            <a href="index.html">الرئيسية</a>
+            <a href="blog.html" class="active">المدونة</a>
+            <a href="contact.html">اتصل بنا</a>
+            <div class="login-container-mobile" data-netlify-identity-button></div>
+        </nav>
+        <div class="header-actions">
+            <button class="theme-toggle-button desktop-theme-toggle" title="تفعيل الوضع الليلي">
+                <i class="fas fa-moon"></i>
+            </button>
+            <img src="assets/iraqFlog.gif" alt="علم العراق" class="header-flag">
+            <div class="login-container-desktop" data-netlify-identity-button></div>
+        </div>
+    </header>
+
+    <main>
+        <article class="article-content content-card" data-aos="fade-up">
+            <h1 class="article-title">ما هي الحوسبة السحابية؟ مقدمة شاملة للمبتدئين</h1>
+            <p class="article-meta">نُشر في: 16 مايو 2024 | بواسطة: فريق Tech_Iraqi</p>
+
+            <!-- Featured Image -->
+            <img src="https://placehold.co/800x400/1abc9c/white?text=Cloud" alt="صورة توضيحية للحوسبة السحابية" class="article-featured-image" loading="lazy">
+            
+            <p>ربما سمعت مصطلح "السحابة" أو "Cloud" يتردد كثيراً، خاصة عند الحديث عن تخزين الملفات أو استخدام تطبيقات مثل Google Docs و Netflix. لكن ماذا تعني الحوسبة السحابية حقًا؟ ببساطة، هي توفير خدمات حاسوبية - مثل الخوادم، والتخزين، وقواعد البيانات، والبرامج - عبر الإنترنت ("السحابة") بدلاً من امتلاكها وتشغيلها على حاسوبك الشخصي أو خادم محلي.</p>
+            
+            <h3>كيف تعمل الحوسبة السحابية؟</h3>
+            <p>تخيل أنك بدلاً من تخزين صورك على هاتفك الذي قد تمتلئ مساحته، تقوم برفعها إلى خدمة مثل Google Photos. صورك الآن مخزنة على خوادم عملاقة تابعة لشركة جوجل في مكان ما في العالم. يمكنك الوصول إليها من أي جهاز متصل بالإنترنت. هذا هو جوهر الحوسبة السحابية: الوصول إلى الموارد الحاسوبية عند الطلب عبر الشبكة.</p>
+            
+            <h3>أشهر أنواع الخدمات السحابية</h3>
+            <p>تنقسم الخدمات السحابية عادة إلى ثلاث فئات رئيسية:</p>
+            <ul>
+                <li><strong>البنية التحتية كخدمة (IaaS):</strong> توفر لك المكونات الأساسية للحوسبة مثل الخوادم الافتراضية والشبكات والتخزين. مثال: Amazon Web Services (AWS).</li>
+                <li><strong>المنصة كخدمة (PaaS):</strong> توفر بيئة للمطورين لبناء واختبار ونشر التطبيقات دون القلق بشأن إدارة البنية التحتية. مثال: Heroku.</li>
+                <li><strong>البرنامج كخدمة (SaaS):</strong> هي تطبيقات برمجية جاهزة للاستخدام تصل إليها عبر متصفح الويب. هذا هو النوع الأكثر شيوعًا للمستخدم العادي. أمثلة: Gmail, Microsoft 365, Dropbox.</li>
+            </ul>
+
+            <h3>لماذا هي مهمة؟ أبرز الفوائد</h3>
+            <p>لقد غيرت الحوسبة السحابية قواعد اللعبة للشركات والأفراد على حد سواء، وذلك بفضل فوائدها العديدة، مثل: <strong>توفير التكاليف</strong> (لا حاجة لشراء أجهزة باهظة الثمن)، و<strong>المرونة وقابلية التوسع</strong> (يمكنك زيادة أو تقليل الموارد حسب حاجتك)، و<strong>سهولة الوصول</strong> من أي مكان في العالم.</p>
+
+        </article>
+
+        <!-- Social Share Section -->
+        <section class="share-section content-card" data-aos="fade-up">
+            <h3>شارك هذا المقال</h3>
+            <div class="share-buttons">
+                <a href="#" class="share-btn twitter" data-network="twitter" target="_blank" rel="noopener noreferrer" aria-label="شارك على تويتر"><i class="fa-brands fa-x-twitter"></i> Twitter</a>
+                <a href="#" class="share-btn facebook" data-network="facebook" target="_blank" rel="noopener noreferrer" aria-label="شارك على فيسبوك"><i class="fa-brands fa-facebook-f"></i> Facebook</a>
+                <a href="#" class="share-btn linkedin" data-network="linkedin" target="_blank" rel="noopener noreferrer" aria-label="شارك على لينكد إن"><i class="fa-brands fa-linkedin-in"></i> LinkedIn</a>
+                <a href="#" class="share-btn whatsapp" data-network="whatsapp" target="_blank" rel="noopener noreferrer" aria-label="شارك على واتساب"><i class="fa-brands fa-whatsapp"></i> WhatsApp</a>
+                <button class="share-btn copy-link" id="copy-link-btn" aria-label="نسخ الرابط"><i class="fas fa-link"></i> نسخ الرابط</button>
+            </div>
+            <p id="copy-success-msg" class="copy-success" style="display: none;">تم نسخ الرابط بنجاح!</p>
+        </section>
+
+        <!-- Comments Section powered by Giscus -->
+        <section class="comments-section content-card" data-aos="fade-up">
+            <h3>التعليقات</h3>
+            <div class="giscus"></div>
+            <script src="https://giscus.app/client.js"
+                    data-repo="legionr4/techiraqi-website"
+                    data-repo-id="R_kgDOPfG9QQ"
+                    data-category="Announcements"
+                    data-category-id="DIC_kwDOPfG9Qc4CuQDB"
+                    data-mapping="pathname"
+                    data-strict="0"
+                    data-reactions-enabled="1"
+                    data-emit-metadata="0"
+                    data-input-position="bottom"
+                    data-theme="preferred_color_scheme"
+                    data-lang="ar"
+                    crossorigin="anonymous"
+                    async>
+            </script>
+        </section>
+
+        <!-- Article Navigation -->
+        <nav class="article-navigation content-card" data-aos="fade-up">
+            <a href="article3.html" class="nav-link prev">
+                <i class="fas fa-arrow-right"></i> المقال السابق
+            </a>
+        </nav>
+    </main>
+
+    <button class="back-to-top" title="العودة إلى الأعلى" aria-label="العودة إلى الأعلى"><i class="fas fa-arrow-up"></i></button>
+
+    <footer>
+        <div class="social-icons">
+            <a href="#" title="تابعنا على تويتر" target="_blank" rel="noopener noreferrer" aria-label="تابعنا على تويتر"><i class="fa-brands fa-x-twitter"></i></a>
+            <a href="#" title="تابعنا على لينكد إن" target="_blank" rel="noopener noreferrer" aria-label="تابعنا على لينكد إن"><i class="fa-brands fa-linkedin-in"></i></a>
+            <a href="https://github.com/legionr4" title="شاهد مشاريعنا على جيت هاب" target="_blank" rel="noopener noreferrer" aria-label="شاهد مشاريعنا على جيت هاب"><i class="fa-brands fa-github"></i></a>
+        </div>
+        <div class="footer-links">
+            <a href="privacy-policy.html">سياسة الخصوصية</a>
+            <a href="terms-of-use.html">شروط الاستخدام</a>
+        </div>
+        <p class="copyright">جميع الحقوق محفوظة &copy; <span id="copyright-year">2024</span></p>
+    </footer>
+
+    <!-- Scripts: Placed at the end for faster page load -->
+    <script type="text/javascript" src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+    <script src="https://unpkg.com/aos@next/dist/aos.js" defer></script>
+    <script src="script.js" defer></script>
+</body>
+</html>

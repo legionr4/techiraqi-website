@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- SEO: Title and Description -->
+    <title>مترجم الصوت | Tech_Iraqi</title>
+    <meta name="description" content="ترجمة المقاطع الصوتية من لغة إلى أخرى مباشرة عبر موقع Tech_Iraqi باستخدام الذكاء الاصطناعي.">
+
+    <!-- SEO: Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://techiraqi.netlify.app/audio-translator.html">
+    <meta property="og:title" content="مترجم الصوت | Tech_Iraqi">
+    <meta property="og:description" content="ترجمة المقاطع الصوتية من لغة إلى أخرى مباشرة عبر موقع Tech_Iraqi.">
+    <meta property="og:image" content="https://techiraqi.netlify.app/FOX.png">
+
+    <!-- SEO: Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://techiraqi.netlify.app/audio-translator.html">
+    <meta property="twitter:title" content="مترجم الصوت | Tech_Iraqi">
+    <meta property="twitter:description" content="ترجمة المقاطع الصوتية من لغة إلى أخرى مباشرة عبر موقع Tech_Iraqi.">
+    <meta property="twitter:image" content="https://techiraqi.netlify.app/FOX.png">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="assets/favicon.png">
+
+    <!-- Font Awesome -->
+    <!-- Asynchronously load Font Awesome for better performance -->
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer">
+    <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"></noscript>
+
+    <!-- AOS Library -->
+    <!-- Asynchronously load AOS CSS for better performance -->
+    <link rel="preload" href="https://unpkg.com/aos@next/dist/aos.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css"></noscript>
+
+    <link rel="stylesheet" href="style.css">
+
+</head>
+<body>
+
+    <!-- Preloader -->
+    <div id="preloader">
+        <div class="spinner"></div>
+    </div>
+
+    <header>
+        <div class="site-title"><a href="index.html">Tech_Iraqi</a></div>
+        <button class="hamburger-menu" id="hamburger-button" aria-label="فتح أو إغلاق القائمة" aria-expanded="false">
+            <span class="fas fa-bars" aria-hidden="true"></span>
+        </button>
+        <nav id="main-nav">
+            <a href="index.html">الرئيسية</a>
+            <a href="audio-translator.html" class="active">مترجم الصوت</a>
+            <a href="blog.html">المدونة</a>
+            <a href="contact.html">اتصل بنا</a>
+            <div class="login-container-mobile" data-netlify-identity-button></div>
+        </nav>
+        <div class="header-actions">
+            <button class="theme-toggle-button desktop-theme-toggle" title="تفعيل الوضع الليلي">
+                <i class="fas fa-moon" aria-hidden="true"></i>
+            </button>
+            <img src="assets/iraqFlog.gif" alt="علم العراق" class="header-flag">
+            <div class="login-container-desktop" data-netlify-identity-button></div>
+        </div>
+    </header>
+
+    <main>
+        <div class="content-card hero-section" data-aos="fade-up">
+            <h1>مترجم الصوت الفوري</h1>
+            <p class="tagline">استخدم هذه الأداة لترجمة الكلام من لغة إلى أخرى. يمكنك رفع ملف صوتي أو التسجيل مباشرة من المايكروفون.</p>
+        </div>
+
+        <div class="translator-container" data-aos="fade-up" data-aos-delay="100">
+            <div class="iframe-loader">
+                <p>جاري تحميل أداة الترجمة...</p>
+                <!-- We can reuse the same spinner style from the preloader -->
+                <div class="spinner"></div>
+            </div>
+            <!--
+                !!! تنبيه هام !!!
+                الصق كود الـ <iframe> الذي نسخته من Hugging Face هنا
+            -->
+            <iframe
+                src="https://toprn-audio-language-translator.hf.space"
+                title="Embedded Audio Translator Application"
+                loading="lazy"
+                onload="this.previousElementSibling.style.display='none';"
+            ></iframe>
+        </div>
+    </main>
+
+    <button class="back-to-top" title="العودة إلى الأعلى" aria-label="العودة إلى الأعلى"><i class="fas fa-arrow-up" aria-hidden="true"></i></button>
+
+    <footer>
+        <div class="social-icons">
+            <a href="#" title="تابعنا على تويتر" target="_blank" rel="noopener noreferrer" aria-label="تابعنا على تويتر"><i class="fa-brands fa-x-twitter" aria-hidden="true"></i></a>
+            <a href="#" title="تابعنا على لينكد إن" target="_blank" rel="noopener noreferrer" aria-label="تابعنا على لينكد إن"><i class="fa-brands fa-linkedin-in" aria-hidden="true"></i></a>
+            <a href="https://github.com/legionr4" title="شاهد مشاريعنا على جيت هاب" target="_blank" rel="noopener noreferrer" aria-label="شاهد مشاريعنا على جيت هاب"><i class="fa-brands fa-github" aria-hidden="true"></i></a>
+        </div>
+        <div class="footer-links">
+            <a href="privacy-policy.html">سياسة الخصوصية</a>
+            <a href="terms-of-use.html">شروط الاستخدام</a>
+        </div>
+        <p class="copyright">جميع الحقوق محفوظة &copy; <span id="copyright-year">2024</span></p>
+    </footer>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js" defer></script>
+    <script src="script.js" defer></script>
+</body>
+</html>

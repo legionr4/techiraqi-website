@@ -1,0 +1,5 @@
+User-agent: *
+Disallow: /thank-you.html
+Disallow: /.netlify/
+
+Sitemap: https://techiraqi.netlify.app/sitemap.xml
