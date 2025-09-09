@@ -541,7 +541,7 @@ function updatePlaneModel() {
     const hasRudder = hasRudderInput.checked;
     const rudderWidth = getValidNumber(rudderWidthInput) * conversionFactor;
 
-    const createSurface = (span, rootChord, taperRatio, sweepAngle, thickness, airfoil, isVertical = false) => {
+    const createSurface = (span, rootChord, taperRatio, sweepAngle, thickness, airfoil, isVertical = false, createRootCap = false) => {
         const effectiveSpan = isVertical ? span : span / 2; // الأسطح العمودية تمتد بطولها الكامل من القاعدة
         const sweepRad = sweepAngle * Math.PI / 180;
         const geometry = new THREE.BufferGeometry();
@@ -579,6 +579,15 @@ function updatePlaneModel() {
         const tipStartIndex = segments * pointsPerSection;
         for (let j = 1; j < pointsPerSection - 1; j++) {
             indices.push(tipStartIndex, tipStartIndex + j + 1, tipStartIndex + j);
+        }
+
+        // Add root cap if requested
+        if (createRootCap) {
+            const rootStartIndex = 0;
+            for (let j = 1; j < pointsPerSection - 1; j++) {
+                // Wind in the opposite direction for the root cap
+                indices.push(rootStartIndex, rootStartIndex + j, rootStartIndex + j + 1);
+            }
         }
 
         geometry.setIndex(indices);
@@ -658,10 +667,8 @@ function updatePlaneModel() {
     if (hasElevator && tailType !== 'v-tail') {
         // إنشاء سطح مائل ومستدق لنصف الرافع
         const elevatorLength = getValidNumber(elevatorLengthInput) * conversionFactor;
-        const elevatorHalfGeom = createSurface(elevatorLength * 2, elevatorWidth, tailTaperRatio, tailSweepAngle, tailThickness, 'rectangular');
-        // ننقل الشكل الهندسي بحيث تكون حافته الخلفية عند x=0، مما يجعل الحافة الأمامية (المفصل) عند x=-elevatorWidth
-        elevatorHalfGeom.translate(elevatorWidth / 2, 0, 0);
-
+        const elevatorHalfGeom = createSurface(elevatorLength * 2, elevatorWidth, tailTaperRatio, tailSweepAngle, tailThickness, 'rectangular', false, true);
+        elevatorHalfGeom.translate(-elevatorWidth / 2, 0, 0); // تمدد للخلف من نقطة المفصل
         // إزاحة الرافع ليبدأ من جانب جسم الطائرة، مما يخلق فجوة في المنتصف
         elevatorHalfGeom.translate(0, 0, fuselage.geometry.parameters.depth / 2);
 
@@ -676,8 +683,9 @@ function updatePlaneModel() {
         leftElevatorPivot.scale.z = -1;
         leftElevatorPivot.children[0].name = 'leftElevator';
 
-        // نضع المحور عند الحافة الخلفية للذيل بأكمله، وسوف يتم رسم الرافع للأمام من هذه النقطة
-        const pivotX = -fuselageLength / 2 - tailChord;
+        // نضع المحور عند الحافة الخلفية للجزء الثابت من الذيل
+        const hStabRootChordEffective = tailChord - elevatorWidth;
+        const pivotX = -fuselageLength / 2 - hStabRootChordEffective;
         const elevatorY = (tailType === 't-tail' ? vStabHeight + fuselage.geometry.parameters.height / 2 : 0);
         
         rightElevatorPivot.position.set(pivotX, elevatorY, 0);
@@ -689,16 +697,16 @@ function updatePlaneModel() {
     if (hasRudder && tailType !== 'v-tail') {
         // إنشاء سطح مائل ومستدق للدفة
         const rudderLength = getValidNumber(rudderLengthInput) * conversionFactor;
-        const rudderGeom = createSurface(rudderLength, rudderWidth, tailTaperRatio, tailSweepAngle, tailThickness, 'rectangular', true);
-        // ننقل الشكل الهندسي بحيث تكون حافته الخلفية عند x=0
-        rudderGeom.translate(rudderWidth / 2, 0, 0);
+        const rudderGeom = createSurface(rudderLength, rudderWidth, tailTaperRatio, tailSweepAngle, tailThickness, 'rectangular', true, true);
+        rudderGeom.translate(-rudderWidth / 2, 0, 0); // تمدد للخلف من نقطة المفصل
 
         const rudder = new THREE.Mesh(rudderGeom, aileronMaterial);
         rudder.name = 'rudder';
         const rudderPivot = new THREE.Group();
         rudderPivot.add(rudder);
-        // نضع المحور عند الحافة الخلفية للذيل العمودي بأكمله
-        const pivotX = -fuselageLength / 2 - vStabChord;
+        // نضع المحور عند الحافة الخلفية للجزء الثابت من الذيل العمودي
+        const vStabRootChordEffective = vStabChord - rudderWidth;
+        const pivotX = -fuselageLength / 2 - vStabRootChordEffective;
         
         rudderPivot.position.set(pivotX, fuselage.geometry.parameters.height / 2, 0); // تبدأ الهندسة من y=0، لذا نرفعها
 
