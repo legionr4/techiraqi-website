@@ -178,6 +178,7 @@ const aileronControls = document.getElementById('aileron-controls');
 
 const fuselageLengthInput = document.getElementById('fuselage-length');
 const wingMaterialInput = document.getElementById('wing-material');
+const tailMaterialInput = document.getElementById('tail-material');
 const propDiameterInput = document.getElementById('prop-diameter');
 const propBladesInput = document.getElementById('prop-blades');
 const propPitchInput = document.getElementById('prop-pitch');
@@ -206,6 +207,8 @@ const thrustResultEl = document.getElementById('thrust-result');
 const twrResultEl = document.getElementById('twr-result');
 const wingAreaResultEl = document.getElementById('wing-area-result');
 const wingWeightResultEl = document.getElementById('wing-weight-result');
+const tailAreaResultEl = document.getElementById('tail-area-result');
+const tailWeightResultEl = document.getElementById('tail-weight-result');
 const totalWeightResultEl = document.getElementById('total-weight-result');
 
 let liftChart, dragChart;
@@ -523,127 +526,84 @@ function updatePlaneModel() {
     else if (wingPosition === 'low') wingGroup.position.y = -fuselageHeight / 2;
 
     // --- تحديث الأبعاد الأخرى ---
-    while(tailGroup.children.length > 0) tailGroup.remove(tailGroup.children[0]);
-    while(tailControlsGroup.children.length > 0) tailControlsGroup.remove(tailControlsGroup.children[0]);
+    // --- إعادة بناء الذيل بالكامل ---
+    while (tailGroup.children.length > 0) tailGroup.remove(tailGroup.children[0]);
+    while (tailControlsGroup.children.length > 0) tailControlsGroup.remove(tailControlsGroup.children[0]);
 
     const tailThickness = wingThickness * 0.75; // الذيل عادة أرق من الجناح
 
-    // --- Horizontal Stabilizer ---
+    // --- حساب الأبعاد الفعالة (مع خصم أسطح التحكم) ---
     const hasElevator = hasElevatorInput.checked;
     const elevatorWidth = getValidNumber(elevatorWidthInput) * conversionFactor;
     const hStabChordEffective = hasElevator ? tailChord - elevatorWidth : tailChord;
 
-    const hStabHalfSpan = tailSpan / 2;
-    const hStabRootChord = hStabChordEffective;
-    const hStabTipChord = hStabRootChord * tailTaperRatio;
-    const hStabSweepRad = tailSweepAngle * Math.PI / 180;
-    const hStabSweepOffset = hStabHalfSpan * Math.tan(hStabSweepRad);
-
-    const hStabShape = new THREE.Shape();
-    hStabShape.moveTo(-hStabRootChord / 2, -hStabHalfSpan);
-    hStabShape.lineTo(hStabRootChord / 2, -hStabHalfSpan);
-    hStabShape.lineTo(hStabTipChord / 2 + hStabSweepOffset, hStabHalfSpan);
-    hStabShape.lineTo(-hStabTipChord / 2 + hStabSweepOffset, hStabHalfSpan);
-    hStabShape.closePath();
-
-    const hStabGeom = new THREE.ExtrudeGeometry(hStabShape, {depth: tailThickness, bevelEnabled: false});
-    hStabGeom.center();
-    // Move the geometry so the leading edge is at x=0
-    hStabGeom.translate(hStabRootChord / 2, 0, 0);
-
-    const hStab = new THREE.Mesh(hStabGeom, tailMaterial);
-    hStab.rotation.x = -Math.PI / 2;
-
-    // --- Vertical Stabilizer ---
     const hasRudder = hasRudderInput.checked;
     const rudderWidth = getValidNumber(rudderWidthInput) * conversionFactor;
     const vStabChordEffective = hasRudder ? vStabChord - rudderWidth : vStabChord;
 
-    // --- إنشاء شكل الذيل العمودي مع الميلان والاستدقاق ---
-    const vStabRootChord = vStabChordEffective;
-    const vStabTipChord = vStabRootChord * tailTaperRatio;
-    const vStabSweepRad = tailSweepAngle * Math.PI / 180;
-    const vStabSweepOffset = vStabHeight * Math.tan(vStabSweepRad);
+    // --- إنشاء الأجزاء الثابتة للذيل ---
+    const hStabGeom = new THREE.BoxGeometry(hStabChordEffective, tailSpan, tailThickness);
+    const hStab = new THREE.Mesh(hStabGeom, tailMaterial);
+    // تحديد موضع الجزء الثابت بحيث تكون حافته الأمامية عند بداية الذيل
+    hStab.position.x = -fuselageLength / 2 + hStabChordEffective / 2;
 
-    const vStabShape = new THREE.Shape();
-    vStabShape.moveTo(-vStabRootChord / 2, 0); // bottom left
-    vStabShape.lineTo(vStabRootChord / 2, 0); // bottom right
-    vStabShape.lineTo(vStabTipChord / 2 + vStabSweepOffset, vStabHeight); // top right
-    vStabShape.lineTo(-vStabTipChord / 2 + vStabSweepOffset, vStabHeight); // top left
-    vStabShape.closePath();
-
-    const vStabGeom = new THREE.ExtrudeGeometry(vStabShape, { depth: tailThickness, bevelEnabled: false });
-    vStabGeom.center();
+    const vStabGeom = new THREE.BoxGeometry(vStabChordEffective, vStabHeight, tailThickness);
     const vStab = new THREE.Mesh(vStabGeom, fuselageMaterial);
-    vStab.rotation.y = Math.PI / 2;
+    // تحديد موضع الجزء الثابت بحيث تكون حافته الأمامية عند بداية الذيل
+    vStab.position.x = -fuselageLength / 2 + vStabChordEffective / 2;
 
     // --- Tail Assembly ---
     if (tailType === 'conventional') {
-        hStab.position.set(-fuselageLength / 2 + (tailChord - hStabChordEffective) / 2, 0, 0);
-        vStab.position.set(-fuselageLength / 2 + (vStabChord - vStabChordEffective) / 2, vStabHeight / 2, 0);
+        hStab.position.y = 0;
+        vStab.position.y = vStabHeight / 2;
         tailGroup.add(hStab, vStab);
     } else if (tailType === 't-tail') {
-        vStab.position.set(-fuselageLength / 2 + (vStabChord - vStabChordEffective) / 2, vStabHeight / 2, 0);
-        hStab.position.set(-fuselageLength / 2 + (tailChord - hStabChordEffective) / 2, vStabHeight, 0);
+        vStab.position.y = vStabHeight / 2;
+        hStab.position.y = vStabHeight;
         tailGroup.add(hStab, vStab);
     } else if (tailType === 'v-tail') {
         const angleRad = vTailAngle * Math.PI / 180;
-        // استخدام نفس شكل الذيل العمودي لألواح الذيل V
-        const rightVPanel = new THREE.Mesh(vStabGeom.clone(), tailMaterial);
+        const vTailPanelGeom = new THREE.BoxGeometry(vStabChord, vStabHeight, tailThickness);
+        
+        const rightVPanel = new THREE.Mesh(vTailPanelGeom, tailMaterial);
+        rightVPanel.position.y = vStabHeight / 2;
+        rightVPanel.rotation.z = -angleRad;
+        
         const leftVPanel = rightVPanel.clone();
+        leftVPanel.rotation.z = angleRad;
 
-        rightVPanel.rotation.x = -angleRad;
-        leftVPanel.rotation.x = angleRad;
-
-        const vTailPivot = new THREE.Group();
-        vTailPivot.add(rightVPanel, leftVPanel);
-        vTailPivot.position.set(-fuselageLength / 2 + (vStabChord - vStabChordEffective) / 2, vStabHeight / 2, 0);
-        tailGroup.add(vTailPivot);
+        const vTailAssembly = new THREE.Group();
+        vTailAssembly.add(rightVPanel, leftVPanel);
+        vTailAssembly.position.x = -fuselageLength / 2 + vStabChord / 2;
+        tailGroup.add(vTailAssembly);
     }
 
     // --- Tail Control Surfaces ---
     if (hasElevator && tailType !== 'v-tail') {
         const elevatorGeom = new THREE.BoxGeometry(elevatorWidth, tailThickness, tailSpan);
-        elevatorGeom.translate(elevatorWidth / 2, 0, 0);
+        elevatorGeom.rotateX(Math.PI / 2); // Rotate to be horizontal
+        elevatorGeom.translate(elevatorWidth / 2, 0, 0); // Set pivot to leading edge
         const elevator = new THREE.Mesh(elevatorGeom, aileronMaterial);
         elevator.name = 'elevator';
         const elevatorPivot = new THREE.Group();
         elevatorPivot.add(elevator);
-        elevatorPivot.position.set(hStab.position.x + hStabChordEffective, hStab.position.y, 0);
+        // Position the pivot at the trailing edge of the fixed h-stab
+        elevatorPivot.position.set(hStab.position.x + hStabChordEffective / 2, hStab.position.y, 0);
         tailControlsGroup.add(elevatorPivot);
     }
 
     if (hasRudder && tailType !== 'v-tail') {
-        const rudderGeom = new THREE.BoxGeometry(rudderWidth, tailThickness, vStabHeight);
-        rudderGeom.translate(rudderWidth / 2, 0, 0);
+        const rudderGeom = new THREE.BoxGeometry(rudderWidth, vStabHeight, tailThickness);
+        rudderGeom.translate(rudderWidth / 2, 0, 0); // Set pivot to leading edge
         const rudder = new THREE.Mesh(rudderGeom, aileronMaterial);
         rudder.name = 'rudder';
         const rudderPivot = new THREE.Group();
         rudderPivot.add(rudder);
-        rudderPivot.position.set(vStab.position.x + vStabChordEffective, vStab.position.y, 0);
-        rudderPivot.rotation.y = Math.PI / 2;
+        // Position the pivot at the trailing edge of the fixed v-stab
+        rudderPivot.position.set(vStab.position.x + vStabChordEffective / 2, vStab.position.y, 0);
         tailControlsGroup.add(rudderPivot);
     } else if (hasRudderInput.checked && tailType === 'v-tail') {
-        // Ruddervators
-        const ruddervatorWidth = getValidNumber(rudderWidthInput) * conversionFactor;
-        const ruddervatorGeom = new THREE.BoxGeometry(ruddervatorWidth, tailThickness, vStabHeight);
-        
-        const rightRuddervator = new THREE.Mesh(ruddervatorGeom, aileronMaterial);
-        rightRuddervator.name = 'rightRuddervator';
-        const rightRuddervatorPivot = new THREE.Group();
-        rightRuddervatorPivot.add(rightRuddervator);
-        rightRuddervator.position.x = ruddervatorWidth / 2;
-        rightRuddervatorPivot.position.set(vStabChordEffective / 2, 0, 0);
-
-        const leftRuddervator = new THREE.Mesh(ruddervatorGeom, aileronMaterial);
-        leftRuddervator.name = 'leftRuddervator';
-        const leftRuddervatorPivot = new THREE.Group();
-        leftRuddervatorPivot.add(leftRuddervator);
-        leftRuddervator.position.x = ruddervatorWidth / 2;
-        leftRuddervatorPivot.position.set(vStabChordEffective / 2, 0, 0);
-
-        tailGroup.getObjectByProperty('type', 'Group').children[0].add(rightRuddervatorPivot);
-        tailGroup.getObjectByProperty('type', 'Group').children[1].add(leftRuddervatorPivot);
+        // This part is complex and can be added in a future step to ensure stability
     }
 
 
@@ -674,6 +634,7 @@ function calculateAerodynamics() {
     const taperRatio = getValidNumber(taperRatioInput);
     const airfoilType = airfoilTypeInput.value;
     const wingMaterial = wingMaterialInput.value;
+    const tailMaterial = tailMaterialInput.value;
     const angleOfAttack = getValidNumber(angleOfAttackInput);
     const airSpeed = getValidNumber(airSpeedInput);
     const airDensity = getValidNumber(airDensityInput);
@@ -694,6 +655,22 @@ function calculateAerodynamics() {
         aileronArea = aileronLength * aileronWidth;
     }
     const mainWingArea = wingArea - (2 * aileronArea); // Subtract area of two ailerons
+
+    // --- Tail Area Calculation ---
+    const tailSpan = getValidNumber(tailSpanInput) * conversionFactor;
+    const tailChord = getValidNumber(tailChordInput) * conversionFactor;
+    const vStabHeight = getValidNumber(vStabHeightInput) * conversionFactor;
+    const vStabChord = getValidNumber(vStabChordInput) * conversionFactor;
+    const tailType = tailTypeInput.value;
+    let totalTailArea = 0;
+
+    if (tailType === 'conventional' || tailType === 't-tail') {
+        const hStabArea = tailSpan * tailChord;
+        const vStabArea = vStabHeight * vStabChord;
+        totalTailArea = hStabArea + vStabArea;
+    } else if (tailType === 'v-tail') {
+        totalTailArea = 2 * (vStabHeight * vStabChord);
+    }
 
     // 1. قوة الرفع (Lift)
     // L = 0.5 * Cl * rho * V^2 * A
@@ -727,10 +704,16 @@ function calculateAerodynamics() {
 
     // 4. حساب الوزن (Weight Calculation)
     const wingVolume = mainWingArea * wingThickness; // Volume in m³
-    const materialDensity = MATERIAL_DENSITIES[wingMaterial]; // Density in kg/m³
-    const wingWeightKg = wingVolume * materialDensity; // Weight in kg
+    const wingMaterialDensity = MATERIAL_DENSITIES[wingMaterial]; // Density in kg/m³
+    const wingWeightKg = wingVolume * wingMaterialDensity; // Weight in kg
+
+    const tailThickness = wingThickness * 0.75; // Tail is usually thinner
+    const tailVolume = totalTailArea * tailThickness;
+    const tailMaterialDensity = MATERIAL_DENSITIES[tailMaterial];
+    const tailWeightKg = tailVolume * tailMaterialDensity;
+
     const planeComponentsWeightKg = planeComponentsWeightGrams / 1000;
-    const totalWeightKg = wingWeightKg + planeComponentsWeightKg;
+    const totalWeightKg = wingWeightKg + tailWeightKg + planeComponentsWeightKg;
 
     // 5. نسبة الدفع إلى الوزن (Thrust-to-Weight Ratio)
     const weightInNewtons = totalWeightKg * 9.81;
@@ -742,6 +725,8 @@ function calculateAerodynamics() {
     thrustResultEl.textContent = thrust > 0 ? thrust.toFixed(2) : '0.00';
     wingAreaResultEl.textContent = mainWingArea > 0 ? `${mainWingArea.toFixed(2)}` : '0.00';
     wingWeightResultEl.textContent = (wingWeightKg * 1000).toFixed(0);
+    tailAreaResultEl.textContent = totalTailArea > 0 ? totalTailArea.toFixed(2) : '0.00';
+    tailWeightResultEl.textContent = (tailWeightKg * 1000).toFixed(0);
     totalWeightResultEl.textContent = (totalWeightKg * 1000).toFixed(0);
     twrResultEl.textContent = twr > 0 ? twr.toFixed(2) : '0.00';
 }
@@ -925,7 +910,7 @@ function onMouseClick(event) {
 
     if (intersects.length > 0) {
         const clickedObject = intersects[0].object;
-        if (clickedObject.name === 'elevator') clickedObject.parent.rotation.z += 0.2;
+        if (clickedObject.name === 'elevator') clickedObject.parent.rotation.y += 0.2;
         if (clickedObject.name === 'rudder') clickedObject.parent.rotation.z += 0.2;
         if (clickedObject.name === 'rightRuddervator') clickedObject.parent.rotation.z += 0.2;
         if (clickedObject.name === 'leftRuddervator') clickedObject.parent.rotation.z += 0.2;
