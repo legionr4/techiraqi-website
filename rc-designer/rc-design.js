@@ -147,6 +147,8 @@ const hasElevatorInput = document.getElementById('has-elevator');
 const elevatorWidthInput = document.getElementById('elevator-width');
 const hasRudderInput = document.getElementById('has-rudder');
 const rudderWidthInput = document.getElementById('rudder-width');
+const tailSweepAngleInput = document.getElementById('tail-sweep-angle');
+const tailTaperRatioInput = document.getElementById('tail-taper-ratio');
 
 const vStabGroup = document.getElementById('v-stab-group');
 const vStabChordGroup = document.getElementById('v-stab-chord-group');
@@ -191,6 +193,8 @@ const aileronColorInput = document.getElementById('aileron-color');
 // عناصر عرض قيم شريط التمرير
 const sweepValueEl = document.getElementById('sweep-value');
 const taperValueEl = document.getElementById('taper-value');
+const tailSweepValueEl = document.getElementById('tail-sweep-value');
+const tailTaperValueEl = document.getElementById('tail-taper-value');
 const unitLabels = document.querySelectorAll('.unit-label');
 
 
@@ -288,6 +292,8 @@ function updatePlaneModel() {
     const vStabHeight = getValidNumber(vStabHeightInput) * conversionFactor;
     const vStabChord = getValidNumber(vStabChordInput) * conversionFactor;
     const vTailAngle = getValidNumber(vTailAngleInput);
+    const tailSweepAngle = getValidNumber(tailSweepAngleInput);
+    const tailTaperRatio = getValidNumber(tailTaperRatioInput);
     
     // قيم المروحة تبقى بالبوصة كما هي متعارف عليها
     const propDiameter = getValidNumber(propDiameterInput) * 0.0254; // to meters
@@ -521,12 +527,29 @@ function updatePlaneModel() {
     const tailThickness = wingThickness * 0.75; // الذيل عادة أرق من الجناح
 
     // --- Horizontal Stabilizer ---
-    const hStabGeom = new THREE.BoxGeometry(tailChord, tailThickness, tailSpan);
+    const hStabHalfSpan = tailSpan / 2;
+    const hStabRootChord = tailChord;
+    const hStabTipChord = hStabRootChord * tailTaperRatio;
+    const hStabSweepRad = tailSweepAngle * Math.PI / 180;
+    const hStabSweepOffset = hStabHalfSpan * Math.tan(hStabSweepRad);
+
+    const hStabShape = new THREE.Shape();
+    hStabShape.moveTo(-hStabRootChord / 2, -hStabHalfSpan);
+    hStabShape.lineTo(hStabRootChord / 2, -hStabHalfSpan);
+    hStabShape.lineTo(hStabRootChord / 2, hStabHalfSpan);
+    hStabShape.lineTo(-hStabRootChord / 2, hStabHalfSpan);
+    hStabShape.closePath();
+
+    const hStabGeom = new THREE.ExtrudeGeometry(hStabShape, {depth: tailThickness, bevelEnabled: false});
+    hStabGeom.center();
+
     const hStab = new THREE.Mesh(hStabGeom, tailMaterial);
+    hStab.rotation.x = -Math.PI / 2;
 
     // --- Vertical Stabilizer ---
     const vStabGeom = new THREE.BoxGeometry(vStabChord, tailThickness, vStabHeight);
     const vStab = new THREE.Mesh(vStabGeom, fuselageMaterial);
+    vStab.geometry.translate(0, vStabHeight/2, 0); // Set pivot to bottom
     vStab.rotation.y = Math.PI / 2;
 
     // --- Tail Assembly ---
@@ -535,7 +558,7 @@ function updatePlaneModel() {
         vStab.position.set(-fuselageLength / 2, vStabHeight / 2, 0);
         tailGroup.add(hStab, vStab);
     } else if (tailType === 't-tail') {
-        vStab.position.set(-fuselageLength / 2, vStabHeight / 2, 0);
+        vStab.position.set(-fuselageLength / 2, 0, 0);
         hStab.position.set(-fuselageLength / 2, vStabHeight, 0);
         tailGroup.add(hStab, vStab);
     } else if (tailType === 'v-tail') {
@@ -550,7 +573,7 @@ function updatePlaneModel() {
         const vTailPivot = new THREE.Group();
         vTailPivot.add(rightVPanel, leftVPanel);
         vTailPivot.rotation.y = Math.PI / 2;
-        vTailPivot.position.set(-fuselageLength / 2, vStabHeight / 2, 0);
+        vTailPivot.position.set(-fuselageLength / 2, vStabHeight/2, 0);
         tailGroup.add(vTailPivot);
     }
 
@@ -563,7 +586,7 @@ function updatePlaneModel() {
         const elevatorPivot = new THREE.Group();
         elevatorPivot.add(elevator);
         elevator.position.x = elevatorWidth / 2;
-        elevatorPivot.position.set(hStab.position.x + tailChord / 2 - elevatorWidth, hStab.position.y, 0);
+        elevatorPivot.position.set(hStab.position.x - tailChord / 2, hStab.position.y, 0);
         tailControlsGroup.add(elevatorPivot);
     }
 
@@ -575,7 +598,7 @@ function updatePlaneModel() {
         const rudderPivot = new THREE.Group();
         rudderPivot.add(rudder);
         rudder.position.x = rudderWidth / 2;
-        rudderPivot.position.set(vStab.position.x + vStabChord / 2 - rudderWidth, vStab.position.y, 0);
+        rudderPivot.position.set(vStab.position.x - vStabChord / 2, vStab.position.y, 0); // Corrected position
         rudderPivot.rotation.y = Math.PI / 2;
         tailControlsGroup.add(rudderPivot);
     } else if (hasRudderInput.checked && tailType === 'v-tail') {
@@ -842,6 +865,8 @@ hasRudderInput.addEventListener('change', updateAll);
 // تحديث عرض قيم شريط التمرير
 sweepAngleInput.addEventListener('input', () => sweepValueEl.textContent = sweepAngleInput.value);
 taperRatioInput.addEventListener('input', () => taperValueEl.textContent = parseFloat(taperRatioInput.value).toFixed(2));
+tailSweepAngleInput.addEventListener('input', () => tailSweepValueEl.textContent = tailSweepAngleInput.value);
+tailTaperRatioInput.addEventListener('input', () => tailTaperValueEl.textContent = parseFloat(tailTaperRatioInput.value).toFixed(2));
 unitSelector.addEventListener('change', updateUnitLabels);
 
 // --- تفاعل الماوس مع الجنيحات ---
