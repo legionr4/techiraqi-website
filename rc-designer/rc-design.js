@@ -1,11 +1,12 @@
 // rc-design.js
 
-import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+// Import directly from the CDN URLs to bypass the importmap
+import * as THREE from 'https://unpkg.com/three@0.164.1/build/three.module.js';
+import { OrbitControls } from 'https://unpkg.com/three@0.164.1/examples/jsm/controls/OrbitControls.js';
 
 document.addEventListener('DOMContentLoaded', () => {
  
-// نسخة آمنة ومبسطة لتصحيح الأخطاء
+    // نسخة آمنة ومبسطة لتصحيح الأخطاء
     // الهدف: التأكد من أن الإعداد الأساسي لـ Three.js يعمل بشكل صحيح.
     // هذا الكود لا يعتمد على أي مدخلات من لوحة التحكم.
 
@@ -21,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // 1. المشهد
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0xf0f0f0); // لون خلفية محايد
+            scene.background = new THREE.Color(0xf0f0f0); // لون خلفية محايد للوضوح
 
             // 2. الكاميرا
             camera = new THREE.PerspectiveCamera(75, viewerContainer.clientWidth / viewerContainer.clientHeight, 0.1, 1000);
@@ -35,7 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // 4. الإضاءة
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
             scene.add(ambientLight);
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
             directionalLight.position.set(5, 10, 7.5);
             scene.add(directionalLight);
 
@@ -56,7 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
             fuselage.rotation.z = Math.PI / 2; // محاذاة مع المحور X
             airplaneGroup.add(fuselage);
 
-            const wingGeo = new THREE.BoxGeometry(0.2, 0.02, 1.2); // (عرض, سماكة, طول)
+            const wingGeo = new THREE.BoxGeometry(0.2, 0.02, 1.2); // (عرض الوتر, سماكة, طول الجناح)
             const wingMat = new THREE.MeshStandardMaterial({ color: 0x007bff });
             const wing = new THREE.Mesh(wingGeo, wingMat);
             airplaneGroup.add(wing);
@@ -68,6 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // التعامل مع تغيير حجم النافذة
             window.addEventListener('resize', () => {
+                if (!camera || !renderer) return;
                 camera.aspect = viewerContainer.clientWidth / viewerContainer.clientHeight;
                 camera.updateProjectionMatrix();
                 renderer.setSize(viewerContainer.clientWidth, viewerContainer.clientHeight);
