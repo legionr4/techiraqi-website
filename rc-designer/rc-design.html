@@ -13,34 +13,23 @@
     <link rel="stylesheet" href="../style.css">
     <style>
         .designer-layout {
-            display: grid;
-            /* في الوضع العربي (RTL)، العمود الأول (viewer-column) سيكون على اليمين */
-            grid-template-columns: 1fr 350px; 
+            display: flex;
+            flex-wrap: wrap;
             gap: 2rem;
-            align-items: flex-start;
         }
         .controls-panel {
-            /* جعل لوحة التحكم ثابتة وقابلة للتمرير */
-            position: sticky;
-            top: 80px; /* مسافة من الأعلى لتجنب الهيدر */
-            height: calc(100vh - 100px); /* ارتفاع الشاشة تقريباً */
-            overflow-y: auto; /* تفعيل التمرير العمودي */
-            
+            flex: 1;
+            min-width: 300px;
             background-color: var(--card-bg-color);
             padding: 1.5rem;
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
-        .viewer-column {
-            display: flex;
-            flex-direction: column;
-            gap: 2rem;
-        }
         .viewer-panel {
-            /* واجهة العرض الآن ثابتة في مكانها أثناء التمرير */
-            position: sticky;
-            top: 80px; /* نفس المسافة من الأعلى */
-            min-height: 65vh; /* الحفاظ على ارتفاع جيد */
+            flex: 2;
+            min-width: 400px;
+            min-height: 500px;
+            position: relative;
             background-color: var(--card-bg-color);
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
@@ -82,11 +71,9 @@
             cursor: pointer;
         }
         .results-panel {
-            /* هذا اللوح أصبح الآن بطاقة مستقلة في عمود العرض */
-            background-color: var(--card-bg-color);
-            padding: 1.5rem;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border-color);
         }
         .results-panel p {
             display: flex;
@@ -131,12 +118,9 @@
         main {
             max-width: 95%; /* استخدام نسبة مئوية لإعطاء شعور بالعرض الكامل */
         }
-        /* تعديل لتقليل ارتفاع قسم العنوان */
-        .hero-section {
-            padding-top: 1.5rem;
-            padding-bottom: 1.5rem;
-            margin-bottom: 1.5rem;
-            text-align: right; /* محاذاة النص لليمين */
+        .viewer-panel {
+            flex: 3; /* إعطاء مساحة أكبر لنافذة العرض ثلاثي الأبعاد */
+            min-height: 65vh; /* زيادة ارتفاع نافذة العرض */
         }
     </style>
 </head>
@@ -172,52 +156,9 @@
         </div>
 
         <div class="designer-layout" data-aos="fade-up" data-aos-delay="100">
-            <!-- العمود الرئيسي للمحتوى (واجهة العرض، النتائج، المخططات) -->
-            <!-- في الوضع العربي، سيظهر هذا العمود على اليمين لأنه العنصر الأول -->
-            <div class="viewer-column">
-                <div class="viewer-panel">
-                    <div id="viewer-container"></div>
-                </div>
-                <div class="results-panel">
-                    <h3><i class="fas fa-calculator"></i> النتائج التقديرية</h3>
-                    <div id="stability-warning" class="stability-warning hidden">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <span>تحذير: الطائرة غير مستقرة! مركز الثقل خلف مركز الرفع.</span>
-                    </div>
-                    <p><span>كثافة الهواء:</span> <span id="result-density">N/A</span></p>
-                    <p><span>معامل الرفع (Cl):</span> <span id="result-cl">N/A</span></p>
-                    <p><span>معامل السحب (Cd):</span> <span id="result-cd">N/A</span></p>
-                    <p><span>مساحة الجناح:</span> <span id="result-area">0.24 م²</span></p>
-                    <p><span>الرفع التقديري:</span> <span id="result-lift">N/A</span></p>
-                    <p><span>السحب التقديري:</span> <span id="result-drag">N/A</span></p>
-                    <p><span>الدفع التقديري:</span> <span id="result-thrust">N/A</span></p>
-                    <p><span>نسبة الدفع إلى الوزن:</span> <span id="result-twr">N/A</span></p>
-                </div>
-                <div class="charts-container">
-                    <div class="content-card" data-aos="fade-up">
-                        <h3 style="text-align: right; margin-bottom: 1.5rem;"><i class="fas fa-chart-line"></i> تحليل الأداء: الرفع مقابل زاوية الهجوم</h3>
-                        <div style="position: relative; height:300px; width:100%;">
-                            <canvas id="lift-chart"></canvas>
-                        </div>
-                    </div>
-                    <div class="content-card" data-aos="fade-up" data-aos-delay="100">
-                        <h3 style="text-align: right; margin-bottom: 1.5rem;"><i class="fas fa-wind"></i> تحليل الأداء: السحب مقابل زاوية الهجوم</h3>
-                        <div style="position: relative; height:300px; width:100%;">
-                            <canvas id="drag-chart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
             <div class="controls-panel">
                 <h3><i class="fas fa-sliders-h"></i> مدخلات التصميم</h3>
                 
-                <h4><i class="fas fa-save"></i> حفظ واستعادة</h4>
-                <div class="input-group" style="display: flex; gap: 1rem;">
-                    <button id="save-design-btn" class="button" style="flex: 1;">حفظ التصميم</button>
-                    <button id="load-design-btn" class="button" style="flex: 1; background-color: var(--secondary-color);">استعادة تصميم</button>
-                    <input type="file" id="load-design-input" style="display: none;" accept=".json">
-                </div>
-
                 <h4><i class="fas fa-plane-departure"></i> الجناح (Wing)</h4>
                 <div class="input-group">
                     <label for="wing-span">طول الجناح (سم)</label>
@@ -272,25 +213,6 @@
                     <input type="number" id="fuselage-diameter" value="16">
                 </div>
 
-                <div class="input-group">
-                    <label for="canopy-type">شكل قمرة القيادة (Canopy)</label>
-                    <select id="canopy-type">
-                        <option value="none" selected>بدون</option>
-                        <option value="bubble">فقاعية (Bubble)</option>
-                        <option value="tandem">مزدوجة (Tandem)</option>
-                    </select>
-                </div>
-
-                <h4><i class="fas fa-cogs"></i> معدات الهبوط (Landing Gear)</h4>
-                <div class="input-group">
-                    <label for="landing-gear-type">نوع معدات الهبوط</label>
-                    <select id="landing-gear-type">
-                        <option value="none" selected>بدون</option>
-                        <option value="tricycle">ثلاثية العجلات (Tricycle)</option>
-                        <option value="taildragger">تقليدية (Taildragger)</option>
-                    </select>
-                </div>
-
                 <h4><i class="fas fa-ruler-combined"></i> الذيل (Empennage)</h4>
                 <div class="input-group">
                     <label for="tail-type">شكل الذيل</label>
@@ -323,6 +245,10 @@
                     <input type="number" id="prop-pitch" value="4.5">
                 </div>
                 <div class="input-group">
+                    <label for="motor-rpm">سرعة دوران المحرك (RPM)</label>
+                    <input type="number" id="motor-rpm" value="10000">
+                </div>
+                <div class="input-group">
                     <label for="prop-blades">عدد ريش المروحة</label>
                     <select id="prop-blades">
                         <option value="2" selected>2</option>
@@ -331,111 +257,15 @@
                     </select>
                 </div>
 
-                <h4><i class="fas fa-cogs"></i> المحرك (Engine/Motor)</h4>
+                <h4><i class="fas fa-balance-scale"></i> معلمات إضافية</h4>
                 <div class="input-group">
-                    <label for="engine-type">نوع المحرك</label>
-                    <select id="engine-type">
-                        <option value="electric" selected>كهربائي (Electric)</option>
-                        <option value="glow">ميكانيكي (Glow/Gas)</option>
-                    </select>
-                </div>
-                <!-- خيارات المحرك الكهربائي الديناميكية -->
-                <div id="electric-motor-options" class="hidden">
-                    <div class="input-group">
-                        <label for="electric-motor-type">نوع المحرك الكهربائي</label>
-                        <select id="electric-motor-type">
-                            <option value="brushless" selected>بدون فرشات (Brushless)</option>
-                            <option value="brushed">بفرشات (Brushed DC)</option>
-                        </select>
-                    </div>
-                    <div class="input-group" id="kv-rating-group">
-                        <label for="kv-rating">تصنيف المحرك (KV)</label>
-                        <input type="number" id="kv-rating" value="1400">
-                    </div>
-                </div>
-                <div class="input-group">
-                    <label for="motor-rpm">سرعة دوران المحرك (RPM)</label>
-                    <input type="number" id="motor-rpm" value="10000">
-                </div>
-                <div class="input-group">
-                    <label for="engine-weight">وزن المحرك (جرام)</label>
-                    <input type="number" id="engine-weight" value="150">
-                </div>
-                <div class="input-group">
-                    <label for="engine-torque">عزم المحرك (N.m) - اختياري</label>
-                    <input type="number" id="engine-torque" value="0.15" step="0.01">
-                </div>
-
-                <!-- قسم نظام الطاقة الديناميكي -->
-                <div id="power-source-section">
-                    <!-- إعدادات النظام الكهربائي -->
-                    <div id="electric-setup">
-                        <h4><i class="fas fa-battery-full"></i> البطارية (Battery)</h4>
-                        <div class="input-group">
-                            <label for="battery-type">نوع البطارية</label>
-                            <select id="battery-type">
-                                <option value="lipo" selected>LiPo</option>
-                                <option value="nimh">NiMH</option>
-                                <option value="liion">Li-Ion</option>
-                            </select>
-                        </div>
-                        <div class="input-group">
-                            <label for="battery-voltage">فولتية البطارية (V)</label>
-                            <input type="number" id="battery-voltage" value="11.1" step="0.1">
-                        </div>
-                        <div class="input-group">
-                            <label for="battery-capacity">سعة البطارية (mAh)</label>
-                            <input type="number" id="battery-capacity" value="2200" step="100">
-                        </div>
-                        <div class="input-group">
-                            <label for="battery-weight">وزن البطارية (جرام)</label>
-                            <input type="number" id="battery-weight" value="200">
-                        </div>
-                        <div class="input-group">
-                            <label for="battery-position-x">موضع البطارية (سم من مقدمة الجناح)</label>
-                            <input type="number" id="battery-position-x" value="10" step="1">
-                        </div>
-                        <p style="font-size: 0.9rem;">طاقة البطارية: <span id="calculated-watt-hours" style="font-weight:bold; color: var(--primary-color);">N/A</span> واط-ساعة</p>
-                    </div>
-
-                    <!-- إعدادات نظام الوقود -->
-                    <div id="fuel-setup" class="hidden">
-                        <h4><i class="fas fa-gas-pump"></i> خزان الوقود (Fuel Tank)</h4>
-                        <div class="input-group">
-                            <label for="fuel-type">نوع الوقود</label>
-                            <select id="fuel-type">
-                                <option value="nitro" selected>نيترو (Nitro)</option>
-                                <option value="gasoline">بنزين (Gasoline)</option>
-                            </select>
-                        </div>
-                        <div class="input-group">
-                            <label for="fuel-tank-capacity">سعة الخزان (مل)</label>
-                            <input type="number" id="fuel-tank-capacity" value="250">
-                        </div>
-                        <div class="input-group">
-                            <label for="fuel-tank-weight">وزن الخزان (فارغ) (جرام)</label>
-                            <input type="number" id="fuel-tank-weight" value="50">
-                        </div>
-                        <div class="input-group">
-                            <label for="fuel-tank-position-x">موضع الخزان (سم من مقدمة الجناح)</label>
-                            <input type="number" id="fuel-tank-position-x" value="15" step="1">
-                        </div>
-                        <p style="font-size: 0.9rem;">وزن الوقود التقديري: <span id="calculated-fuel-weight" style="font-weight:bold; color: var(--primary-color);">N/A</span> جرام</p>
-                        <p style="font-size: 0.9rem;">زمن التشغيل التقديري: <span id="calculated-runtime" style="font-weight:bold; color: var(--primary-color);">N/A</span> دقيقة</p>
-                    </div>
-                </div>
-
-                <h4><i class="fas fa-balance-scale"></i> الوزن والتوازن</h4>
-                <div class="input-group">
-                    <label for="plane-weight">وزن الهيكل (بدون نظام طاقة) (جرام)</label>
-                    <input type="number" id="plane-weight" value="1150">
+                    <label for="plane-weight">وزن الطائرة الإجمالي (جرام)</label>
+                    <input type="number" id="plane-weight" value="1500">
                 </div>
                 <div class="input-group">
                     <label for="cg-position">مركز الجاذبية (% من عرض الجناح)</label>
                     <input type="number" id="cg-position" value="30">
                 </div>
-                <p style="margin-top: -0.5rem; font-size: 0.9rem;">الوزن الإجمالي: <span id="total-weight-display" style="font-weight:bold; color: var(--primary-color);">N/A</span> جرام</p>
-                <p style="margin-top: -0.5rem; font-size: 0.9rem;">مركز الثقل المحسوب (X): <span id="calculated-cg-x-display" style="font-weight:bold; color: var(--primary-color);">N/A</span> سم من مقدمة الجناح</p>
 
                 <h4><i class="fas fa-feather-alt"></i> الظروف الهوائية</h4>
                 <div class="input-group">
@@ -477,6 +307,40 @@
                 <div class="input-group" style="flex-direction: row; align-items: center; gap: 10px;">
                     <input type="checkbox" id="toggle-prop-anim" style="width: auto; height: auto;" checked>
                     <label for="toggle-prop-anim" style="margin-bottom: 0;">تشغيل دوران المروحة</label>
+                </div>
+
+                <div class="results-panel">
+                    <h3><i class="fas fa-calculator"></i> النتائج التقديرية</h3>
+                    <div id="stability-warning" class="stability-warning hidden">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>تحذير: الطائرة غير مستقرة! مركز الثقل خلف مركز الرفع.</span>
+                    </div>
+                    <p><span>كثافة الهواء:</span> <span id="result-density">N/A</span></p>
+                    <p><span>معامل الرفع (Cl):</span> <span id="result-cl">N/A</span></p>
+                    <p><span>معامل السحب (Cd):</span> <span id="result-cd">N/A</span></p>
+                    <p><span>مساحة الجناح:</span> <span id="result-area">0.24 م²</span></p>
+                    <p><span>الرفع التقديري:</span> <span id="result-lift">N/A</span></p>
+                    <p><span>السحب التقديري:</span> <span id="result-drag">N/A</span></p>
+                    <p><span>الدفع التقديري:</span> <span id="result-thrust">N/A</span></p>
+                    <p><span>نسبة الدفع إلى الوزن:</span> <span id="result-twr">N/A</span></p>
+                </div>
+            </div>
+            <div class="viewer-panel">
+                <div id="viewer-container"></div>
+            </div>
+        </div>
+
+        <div class="charts-container">
+            <div class="content-card" data-aos="fade-up">
+                <h3 style="text-align: right; margin-bottom: 1.5rem;"><i class="fas fa-chart-line"></i> تحليل الأداء: الرفع مقابل زاوية الهجوم</h3>
+                <div style="position: relative; height:300px; width:100%;">
+                    <canvas id="lift-chart"></canvas>
+                </div>
+            </div>
+            <div class="content-card" data-aos="fade-up" data-aos-delay="100">
+                <h3 style="text-align: right; margin-bottom: 1.5rem;"><i class="fas fa-wind"></i> تحليل الأداء: السحب مقابل زاوية الهجوم</h3>
+                <div style="position: relative; height:300px; width:100%;">
+                    <canvas id="drag-chart"></canvas>
                 </div>
             </div>
         </div>
