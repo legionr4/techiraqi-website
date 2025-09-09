@@ -366,7 +366,7 @@ function updatePlaneModel() {
         // Position the aileron at the trailing edge of the wing
         const aileronZ = halfSpan - aileronPosition - (aileronLength / 2);
         const chordAtAileron = rootChord + (rootChord * taperRatio - rootChord) * (aileronZ / halfSpan);
-        const sweepAtAileron = aileronZ * Math.tan(sweepRad);
+        const sweepAtAileron = (aileronZ > 0 ? aileronZ : 0) * Math.tan(sweepRad);
         rightAileron.position.set(sweepAtAileron + (chordAtAileron / 2) - (aileronWidth / 2), 0, aileronZ);
         rightAileron.name = 'rightAileron'; // Name for raycasting
         rightWing.add(rightAileron);
