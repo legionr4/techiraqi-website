@@ -70,6 +70,14 @@
             border: 1px solid #ccc;
             border-radius: 4px;
         }
+        .input-group input[type="color"] {
+            flex-basis: 45%;
+            padding: 2px;
+            height: 30px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            cursor: pointer;
+        }
         .results {
             margin-top: 20px;
             padding: 15px;
@@ -170,6 +178,26 @@
                         <label for="pressure">الضغط (باسكال)</label>
                         <input type="number" id="pressure" value="101325" step="100">
                     </div>
+                    <div class="input-group">
+                        <label for="plane-weight">وزن الطائرة (جرام)</label>
+                        <input type="number" id="plane-weight" value="1500" step="50">
+                    </div>
+                </fieldset>
+
+                <fieldset>
+                    <legend>الألوان</legend>
+                    <div class="input-group">
+                        <label for="fuselage-color">لون جسم الطائرة</label>
+                        <input type="color" id="fuselage-color" value="#0056b3">
+                    </div>
+                    <div class="input-group">
+                        <label for="wing-color">لون الجناح</label>
+                        <input type="color" id="wing-color" value="#cccccc">
+                    </div>
+                    <div class="input-group">
+                        <label for="tail-color">لون الذيل</label>
+                        <input type="color" id="tail-color" value="#dddddd">
+                    </div>
                 </fieldset>
             </form>
 
@@ -187,6 +215,10 @@
                 <div class="result-item">
                     <p>قوة الدفع (نيوتن):</p>
                     <span id="thrust-result">0.00</span>
+                </div>
+                <div class="result-item">
+                    <p>نسبة الدفع إلى الوزن:</p>
+                    <span id="twr-result">0.00</span>
                 </div>
             </div>
         </div>

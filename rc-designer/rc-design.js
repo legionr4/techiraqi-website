@@ -22,12 +22,13 @@ scene.add(directionalLight);
 
 // --- إنشاء أجزاء الطائرة ---
 const planeGroup = new THREE.Group();
-const material = new THREE.MeshStandardMaterial({ color: 0x0056b3 });
+const fuselageMaterial = new THREE.MeshStandardMaterial({ color: 0x0056b3 });
 const wingMaterial = new THREE.MeshStandardMaterial({ color: 0xcccccc });
+const tailMaterial = new THREE.MeshStandardMaterial({ color: 0xdddddd });
 
 // جسم الطائرة
 const fuselageGeom = new THREE.BoxGeometry(1, 0.15, 0.15);
-const fuselage = new THREE.Mesh(fuselageGeom, material);
+const fuselage = new THREE.Mesh(fuselageGeom, fuselageMaterial);
 planeGroup.add(fuselage);
 
 // الجناح الرئيسي
@@ -40,13 +41,13 @@ planeGroup.add(wing);
 // الذيل الأفقي
 // (width: chord, height: thickness, depth: span)
 const tailGeom = new THREE.BoxGeometry(1, 1, 1); // Unit cube
-const tail = new THREE.Mesh(tailGeom, wingMaterial);
+const tail = new THREE.Mesh(tailGeom, tailMaterial);
 tail.position.set(-0.5, 0.05, 0);
 planeGroup.add(tail);
 
 // الذيل العمودي
 const vTailGeom = new THREE.BoxGeometry(0.1, 0.2, 0.015);
-const vTail = new THREE.Mesh(vTailGeom, material);
+const vTail = new THREE.Mesh(vTailGeom, fuselageMaterial); // يتبع لون الجسم
 vTail.position.set(-0.5, 0.15, 0);
 planeGroup.add(vTail);
 
@@ -77,10 +78,15 @@ const propRpmInput = document.getElementById('prop-rpm');
 const angleOfAttackInput = document.getElementById('angle-of-attack');
 const airSpeedInput = document.getElementById('air-speed');
 const airDensityInput = document.getElementById('air-density');
+const planeWeightInput = document.getElementById('plane-weight');
+const fuselageColorInput = document.getElementById('fuselage-color');
+const wingColorInput = document.getElementById('wing-color');
+const tailColorInput = document.getElementById('tail-color');
 
 const liftResultEl = document.getElementById('lift-result');
 const dragResultEl = document.getElementById('drag-result');
 const thrustResultEl = document.getElementById('thrust-result');
+const twrResultEl = document.getElementById('twr-result');
 
 function updatePlaneModel() {
     const wingSpan = parseFloat(wingSpanInput.value);
@@ -90,6 +96,14 @@ function updatePlaneModel() {
     const fuselageLength = parseFloat(fuselageLengthInput.value);
     const propDiameter = parseFloat(propDiameterInput.value) * 0.0254; // to meters
     const propBlades = parseInt(propBladesInput.value);
+    const fuselageColor = fuselageColorInput.value;
+    const wingColor = wingColorInput.value;
+    const tailColor = tailColorInput.value;
+
+    // تحديث الألوان
+    fuselageMaterial.color.set(fuselageColor);
+    wingMaterial.color.set(wingColor);
+    tailMaterial.color.set(tailColor);
 
     // تحديث الأبعاد
     fuselage.scale.x = fuselageLength;
@@ -126,6 +140,7 @@ function calculateAerodynamics() {
     const propDiameter = parseFloat(propDiameterInput.value) * 0.0254; // to meters
     const propPitch = parseFloat(propPitchInput.value); // inches
     const propRpm = parseFloat(propRpmInput.value);
+    const planeWeightGrams = parseFloat(planeWeightInput.value);
 
     // --- حسابات مبسطة جداً ---
     const wingArea = wingSpan * wingChord;
@@ -152,11 +167,17 @@ function calculateAerodynamics() {
     // لا تعكس الواقع بدقة ولكن تعطي فكرة عن علاقة المتغيرات
     const n_rps = propRpm / 60; // revolutions per second
     const thrust = 4.392399 * Math.pow(10, -8) * propRpm * Math.pow(propDiameter / 0.0254, 3.5) / Math.sqrt(propPitch) * (4.23333 * Math.pow(10, -4) * propRpm * propPitch - airSpeed * 0.5144);
-    
+
+    // 4. نسبة الدفع إلى الوزن (Thrust-to-Weight Ratio)
+    const planeMassKg = planeWeightGrams / 1000;
+    const weightInNewtons = planeMassKg * 9.81;
+    const twr = weightInNewtons > 0 ? (thrust / weightInNewtons) : 0;
+
     // عرض النتائج
     liftResultEl.textContent = lift > 0 ? lift.toFixed(2) : '0.00';
     dragResultEl.textContent = drag > 0 ? drag.toFixed(2) : '0.00';
     thrustResultEl.textContent = thrust > 0 ? thrust.toFixed(2) : '0.00';
+    twrResultEl.textContent = twr > 0 ? twr.toFixed(2) : '0.00';
 }
 
 function updateAll() {
