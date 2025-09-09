@@ -527,8 +527,12 @@ function updatePlaneModel() {
     const tailThickness = wingThickness * 0.75; // الذيل عادة أرق من الجناح
 
     // --- Horizontal Stabilizer ---
+    const hasElevator = hasElevatorInput.checked;
+    const elevatorWidth = getValidNumber(elevatorWidthInput) * conversionFactor;
+    const hStabChordEffective = hasElevator ? tailChord - elevatorWidth : tailChord;
+
     const hStabHalfSpan = tailSpan / 2;
-    const hStabRootChord = tailChord;
+    const hStabRootChord = hStabChordEffective;
     const hStabTipChord = hStabRootChord * tailTaperRatio;
     const hStabSweepRad = tailSweepAngle * Math.PI / 180;
     const hStabSweepOffset = hStabHalfSpan * Math.tan(hStabSweepRad);
@@ -536,18 +540,24 @@ function updatePlaneModel() {
     const hStabShape = new THREE.Shape();
     hStabShape.moveTo(-hStabRootChord / 2, -hStabHalfSpan);
     hStabShape.lineTo(hStabRootChord / 2, -hStabHalfSpan);
-    hStabShape.lineTo(hStabRootChord / 2, hStabHalfSpan);
-    hStabShape.lineTo(-hStabRootChord / 2, hStabHalfSpan);
+    hStabShape.lineTo(hStabTipChord / 2 + hStabSweepOffset, hStabHalfSpan);
+    hStabShape.lineTo(-hStabTipChord / 2 + hStabSweepOffset, hStabHalfSpan);
     hStabShape.closePath();
 
     const hStabGeom = new THREE.ExtrudeGeometry(hStabShape, {depth: tailThickness, bevelEnabled: false});
     hStabGeom.center();
+    // Move the geometry so the leading edge is at x=0
+    hStabGeom.translate(hStabRootChord / 2, 0, 0);
 
     const hStab = new THREE.Mesh(hStabGeom, tailMaterial);
     hStab.rotation.x = -Math.PI / 2;
 
     // --- Vertical Stabilizer ---
-    const vStabGeom = new THREE.BoxGeometry(vStabChord, tailThickness, vStabHeight);
+    const hasRudder = hasRudderInput.checked;
+    const rudderWidth = getValidNumber(rudderWidthInput) * conversionFactor;
+    const vStabChordEffective = hasRudder ? vStabChord - rudderWidth : vStabChord;
+
+    const vStabGeom = new THREE.BoxGeometry(vStabChordEffective, tailThickness, vStabHeight);
     const vStab = new THREE.Mesh(vStabGeom, fuselageMaterial);
     vStab.geometry.translate(0, vStabHeight/2, 0); // Set pivot to bottom
     vStab.rotation.y = Math.PI / 2;
@@ -555,11 +565,11 @@ function updatePlaneModel() {
     // --- Tail Assembly ---
     if (tailType === 'conventional') {
         hStab.position.set(-fuselageLength / 2, 0, 0);
-        vStab.position.set(-fuselageLength / 2, vStabHeight / 2, 0);
+        vStab.position.set(-fuselageLength / 2 - (vStabChord - vStabChordEffective)/2, 0, 0);
         tailGroup.add(hStab, vStab);
     } else if (tailType === 't-tail') {
-        vStab.position.set(-fuselageLength / 2, 0, 0);
-        hStab.position.set(-fuselageLength / 2, vStabHeight, 0);
+        vStab.position.set(-fuselageLength / 2 - (vStabChord - vStabChordEffective)/2, 0, 0);
+        hStab.position.set(-fuselageLength / 2 - (tailChord - hStabChordEffective)/2, vStabHeight, 0);
         tailGroup.add(hStab, vStab);
     } else if (tailType === 'v-tail') {
         const angleRad = vTailAngle * Math.PI / 180;
@@ -573,32 +583,30 @@ function updatePlaneModel() {
         const vTailPivot = new THREE.Group();
         vTailPivot.add(rightVPanel, leftVPanel);
         vTailPivot.rotation.y = Math.PI / 2;
-        vTailPivot.position.set(-fuselageLength / 2, vStabHeight/2, 0);
+        vTailPivot.position.set(-fuselageLength / 2, 0, 0);
         tailGroup.add(vTailPivot);
     }
 
     // --- Tail Control Surfaces ---
-    if (hasElevatorInput.checked && tailType !== 'v-tail') {
-        const elevatorWidth = getValidNumber(elevatorWidthInput) * conversionFactor;
+    if (hasElevator && tailType !== 'v-tail') {
         const elevatorGeom = new THREE.BoxGeometry(elevatorWidth, tailThickness, tailSpan);
+        elevatorGeom.translate(elevatorWidth / 2, 0, 0);
         const elevator = new THREE.Mesh(elevatorGeom, aileronMaterial);
         elevator.name = 'elevator';
         const elevatorPivot = new THREE.Group();
         elevatorPivot.add(elevator);
-        elevator.position.x = elevatorWidth / 2;
-        elevatorPivot.position.set(hStab.position.x - tailChord / 2, hStab.position.y, 0);
+        elevatorPivot.position.set(hStab.position.x + hStabChordEffective, hStab.position.y, 0);
         tailControlsGroup.add(elevatorPivot);
     }
 
-    if (hasRudderInput.checked && tailType !== 'v-tail') {
-        const rudderWidth = getValidNumber(rudderWidthInput) * conversionFactor;
+    if (hasRudder && tailType !== 'v-tail') {
         const rudderGeom = new THREE.BoxGeometry(rudderWidth, tailThickness, vStabHeight);
+        rudderGeom.translate(rudderWidth / 2, 0, 0);
         const rudder = new THREE.Mesh(rudderGeom, aileronMaterial);
         rudder.name = 'rudder';
         const rudderPivot = new THREE.Group();
         rudderPivot.add(rudder);
-        rudder.position.x = rudderWidth / 2;
-        rudderPivot.position.set(vStab.position.x - vStabChord / 2, vStab.position.y, 0); // Corrected position
+        rudderPivot.position.set(vStab.position.x + vStabChordEffective, vStab.position.y, 0);
         rudderPivot.rotation.y = Math.PI / 2;
         tailControlsGroup.add(rudderPivot);
     } else if (hasRudderInput.checked && tailType === 'v-tail') {
@@ -611,14 +619,14 @@ function updatePlaneModel() {
         const rightRuddervatorPivot = new THREE.Group();
         rightRuddervatorPivot.add(rightRuddervator);
         rightRuddervator.position.x = ruddervatorWidth / 2;
-        rightRuddervatorPivot.position.set(vStabChord / 2 - ruddervatorWidth, 0, 0);
+        rightRuddervatorPivot.position.set(vStabChordEffective / 2, 0, 0);
 
         const leftRuddervator = new THREE.Mesh(ruddervatorGeom, aileronMaterial);
         leftRuddervator.name = 'leftRuddervator';
         const leftRuddervatorPivot = new THREE.Group();
         leftRuddervatorPivot.add(leftRuddervator);
         leftRuddervator.position.x = ruddervatorWidth / 2;
-        leftRuddervatorPivot.position.set(vStabChord / 2 - ruddervatorWidth, 0, 0);
+        leftRuddervatorPivot.position.set(vStabChordEffective / 2, 0, 0);
 
         tailGroup.getObjectByProperty('type', 'Group').children[0].add(rightRuddervatorPivot);
         tailGroup.getObjectByProperty('type', 'Group').children[1].add(leftRuddervatorPivot);
