@@ -20,6 +20,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            // فحص تشخيصي: التأكد من أن الحاوية لها أبعاد
+            if (viewerContainer.clientWidth === 0 || viewerContainer.clientHeight === 0) {
+                alert('خطأ في التخطيط: حاوية العرض ثلاثية الأبعاد ليس لها أبعاد (width/height). يرجى التحقق من ملف CSS.');
+                viewerContainer.style.border = "2px solid red"; // إظهار حدود حمراء للمساعدة في التشخيص
+                return;
+            }
+
             // 1. المشهد
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0xf0f0f0); // لون خلفية محايد للوضوح
