@@ -326,6 +326,14 @@ function updatePlaneModel() {
     const pointsPerSection = (15 * 2); // 15 نقطة للسطح العلوي و 15 للسفلي
 
     // إنشاء نقاط لكل مقطع على طول الجناح
+    const aileronActive = hasAileronInput.checked;
+    const aileronLength = getValidNumber(aileronLengthInput) * conversionFactor;
+    const aileronWidth = getValidNumber(aileronWidthInput) * conversionFactor;
+    const aileronPosition = getValidNumber(aileronPositionInput) * conversionFactor;
+    const aileronZStart = halfSpan - aileronPosition - aileronLength;
+    const aileronZEnd = halfSpan - aileronPosition;
+
+
     for (let i = 0; i <= segments; i++) {
         const spanProgress = i / segments;
         const currentZ = spanProgress * halfSpan;
@@ -340,7 +348,21 @@ function updatePlaneModel() {
 
     // إنشاء الأوجه (المثلثات) التي تربط النقاط ببعضها
     for (let i = 0; i < segments; i++) {
+        const z_start = (i / segments) * halfSpan;
+
         for (let j = 0; j < pointsPerSection; j++) {
+            // Check if this face is part of the aileron cutout
+            const isAileronZone = aileronActive && z_start >= aileronZStart && z_start < aileronZEnd;
+            const p1_vertex_index = (i * pointsPerSection + j) * 3;
+            const p1_x = vertices[p1_vertex_index];
+            const currentChord = rootChord + (rootChord * taperRatio - rootChord) * (z_start / halfSpan);
+            const sweepAtZ = z_start * Math.tan(sweepRad);
+            const isTrailingEdgeFace = (p1_x - sweepAtZ) < (-currentChord / 2) + aileronWidth;
+
+            if (isAileronZone && isTrailingEdgeFace) {
+                continue; // Skip creating this face, effectively creating a hole
+            }
+
             const p1 = i * pointsPerSection + j;
             const p2 = i * pointsPerSection + ((j + 1) % pointsPerSection);
             const p3 = (i + 1) * pointsPerSection + j;
@@ -363,48 +385,6 @@ function updatePlaneModel() {
     const rightWing = new THREE.Mesh(wingGeometry, wingMaterial);
     const leftWing = rightWing.clone();
     leftWing.scale.z = -1; // عكس الجناح الأيسر
-
-    // "Cutout" for Ailerons
-    if (hasAileronInput.checked) {
-        const aileronLength = getValidNumber(aileronLengthInput) * conversionFactor;
-        const aileronWidth = getValidNumber(aileronWidthInput) * conversionFactor;
-        const aileronPosition = getValidNumber(aileronPositionInput) * conversionFactor;
-
-        const cutoutGeom = new THREE.BoxGeometry(aileronWidth, wingThickness * 1.1, aileronLength); // Slightly thicker to ensure clean cut
-        const cutoutMesh = new THREE.Mesh(cutoutGeom);
-        
-        const aileronZ = halfSpan - aileronPosition - (aileronLength / 2);
-        const chordAtAileron = rootChord + (rootChord * taperRatio - rootChord) * (aileronZ / halfSpan);
-        const sweepAtAileron = (aileronZ > 0 ? aileronZ : 0) * Math.tan(sweepRad);
-        cutoutMesh.position.set(sweepAtAileron - (chordAtAileron / 2) + (aileronWidth / 2), 0, aileronZ);
-        // Note: This is a visual cutout. For perfect CSG (Constructive Solid Geometry), a library like three-csg-ts would be needed.
-        // For now, we place the aileron in the same spot, which visually works.
-    }
-
-    // Ailerons
-    if (hasAileronInput.checked) {
-        const aileronLength = getValidNumber(aileronLengthInput) * conversionFactor;
-        const aileronWidth = getValidNumber(aileronWidthInput) * conversionFactor;
-        const aileronThickness = getValidNumber(aileronThicknessInput) * conversionFactor;
-        const aileronPosition = getValidNumber(aileronPositionInput) * conversionFactor;
-
-        const aileronGeom = new THREE.BoxGeometry(aileronWidth, aileronThickness, aileronLength);
-        
-        const rightAileron = new THREE.Mesh(aileronGeom, aileronMaterial);
-        // Position the aileron at the trailing edge of the wing
-        const aileronZ = halfSpan - aileronPosition - (aileronLength / 2);
-        const chordAtAileron = rootChord + (rootChord * taperRatio - rootChord) * (aileronZ / halfSpan);
-        const sweepAtAileron = (aileronZ > 0 ? aileronZ : 0) * Math.tan(sweepRad); // The X offset due to sweep
-        rightAileron.position.set(sweepAtAileron - (chordAtAileron / 2) + (aileronWidth / 2), 0, aileronZ); // Corrected X position to be at the trailing edge
-        rightAileron.name = 'rightAileron'; // Name for raycasting
-        rightWing.add(rightAileron);
-
-        const leftAileron = new THREE.Mesh(aileronGeom, aileronMaterial);
-        leftAileron.position.copy(rightAileron.position);
-        leftAileron.name = 'leftAileron'; // Name for raycasting
-        leftWing.add(leftAileron);
-    }
-
 
     wingGroup.add(rightWing, leftWing);
      // Wingtip
@@ -451,6 +431,31 @@ function updatePlaneModel() {
         rightWing.add(rightWingtip);
         leftWing.add(leftWingtip);
 
+    }
+
+    // Ailerons (Added after wingtips to ensure correct positioning relative to the final wing)
+    if (hasAileronInput.checked) {
+        const aileronLength = getValidNumber(aileronLengthInput) * conversionFactor;
+        const aileronWidth = getValidNumber(aileronWidthInput) * conversionFactor;
+        const aileronThickness = getValidNumber(aileronThicknessInput) * conversionFactor;
+        const aileronPosition = getValidNumber(aileronPositionInput) * conversionFactor;
+
+        const aileronGeom = new THREE.BoxGeometry(aileronWidth, aileronThickness, aileronLength);
+        
+        const rightAileron = new THREE.Mesh(aileronGeom, aileronMaterial);
+        // Position the aileron at the trailing edge of the wing
+        const aileronZ = halfSpan - aileronPosition - (aileronLength / 2);
+        const chordAtAileron = rootChord + (rootChord * taperRatio - rootChord) * (aileronZ / halfSpan);
+        const sweepAtAileron = (aileronZ > 0 ? aileronZ : 0) * Math.tan(sweepRad); // The X offset due to sweep
+        rightAileron.position.set(sweepAtAileron - (chordAtAileron / 2) + (aileronWidth / 2), 0, aileronZ); // Corrected X position to be at the trailing edge
+        rightAileron.rotation.y = sweepRad; // Apply the same sweep angle to the aileron
+        rightAileron.name = 'rightAileron'; // Name for raycasting
+        rightWing.add(rightAileron);
+
+        const leftAileron = new THREE.Mesh(aileronGeom, aileronMaterial);
+        leftAileron.position.copy(rightAileron.position);
+        leftAileron.name = 'leftAileron'; // Name for raycasting
+        leftWing.add(leftAileron);
     }
 
 
@@ -506,6 +511,14 @@ function calculateAerodynamics() {
     const tipChord = wingChord * taperRatio;
     const wingArea = wingSpan * (wingChord + tipChord) / 2; // Area of a trapezoid
     const alphaRad = angleOfAttack * (Math.PI / 180);
+    
+    let aileronArea = 0;
+    if (hasAileronInput.checked) {
+        const aileronLength = getValidNumber(aileronLengthInput) * conversionFactor;
+        const aileronWidth = getValidNumber(aileronWidthInput) * conversionFactor;
+        aileronArea = aileronLength * aileronWidth;
+    }
+    const mainWingArea = wingArea - (2 * aileronArea); // Subtract area of two ailerons
 
     // 1. قوة الرفع (Lift)
     // L = 0.5 * Cl * rho * V^2 * A
@@ -519,7 +532,7 @@ function calculateAerodynamics() {
         airfoilLiftFactor = 0.85; // أقل كفاءة
     }
     const cl = airfoilLiftFactor * 2 * Math.PI * alphaRad;
-    const lift = 0.5 * cl * airDensity * Math.pow(airSpeed, 2) * wingArea;
+    const lift = 0.5 * cl * airDensity * Math.pow(airSpeed, 2) * mainWingArea;
 
     // 2. قوة السحب (Drag)
     // D = 0.5 * Cd * rho * V^2 * A
@@ -529,7 +542,7 @@ function calculateAerodynamics() {
     const cdi = Math.pow(cl, 2) / (Math.PI * aspectRatio * oswaldEfficiency);
     const cdp = 0.025; // معامل سحب طفيلي مفترض (لجسم الطائرة والذيل وغيرها)
     const cd = cdp + cdi;
-    const drag = 0.5 * cd * airDensity * Math.pow(airSpeed, 2) * wingArea;
+    const drag = 0.5 * cd * airDensity * Math.pow(airSpeed, 2) * mainWingArea;
 
     // 3. قوة الدفع (Thrust)
     // صيغة تجريبية مبسطة جداً للدفع الساكن (Static Thrust)
@@ -538,7 +551,7 @@ function calculateAerodynamics() {
     const thrust = 4.392399 * Math.pow(10, -8) * propRpm * Math.pow(propDiameter / 0.0254, 3.5) / Math.sqrt(propPitch) * (4.23333 * Math.pow(10, -4) * propRpm * propPitch - airSpeed * 0.5144);
 
     // 4. حساب الوزن (Weight Calculation)
-    const wingVolume = wingArea * wingThickness; // Volume in m³
+    const wingVolume = mainWingArea * wingThickness; // Volume in m³
     const materialDensity = MATERIAL_DENSITIES[wingMaterial]; // Density in kg/m³
     const wingWeightKg = wingVolume * materialDensity; // Weight in kg
     const planeComponentsWeightKg = planeComponentsWeightGrams / 1000;
@@ -552,7 +565,7 @@ function calculateAerodynamics() {
     liftResultEl.textContent = lift > 0 ? lift.toFixed(2) : '0.00';
     dragResultEl.textContent = drag > 0 ? drag.toFixed(2) : '0.00';
     thrustResultEl.textContent = thrust > 0 ? thrust.toFixed(2) : '0.00';
-    wingAreaResultEl.textContent = wingArea > 0 ? `${wingArea.toFixed(2)}` : '0.00';
+    wingAreaResultEl.textContent = mainWingArea > 0 ? `${mainWingArea.toFixed(2)}` : '0.00';
     wingWeightResultEl.textContent = (wingWeightKg * 1000).toFixed(0);
     totalWeightResultEl.textContent = (totalWeightKg * 1000).toFixed(0);
     twrResultEl.textContent = twr > 0 ? twr.toFixed(2) : '0.00';
