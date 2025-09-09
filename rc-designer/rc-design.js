@@ -437,6 +437,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function setupEventListeners() {
         // Listen to all inputs in the control panel
         const controlsPanel = document.querySelector('.controls-panel');
+        if (!controlsPanel) {
+            console.error("Fatal Error: The '.controls-panel' element was not found. UI will not be interactive.");
+            return; // Exit if the main panel is missing
+        }
+
         controlsPanel.addEventListener('input', (event) => {
             // Update slider value displays immediately
             if (event.target.id === 'sweep-angle') DOM.sweepAngleValue.textContent = event.target.value;
