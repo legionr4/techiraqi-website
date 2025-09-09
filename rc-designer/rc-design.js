@@ -20,6 +20,10 @@ const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
 directionalLight.position.set(5, 10, 7.5);
 scene.add(directionalLight);
 
+// --- إضافة محاور XYZ ---
+const axesHelper = new THREE.AxesHelper( 2 ); // الرقم 2 يحدد حجم المحاور
+scene.add( axesHelper );
+
 // --- إنشاء أجزاء الطائرة ---
 const planeGroup = new THREE.Group();
 const fuselageMaterial = new THREE.MeshStandardMaterial({ color: 0x0056b3, side: THREE.DoubleSide });
@@ -152,6 +156,13 @@ const wingtipThicknessInput = document.getElementById('wingtip-thickness');
 const wingtipPositionInput = document.getElementById('wingtip-position');
 const wingtipAngleInput = document.getElementById('wingtip-angle');
 const wingtipControls =  document.getElementById('wingtip-controls');
+
+const hasAileronInput = document.getElementById('has-aileron');
+const aileronLengthInput = document.getElementById('aileron-length');
+const aileronWidthInput = document.getElementById('aileron-width');
+const aileronThicknessInput = document.getElementById('aileron-thickness');
+const aileronPositionInput = document.getElementById('aileron-position');
+const aileronControls = document.getElementById('aileron-controls');
 
 
 const fuselageLengthInput = document.getElementById('fuselage-length');
