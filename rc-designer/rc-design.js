@@ -662,6 +662,9 @@ function updatePlaneModel() {
         // ننقل الشكل الهندسي بحيث تكون حافته الخلفية عند x=0، مما يجعل الحافة الأمامية (المفصل) عند x=-elevatorWidth
         elevatorHalfGeom.translate(elevatorWidth / 2, 0, 0);
 
+        // إزاحة الرافع ليبدأ من جانب جسم الطائرة، مما يخلق فجوة في المنتصف
+        elevatorHalfGeom.translate(0, 0, fuselage.geometry.parameters.depth / 2);
+
         // الرافع الأيمن
         const rightElevator = new THREE.Mesh(elevatorHalfGeom, aileronMaterial);
         rightElevator.name = 'rightElevator';
