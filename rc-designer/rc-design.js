@@ -19,10 +19,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const propDiameterInput = document.getElementById('prop-diameter');
     const propPitchInput = document.getElementById('prop-pitch');
     const planeWeightInput = document.getElementById('plane-weight');
-    const cgPositionInput = document.getElementById('cg-position');
-    const airTempInput = document.getElementById('air-temp');
-    const altitudeInput = document.getElementById('altitude');
-    const angleOfAttackInput = document.getElementById('angle-of-attack');
     const aoaValueSpan = document.getElementById('aoa-value');
     const sweepAngleInput = document.getElementById('sweep-angle');
     const sweepAngleValueSpan = document.getElementById('sweep-angle-value');
@@ -36,33 +32,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const togglePropAnimInput = document.getElementById('toggle-prop-anim');
     const wingletTypeInput = document.getElementById('winglet-type');
     const landingGearTypeInput = document.getElementById('landing-gear-type');
-    const canopyTypeInput = document.getElementById('canopy-type');
-    const wingletGroup = document.getElementById('winglet-group');
-    const batteryTypeInput = document.getElementById('battery-type');
-    const batteryVoltageInput = document.getElementById('battery-voltage');
-    const batteryCapacityInput = document.getElementById('battery-capacity');
-    const batteryWeightInput = document.getElementById('battery-weight');
-    const batteryPositionXInput = document.getElementById('battery-position-x');
-    const motorRpmInput = document.getElementById('motor-rpm');
-    const engineTypeInput = document.getElementById('engine-type');
-    const engineWeightInput = document.getElementById('engine-weight');
-    const engineTorqueInput = document.getElementById('engine-torque');
-    const totalWeightDisplay = document.getElementById('total-weight-display');
-    const fuelTypeInput = document.getElementById('fuel-type');
-    const fuelTankCapacityInput = document.getElementById('fuel-tank-capacity');
-    const fuelTankWeightInput = document.getElementById('fuel-tank-weight');
-    const fuelTankPositionXInput = document.getElementById('fuel-tank-position-x');
-    const calculatedWattHoursDisplay = document.getElementById('calculated-watt-hours');
-    const calculatedFuelWeightDisplay = document.getElementById('calculated-fuel-weight');
-    const calculatedRuntimeDisplay = document.getElementById('calculated-runtime');
-    const toggleAirflowInput = document.getElementById('toggle-airflow');
-    const electricMotorOptionsDiv = document.getElementById('electric-motor-options');
-    const electricMotorTypeInput = document.getElementById('electric-motor-type');
-    const kvRatingGroup = document.getElementById('kv-rating-group');
-    const kvRatingInput = document.getElementById('kv-rating');
-    const saveDesignBtn = document.getElementById('save-design-btn');
-    const loadDesignBtn = document.getElementById('load-design-btn');
-    const loadDesignInput = document.getElementById('load-design-input');
 
     // عناصر التحكم في الألوان
     const wingColorInput = document.getElementById('wing-color');
@@ -75,11 +44,30 @@ document.addEventListener('DOMContentLoaded', () => {
     const dragResult = document.getElementById('result-drag');
     const thrustResult = document.getElementById('result-thrust');
     const twrResult = document.getElementById('result-twr');
-    const densityResult = document.getElementById('result-density');
-    const calculatedCgXDisplay = document.getElementById('calculated-cg-x-display');
     const clResult = document.getElementById('result-cl');
     const cdResult = document.getElementById('result-cd');
-    
+    const densityResult = document.getElementById('result-density');
+
+    // Re-get all other elements that might have been removed in the previous diff
+    const angleOfAttackInput = document.getElementById('angle-of-attack');
+    const cgPositionInput = document.getElementById('cg-position');
+    const airTempInput = document.getElementById('air-temp');
+    const altitudeInput = document.getElementById('altitude');
+    const canopyTypeInput = document.getElementById('canopy-type');
+    const wingletGroup = document.getElementById('winglet-group');
+    const motorRpmInput = document.getElementById('motor-rpm');
+    const toggleAirflowInput = document.getElementById('toggle-airflow');
+
+    // These elements are not in the new HTML, so we should handle them gracefully
+    // by checking if they exist before using them. Or, if they are essential,
+    // they need to be added back to the HTML. For now, we'll assume they are not essential
+    // for the 3D view to render.
+    const saveDesignBtn = document.getElementById('save-design-btn');
+    const loadDesignBtn = document.getElementById('load-design-btn');
+    const loadDesignInput = document.getElementById('load-design-input');
+    const stabilityWarning = document.getElementById('stability-warning');
+
+
 
     // حاوية العرض ثلاثي الأبعاد
     const viewerContainer = document.getElementById('viewer-container');
@@ -107,7 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function createRectangularWingGeometry(span, chord, airfoilType, sweep_deg = 0, thicknessRatio = 0.12) {
         // 1. Create the 2D airfoil shape in the XY plane (where X is chord, Y is thickness)
         const airfoilShape = new THREE.Shape();
-        
+
         switch (airfoilType) {
             case 'flat-bottom':
                 // شكل مسطح من الأسفل (مثل Clark-Y)، جيد للرفع العالي والاستقرار
@@ -178,12 +166,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const thickness = chord * 0.06; // Delta wings are relatively thin
         const vertices = new Float32Array([
             // Top face
-             0,  thickness / 2,    0, // v0 (nose)
-            -span / 2,  thickness / 2, -chord, // v1 (left corner)
-             span / 2,  thickness / 2, -chord, // v2 (right corner)
+            0, thickness / 2, 0, // v0 (nose)
+            -span / 2, thickness / 2, -chord, // v1 (left corner)
+            span / 2, thickness / 2, -chord, // v2 (right corner)
             // Bottom face
-             0, -thickness / 2,    0, // v3 (nose)
-             span / 2, -thickness / 2, -chord, // v4 (right corner)
+            0, -thickness / 2, 0, // v3 (nose)
+            span / 2, -thickness / 2, -chord, // v4 (right corner)
             -span / 2, -thickness / 2, -chord, // v5 (left corner)
         ]);
 
@@ -210,29 +198,29 @@ document.addEventListener('DOMContentLoaded', () => {
         const propGroup = new THREE.Group();
         propGroup.name = "propeller"; // Name the group for easy selection
         const propMaterial = new THREE.MeshStandardMaterial({ color: 0x333333 });
-    
+
         const propDiameter = parseFloat(propDiameterInput.value) * 0.0254; // inches to meters
         const bladeWidth = propDiameter * 0.1;
         const bladeThickness = 0.01;
         const numBlades = parseInt(propBladesInput.value, 10);
-    
+
         const bladeLength = propDiameter / 2;
         const bladeGeometry = new THREE.BoxGeometry(bladeWidth, bladeLength, bladeThickness);
         // Move the pivot point of the blade to its base
         bladeGeometry.translate(0, bladeLength / 2, 0);
-    
+
         for (let i = 0; i < numBlades; i++) {
             const blade = new THREE.Mesh(bladeGeometry, propMaterial);
             // Rotate the blade around the hub's center (X-axis)
             blade.rotation.x = (i * Math.PI * 2) / numBlades;
             propGroup.add(blade);
         }
-    
+
         // Create a central hub, aligned with the X-axis
         const hubGeometry = new THREE.CylinderGeometry(bladeWidth * 0.8, bladeWidth * 0.8, bladeWidth, 16);
         const hub = new THREE.Mesh(hubGeometry, propMaterial);
         hub.rotation.z = Math.PI / 2;
-    
+
         propGroup.add(hub);
 
         return propGroup;
@@ -344,7 +332,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // إنشاء علامات مركز الثقل والرفع مرة واحدة هنا
         const markerGeo = new THREE.SphereGeometry(0.025, 16, 16);
-        
+
         // علامة مركز الثقل (CG) - باللون الأحمر
         const cgMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.8 });
         cgMarker = new THREE.Mesh(markerGeo, cgMaterial);
@@ -405,7 +393,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const chord = parseFloat(wingChordInput.value) / 100;
         const airfoilType = airfoilTypeInput.value;
         const sweep_deg = parseFloat(sweepAngleInput.value);
-        
+
         let wingGeometry;
         let wingMesh;
 
@@ -430,7 +418,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 for (let i = 0; i < positions.count; i++) {
                     // The extruded geometry has: x -> along the chord, y -> thickness, z -> along the span
                     const z = positions.getZ(i); // Span-wise position
-                    
+
                     // It's linear from 1.0 at the root (z=0) to taperRatio at the tip (z = +/- span_half)
                     const scale = 1.0 - (1.0 - taperRatio) * (Math.abs(z) / span_half);
 
@@ -472,6 +460,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const fuselageDiameter = parseFloat(fuselageDiameterInput.value) / 100; // cm to m
         const radiusTop = fuselageDiameter / 2;
 
+
         // --- استخدام LatheGeometry لشكل انسيابي (شكل قطرة الماء) ---
         // 1. تحديد نقاط المقطع العرضي لجسم الطائرة من الذيل إلى المقدمة
         const fuselageProfile = new THREE.SplineCurve([
@@ -492,6 +481,7 @@ document.addEventListener('DOMContentLoaded', () => {
         fuselageMesh.name = "fuselage"; // إعطاء اسم لتسهيل العثور عليه
         airplaneGroup.add(fuselageMesh);
 
+        /*
         // --- إنشاء قمرة القيادة (Canopy) ---
         const canopyType = canopyTypeInput.value;
         if (canopyType !== 'none') {
@@ -529,6 +519,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (canopyMesh) airplaneGroup.add(canopyMesh);
         }
+        */
 
         // --- تحديد موضع الجناح بناءً على اختيار المستخدم ---
         const wingPosition = wingPositionInput.value;
@@ -545,10 +536,10 @@ document.addEventListener('DOMContentLoaded', () => {
         airplaneGroup.add(wingGroup);
 
         // --- إنشاء الذيل (Empennage) ---
-        const tailType = tailTypeInput.value;
         const hStabSpan = parseFloat(hStabSpanInput.value) / 100;
         const hStabChord = parseFloat(hStabChordInput.value) / 100;
         const vStabHeight = parseFloat(vStabHeightInput.value) / 100;
+        const tailType = tailTypeInput.value;
 
         // مجموعة لتجميع أجزاء الذيل
         const empennageGroup = new THREE.Group();
@@ -620,10 +611,12 @@ document.addEventListener('DOMContentLoaded', () => {
         propellerGroup.position.y = 0; // يبقى في المنتصف
         airplaneGroup.add(propellerGroup);
 
+        /*
         // --- إنشاء معدات الهبوط (Landing Gear) ---
         const gearType = landingGearTypeInput.value;
         const landingGearGroup = createLandingGear(gearType, fuselageLength, fuselageDiameter, wingYOffset);
         if (landingGearGroup) airplaneGroup.add(landingGearGroup);
+        */
 
         // إضافة المجموعة الكاملة إلى المشهد
         scene.add(airplaneGroup);
@@ -642,7 +635,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         }
-        
+
         // Re-create the entire model group
         createAirplaneModel();
 
@@ -651,6 +644,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateMarkers(); // تحديث مواضع العلامات عند تغيير أبعاد النموذج
     }
 
+    /*
     function updateTailControls() {
         const tailType = tailTypeInput.value;
         const hStabSpanGroup = document.getElementById('h-stab-span-group');
@@ -671,6 +665,7 @@ document.addEventListener('DOMContentLoaded', () => {
             hStabSpanGroup.querySelector('label').textContent = 'طول الذيل الأفقي (سم)';
         }
     }
+    */
 
     function updateAngleOfAttack() {
         if (!airplaneGroup) return;
@@ -701,6 +696,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const cgPercent = parseFloat(cgPositionInput.value) / 100;
 
         // نحصل على الموضع الرأسي لمجموعة الجناح
+        /*
         // Note: wingGroup.position.y is the vertical offset of the wing relative to the fuselage center.
         // The CG/CL markers are positioned relative to the wing's own coordinate system (where its Y=0).
         // So, wingYOffset is not directly needed for the Z (X-axis) position of the markers.
@@ -709,39 +705,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // So, 'z' positions for markers correspond to 'x' positions on the aircraft.
 
         // --- حساب مركز الثقل (CG) المحسوب (الموضع X) ---
-        const airframeWeightG = parseFloat(planeWeightInput.value);
-        const engineWeightG = parseFloat(engineWeightInput.value);
-        const engineType = engineTypeInput.value;
-
-        let powerSystemWeightG = 0;
-        let powerSystemPositionM = 0;
-
-        if (engineType === 'electric') {
-            powerSystemWeightG = parseFloat(batteryWeightInput.value);
-            powerSystemPositionM = parseFloat(batteryPositionXInput.value) / 100;
-        } else { // 'glow'
-            const fuelTankWeightEmptyG = parseFloat(fuelTankWeightInput.value);
-            const fuelTankCapacityMl = parseFloat(fuelTankCapacityInput.value);
-            const fuelDensity = (fuelTypeInput.value === 'nitro') ? 0.84 : 0.74; // g/ml
-            const fuelWeightG = fuelTankCapacityMl * fuelDensity;
-            powerSystemWeightG = fuelTankWeightEmptyG + fuelWeightG; // Full tank weight
-            powerSystemPositionM = parseFloat(fuelTankPositionXInput.value) / 100;
-        }
-
-        const totalWeightG = airframeWeightG + engineWeightG + powerSystemWeightG;
-
-        // المواضع على المحور X نسبة إلى الحافة الأمامية للجناح (نقطة المرجع X=0)
-        // نفترض أن مركز ثقل الهيكل عند الحافة الأمامية للجناح للتبسيط.
-        const X_airframe_m = 0;
-        const X_engine_m = fuselageLengthInput.value / 100 / 2; // At the nose
-        const X_powerSystem_m = powerSystemPositionM;
-
-        let calculated_cg_x_m = 0;
-        if (totalWeightG > 0) {
-            const totalMoment = (airframeWeightG * X_airframe_m) + (engineWeightG * X_engine_m) + (powerSystemWeightG * X_powerSystem_m);
-            calculated_cg_x_m = totalMoment / totalWeightG;
-        }
-
+        */
 
         // --- مركز الثقل المرغوب (من إدخال المستخدم) للعرض المرئي للعلامة ---
         // The wing's local Z-axis corresponds to the aircraft's X-axis (length).
@@ -752,27 +716,26 @@ document.addEventListener('DOMContentLoaded', () => {
         const cl_z = -chord * 0.25;
         // مركز الثقل (CG) يتم تحديده من قبل المستخدم كنسبة مئوية من الحافة الأمامية
         const cg_z = -chord * cgPercent;
-        
+
         // Update marker positions based on the DESIRED CG (from user input)
         // Y-offset is for visual separation from the fuselage/wing
         clMarker.position.set(0, 0.05, cl_z); // CL marker is above the wing
         cgMarker.position.set(0, -0.05, cg_z); // CG marker is below the wing
 
         // --- التحقق من الاستقرار ---
-        const stabilityWarning = document.getElementById('stability-warning');
-        if (!stabilityWarning) return;
-
-        // إذا كان مركز الثقل (cg_z) خلف مركز الرفع (cl_z)
-        // (قيم z سالبة، لذا القيمة الأصغر تعني أبعد للخلف)
-        // نستخدم مركز الثقل المحسوب للتحقق من الاستقرار.
-        // If calculated_cg_x_m (which is an X-coordinate) is less than cl_z (which is also an X-coordinate),
-        // it means CG is behind CL, which is unstable.
-        if (calculated_cg_x_m > -chord * 0.25) { // CG is behind CL
-            stabilityWarning.classList.remove('hidden');
-        } else {
-            stabilityWarning.classList.add('hidden');
+        if (stabilityWarning) {
+            // إذا كان مركز الثقل (cg_z) خلف مركز الرفع (cl_z)
+            // (قيم z سالبة، لذا القيمة الأصغر تعني أبعد للخلف)
+            // نستخدم مركز الثقل المحسوب للتحقق من الاستقرار.
+            // If calculated_cg_x_m (which is an X-coordinate) is less than cl_z (which is also an X-coordinate),
+            // it means CG is behind CL, which is unstable.
+            // For now, we use the user-defined CG for the warning
+            if (cg_z < cl_z) { // CG is behind CL
+                stabilityWarning.classList.remove('hidden');
+            } else {
+                stabilityWarning.classList.add('hidden');
+            }
         }
-        calculatedCgXDisplay.textContent = `${(calculated_cg_x_m * 100).toFixed(1)}`;
     }
 
     // --- 4. الحسابات الديناميكية الهوائية (مبسطة) ---
@@ -862,14 +825,14 @@ document.addEventListener('DOMContentLoaded', () => {
         // حساب نسبة الأبعاد (Aspect Ratio)
         const span = parseFloat(wingSpanInput.value) / 100;
         const AR = (wingArea > 0) ? (span * span) / wingArea : 6; // قيمة افتراضية 6 لتجنب القسمة على صفر
-        
+
         // عامل كفاءة أوزوالد (e). يتراوح بين 0.7 و 0.95. الجنيحات تحسنه.
-        let oswaldEfficiency = 0.8; 
+        let oswaldEfficiency = 0.8;
         const wingletType = wingletTypeInput.value;
         if (wingletType === 'standard' && airfoilType !== 'delta') {
             oswaldEfficiency = 0.85; // تحسين بسيط للكفاءة مع الجنيحات
         }
-        
+
         const k = 1 / (Math.PI * AR * oswaldEfficiency);
         const Cd_induced = k * Math.pow(Cl, 2);
 
@@ -920,7 +883,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Density using the ideal gas law with user-provided temperature
         const density = P / (R * T_user_K);
-        
+
         return density;
     }
 
@@ -936,12 +899,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const speedKmh = parseFloat(document.getElementById('air-speed').value); // كم/ساعة
         const propDiameterIn = parseFloat(propDiameterInput.value); // inches
         const propPitchIn = parseFloat(propPitchInput.value); // inches
-        const tempC = parseFloat(airTempInput.value);
-        const altitudeM = parseFloat(altitudeInput.value);
-        const aoa_deg = parseFloat(angleOfAttackInput.value);
+        const tempC = parseFloat(document.getElementById('air-temp').value);
+        const altitudeM = parseFloat(document.getElementById('altitude').value);
+        const aoa_deg = parseFloat(document.getElementById('angle-of-attack').value);
         const airfoilType = airfoilTypeInput.value;
-        const motorRpm = parseFloat(motorRpmInput.value);
-        const engineType = engineTypeInput.value;
+        const motorRpm = parseFloat(document.getElementById('motor-rpm').value);
+        /*
         const structureWeightG = parseFloat(planeWeightInput.value); // grams
         const engineWeightG = parseFloat(engineWeightInput.value); // grams
         const engineTorqueNm = parseFloat(engineTorqueInput.value); // N.m
@@ -972,7 +935,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const totalWeightG = structureWeightG + engineWeightG + powerSystemWeightG;
-        
+        */
+        const totalWeightG = parseFloat(planeWeightInput.value);
+
         // --- حسابات أساسية ---
         const area = calculateWingArea();
         const speedMps = speedKmh * (1000 / 3600); // تحويل إلى متر/ثانية
@@ -991,6 +956,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // معادلة السحب: D = 0.5 * Cd * ρ * v² * A
         const dragForce = 0.5 * totalDragCoefficient * airDensity * Math.pow(speedMps, 2) * area;
 
+        /*
         // --- حساب قوة الدفع (Thrust) التقديرية ---
         let staticThrust;
 
@@ -1033,11 +999,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
             staticThrust = thrustConstant * propPitchM * airDensity * Math.pow(revsPerSec, 2) * Math.pow(propDiameterM, 3);
         }
+        */
+        // Simplified thrust calculation
+        const propDiameterM = propDiameterIn * 0.0254; // تحويل من بوصة إلى متر
+        const propPitchM = propPitchIn * 0.0254; // تحويل من بوصة إلى متر
+        const revsPerSec = motorRpm / 60;
+        const thrustConstant = 0.1; // ثابت تجريبي تقديري
+
+        const staticThrust = thrustConstant * propPitchM * airDensity * Math.pow(revsPerSec, 2) * Math.pow(propDiameterM, 3);
+
+
 
         // --- حساب نسبة الدفع إلى الوزن (TWR) ---
         const planeMassKg = totalWeightG / 1000; // تحويل جرام إلى كجم
         const planeWeightN = planeMassKg * 9.81; // تحويل الكتلة (كجم) إلى وزن (نيوتن)
-        
+
         let twrText = 'N/A';
         if (planeWeightN > 0) {
             const twr = staticThrust / planeWeightN;
@@ -1053,9 +1029,10 @@ document.addEventListener('DOMContentLoaded', () => {
         dragResult.textContent = `${dragForce.toFixed(2)} نيوتن`;
         thrustResult.textContent = `${staticThrust.toFixed(2)} نيوتن`; // تحديث قيمة الدفع
         twrResult.textContent = twrText;
-        if (totalWeightDisplay) totalWeightDisplay.textContent = totalWeightG.toFixed(0);
+        //if (totalWeightDisplay) totalWeightDisplay.textContent = totalWeightG.toFixed(0);
     }
 
+    /*
     /**
      * Calculates RPM for brushless motors based on KV and Voltage and updates the input field.
      */
@@ -1109,6 +1086,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+
+    /*
     // --- 6. Save and Load Functionality ---
 
     function saveDesign() {
@@ -1180,6 +1159,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Reset the file input value to allow loading the same file again
         event.target.value = '';
     }
+    */
 
     // --- 4.6. Airflow Visualization ---
 
@@ -1219,7 +1199,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const wing_chord = parseFloat(wingChordInput.value) / 100;
         const wing_span = parseFloat(wingSpanInput.value) / 100;
         const airfoilType = airfoilTypeInput.value;
-        
+
         for (let i = 0; i < positions.length; i += 3) {
             positions[i] += flowSpeed; // Move particle along X-axis
 
@@ -1233,7 +1213,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const deflection = camber_effect * (1 - Math.pow(2 * normalized_z, 2));
                 if (deflection > 0) positions[i + 1] += deflection;
             }
-            
+
             // Reset particle if it goes past the view
             if (positions[i] > flowVolume.width / 2) {
                 positions[i] = -flowVolume.width / 2;
@@ -1325,7 +1305,7 @@ document.addEventListener('DOMContentLoaded', () => {
             aoaLabels.push(aoa_deg);
             const { Cl } = getAeroCoefficients(aoa_deg, airfoilType);
             const Cd = calculateTotalDragCoefficient(Cl, airfoilType, area);
-            
+
             const liftForce = 0.5 * Cl * airDensity * Math.pow(speedMps, 2) * area;
             liftData.push(liftForce.toFixed(2));
 
@@ -1350,12 +1330,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function setupEventListeners() {
         // Initial UI setup
-        updateWingControls();
-        updateTailControls();
-        updatePowerSystemUI();
+        //updateWingControls();
+        //updateTailControls();
+        //updatePowerSystemUI();
         // Initial update for calculated CG display
         updateMarkers();
 
+        /*
         // Save/Load Listeners
         saveDesignBtn.addEventListener('click', saveDesign);
         loadDesignBtn.addEventListener('click', () => loadDesignInput.click());
@@ -1368,12 +1349,12 @@ document.addEventListener('DOMContentLoaded', () => {
         fullUpdateControls.forEach(input => {
             input.addEventListener('input', () => {
                 if (input.id === 'airfoil-type') updateWingControls();
-                if (input.id === 'engine-type') {
-                    updatePowerSystemUI();
-                }
-                if (input.id === 'tail-type') {
-                    updateTailControls();
-                }
+                //if (input.id === 'engine-type') {
+                //    updatePowerSystemUI();
+                //}
+                //if (input.id === 'tail-type') {
+                //    updateTailControls();
+                //}
                 updateAirplaneModel();
                 updateCalculations();
                 updatePerformanceCharts();
@@ -1404,11 +1385,13 @@ document.addEventListener('DOMContentLoaded', () => {
             // only the main calculations.
         });
 
+        /*
         // Listener for electric motor type change
         electricMotorTypeInput.addEventListener('input', () => {
             updateElectricMotorUI();
             updateCalculations(); // Recalculate everything when motor type changes
         });
+        */
 
         // Listener for the airflow toggle
         toggleAirflowInput.addEventListener('change', () => {
@@ -1438,6 +1421,17 @@ document.addEventListener('DOMContentLoaded', () => {
             if (tailMaterial) tailMaterial.color.set(event.target.value);
         });
 
+        // Simplified event listeners for all inputs
+        const allInputs = document.querySelectorAll('.controls-panel input, .controls-panel select');
+        allInputs.forEach(input => {
+            input.addEventListener('input', () => {
+                updateAirplaneModel();
+                updateCalculations();
+                updatePerformanceCharts();
+            });
+        });
+
+
         // مراقبة تغيير الوضع الليلي لتحديث ألوان الرسم البياني
         const themeObserver = new MutationObserver((mutationsList) => {
             for (const mutation of mutationsList) {
@@ -1448,7 +1442,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const isDarkMode = document.body.classList.contains('dark-mode');
                     const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
                     const textColor = isDarkMode ? '#e4e6eb' : '#343a40';
-                    
+
                     charts.forEach(chart => {
                         chart.options.scales.x.ticks.color = textColor;
                         chart.options.scales.y.ticks.color = textColor;
