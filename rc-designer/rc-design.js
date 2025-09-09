@@ -357,8 +357,8 @@ function updatePlaneModel() {
             const p1_x = vertices[p1_vertex_index];
             const currentChord = rootChord + (rootChord * taperRatio - rootChord) * (z_start / halfSpan);
             const sweepAtZ = z_start * Math.tan(sweepRad);
-            // The wing is flipped, so trailing edge is at +chord/2
-            const isTrailingEdgeFace = (p1_x - sweepAtZ) > (currentChord / 2) - aileronWidth;
+            // The wing is flipped, so leading edge is at +x, trailing edge is at -x.
+            const isTrailingEdgeFace = (p1_x - sweepAtZ) < (-currentChord / 2) + aileronWidth;
 
             if (isAileronZone && isTrailingEdgeFace) {
                 continue; // Skip creating this face, effectively creating a hole
@@ -462,8 +462,8 @@ function updatePlaneModel() {
         const aileronAvgZ = halfSpan - aileronPosition - (aileronLength / 2);
         const chordAtHinge = rootChord + (rootChord * taperRatio - rootChord) * (aileronAvgZ / halfSpan);
         const sweepAtHinge = (aileronAvgZ > 0 ? aileronAvgZ : 0) * Math.tan(sweepRad);
-        // The wing is flipped, so the trailing edge is at +chord/2. The hinge is at the trailing edge minus the aileron width.
-        const hingeX = sweepAtHinge + (chordAtHinge / 2) - aileronWidth;
+        // The wing is flipped, so leading edge is at +x, trailing edge is at -x. The hinge is at the trailing edge.
+        const hingeX = sweepAtHinge - (chordAtHinge / 2);
 
         // Position and rotate the PIVOTS
         rightAileronPivot.position.set(hingeX, 0, aileronAvgZ);
