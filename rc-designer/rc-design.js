@@ -542,12 +542,12 @@ function updatePlaneModel() {
     const vStabChordEffective = hasRudder ? vStabChord - rudderWidth : vStabChord;
 
     // --- إنشاء الأجزاء الثابتة للذيل ---
-    const hStabGeom = new THREE.BoxGeometry(hStabChordEffective, tailSpan, tailThickness);
+    const hStabGeom = new THREE.BoxGeometry(hStabChordEffective, tailThickness, tailSpan);
     const hStab = new THREE.Mesh(hStabGeom, tailMaterial);
     // تحديد موضع الجزء الثابت بحيث تكون حافته الأمامية عند بداية الذيل
     hStab.position.x = -fuselageLength / 2 + hStabChordEffective / 2;
 
-    const vStabGeom = new THREE.BoxGeometry(vStabChordEffective, vStabHeight, tailThickness);
+    const vStabGeom = new THREE.BoxGeometry(vStabChordEffective, vStabHeight, tailThickness); // Correct: width, height, depth
     const vStab = new THREE.Mesh(vStabGeom, fuselageMaterial);
     // تحديد موضع الجزء الثابت بحيث تكون حافته الأمامية عند بداية الذيل
     vStab.position.x = -fuselageLength / 2 + vStabChordEffective / 2;
@@ -580,8 +580,7 @@ function updatePlaneModel() {
 
     // --- Tail Control Surfaces ---
     if (hasElevator && tailType !== 'v-tail') {
-        const elevatorGeom = new THREE.BoxGeometry(elevatorWidth, tailThickness, tailSpan);
-        elevatorGeom.rotateX(Math.PI / 2); // Rotate to be horizontal
+        const elevatorGeom = new THREE.BoxGeometry(elevatorWidth, tailThickness, tailSpan); // Correct: width, height, depth
         elevatorGeom.translate(elevatorWidth / 2, 0, 0); // Set pivot to leading edge
         const elevator = new THREE.Mesh(elevatorGeom, aileronMaterial);
         elevator.name = 'elevator';
