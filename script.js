@@ -256,24 +256,24 @@ document.addEventListener('DOMContentLoaded', () => {
         searchInput.addEventListener('input', debouncedFilter);
     };
 
-    // --- Preloader --- (تم تعطيله مؤقتاً لتصحيح الأخطاء)
-    // const preloader = document.getElementById('preloader');
-    // if (preloader) {
-    //     const hidePreloader = () => {
-    //         // Start fading out
-    //         preloader.style.opacity = '0';
-    //         // After the fade-out transition ends, set display to none
-    //         setTimeout(() => {
-    //             preloader.style.display = 'none';
-    //         }, 500); // This should match the transition duration in your CSS
-    //     };
+    // --- Preloader ---
+    const preloader = document.getElementById('preloader');
+    if (preloader) {
+        const hidePreloader = () => {
+            // Start fading out
+            preloader.style.opacity = '0';
+            // After the fade-out transition ends, set display to none
+            setTimeout(() => {
+                preloader.style.display = 'none';
+            }, 500); // This should match the transition duration in your CSS
+        };
 
-    //     // Hide when all resources (images, etc.) are loaded
-    //     window.addEventListener('load', hidePreloader);
+        // Hide when all resources (images, etc.) are loaded
+        window.addEventListener('load', hidePreloader);
 
-    //     // Fallback: Hide after 3 seconds anyway, in case 'load' event fails (e.g., broken image)
-    //     setTimeout(hidePreloader, 3000);
-    // }
+        // Fallback: Hide after 3 seconds anyway, in case 'load' event fails (e.g., broken image)
+        setTimeout(hidePreloader, 3000);
+    }
 
     // --- Smart Page Router ---
     // This router runs specific JavaScript code based on the current page URL.
@@ -320,3 +320,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
     executeRoutes(); // Run the router
 });
+ئ
