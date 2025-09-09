@@ -25,6 +25,7 @@ const planeGroup = new THREE.Group();
 const fuselageMaterial = new THREE.MeshStandardMaterial({ color: 0x0056b3, side: THREE.DoubleSide });
 const wingMaterial = new THREE.MeshStandardMaterial({ color: 0xcccccc, side: THREE.DoubleSide });
 const tailMaterial = new THREE.MeshStandardMaterial({ color: 0xdddddd, side: THREE.DoubleSide });
+const aileronMaterial = new THREE.MeshStandardMaterial({ color: 0xffc107, side: THREE.DoubleSide });
 
 // جسم الطائرة
 const fuselageGeom = new THREE.BoxGeometry(1, 0.15, 0.15);
@@ -166,6 +167,7 @@ const planeWeightInput = document.getElementById('plane-weight');
 const fuselageColorInput = document.getElementById('fuselage-color');
 const wingColorInput = document.getElementById('wing-color');
 const tailColorInput = document.getElementById('tail-color');
+const aileronColorInput = document.getElementById('aileron-color');
 
 // عناصر عرض قيم شريط التمرير
 const sweepValueEl = document.getElementById('sweep-value');
@@ -209,22 +211,22 @@ function generateAirfoil(chord, thickness, airfoilType, numPoints = 15) {
             const x_norm = i / numPoints;
             points.push(new THREE.Vector2(x_norm * chord, -halfThickness));
         }
-        // Center horizontally
-        points.forEach(p => p.x -= chord / 2);
+        // Center horizontally and flip
+        points.forEach(p => { p.x = (chord / 2) - p.x; });
     } else if (airfoilType === 'flat-bottom') {
         // Top surface
         for (let i = 0; i <= numPoints; i++) {
             const x_norm = i / numPoints;
-            points.push(new THREE.Vector2(x_norm * chord, thickness * airfoilCurve(x_norm)));
+            points.push(new THREE.Vector2(x_norm * chord, thickness * airfoilCurve(x_norm) - (thickness / 2)));
         }
         // Bottom surface (flat)
-        points.push(new THREE.Vector2(chord, 0));
-        points.push(new THREE.Vector2(0, 0));
+        for (let i = numPoints - 1; i >= 1; i--) {
+            const x_norm = i / numPoints;
+            points.push(new THREE.Vector2(x_norm * chord, -thickness / 2));
+        }
 
-        // Center vertically
-        points.forEach(p => p.y -= thickness / 2);
-        // Center horizontally
-        points.forEach(p => p.x -= chord / 2);
+        // Center horizontally and flip
+        points.forEach(p => { p.x = (chord / 2) - p.x; });
     } else { // Symmetrical and Semi-symmetrical
         let bottomFactor = (airfoilType === 'semi-symmetrical') ? 0.6 : 1.0;
         // Top surface
@@ -239,8 +241,8 @@ function generateAirfoil(chord, thickness, airfoilType, numPoints = 15) {
         }
         // Center vertically
         points.forEach(p => p.y -= (thickness - bottomFactor * thickness) / 2);
-        // Center horizontally
-        points.forEach(p => p.x -= chord / 2);
+        // Center horizontally and flip
+        points.forEach(p => { p.x = (chord / 2) - p.x; });
     }
 
     return points;
@@ -275,6 +277,7 @@ function updatePlaneModel() {
     fuselageMaterial.color.set(fuselageColor);
     wingMaterial.color.set(wingColor);
     tailMaterial.color.set(tailColor);
+    aileronMaterial.color.set(aileronColorInput.value);
 
      // Wingtip Controls visibility
     if(hasWingtipInput.checked){
@@ -283,6 +286,12 @@ function updatePlaneModel() {
          wingtipControls.style.display = 'none';
     }
 
+    // Aileron Controls visibility
+    if (hasAileronInput.checked) {
+        aileronControls.style.display = 'block';
+    } else {
+        aileronControls.style.display = 'none';
+    }
 
 
 
@@ -344,6 +353,31 @@ function updatePlaneModel() {
     const leftWing = rightWing.clone();
     leftWing.scale.z = -1; // عكس الجناح الأيسر
 
+    // Ailerons
+    if (hasAileronInput.checked) {
+        const aileronLength = getValidNumber(aileronLengthInput) * conversionFactor;
+        const aileronWidth = getValidNumber(aileronWidthInput) * conversionFactor;
+        const aileronThickness = getValidNumber(aileronThicknessInput) * conversionFactor;
+        const aileronPosition = getValidNumber(aileronPositionInput) * conversionFactor;
+
+        const aileronGeom = new THREE.BoxGeometry(aileronWidth, aileronThickness, aileronLength);
+        
+        const rightAileron = new THREE.Mesh(aileronGeom, aileronMaterial);
+        // Position the aileron at the trailing edge of the wing
+        const aileronZ = halfSpan - aileronPosition - (aileronLength / 2);
+        const chordAtAileron = rootChord + (rootChord * taperRatio - rootChord) * (aileronZ / halfSpan);
+        const sweepAtAileron = aileronZ * Math.tan(sweepRad);
+        rightAileron.position.set(sweepAtAileron + (chordAtAileron / 2) - (aileronWidth / 2), 0, aileronZ);
+        rightAileron.name = 'rightAileron'; // Name for raycasting
+        rightWing.add(rightAileron);
+
+        const leftAileron = new THREE.Mesh(aileronGeom, aileronMaterial);
+        leftAileron.position.copy(rightAileron.position);
+        leftAileron.name = 'leftAileron'; // Name for raycasting
+        leftWing.add(leftAileron);
+    }
+
+
     wingGroup.add(rightWing, leftWing);
      // Wingtip
     if (hasWingtipInput.checked) {
@@ -369,16 +403,21 @@ function updatePlaneModel() {
         const wingtipMaterial = new THREE.MeshStandardMaterial({ color: wingMaterial.color, side: THREE.DoubleSide });
         const rightWingtip = new THREE.Mesh(wingtipGeometry, wingtipMaterial);
 
-          // Rotate Wingtip
-        rightWingtip.rotation.x = -Math.PI / 2;
-          // Apply Wingtip Angle
-        rightWingtip.rotation.z = wingtipAngle; 
+        // Position the wingtip at the end of the main wing
+        const tipSection = wingGeometry.attributes.position.array.slice(tipStartIndex * 3, (tipStartIndex + pointsPerSection) * 3);
+        const tipCentroid = new THREE.Vector3(0, 0, 0);
+        for (let i = 0; i < tipSection.length; i += 3) {
+            tipCentroid.x += tipSection[i];
+            tipCentroid.y += tipSection[i + 1];
+        }
+        tipCentroid.divideScalar(pointsPerSection);
+        rightWingtip.position.copy(tipCentroid);
 
-        // Adjust Wingtip Position   
-        rightWingtip.position.set(0, 0, halfSpan); // Set Z position
+        // Apply the cant angle (up/down rotation)
+        rightWingtip.rotation.x = wingtipAngle;
 
         const leftWingtip = rightWingtip.clone();
-        leftWingtip.scale.z = -1;
+        leftWingtip.rotation.x = -wingtipAngle; // Mirror the angle for the left wing
 
         rightWing.add(rightWingtip);
         leftWing.add(leftWingtip);
@@ -620,6 +659,7 @@ allControls.forEach(control => {
     }
 });
 
+hasAileronInput.addEventListener('change', updateAll);
 hasWingtipInput.addEventListener('change', updateAll);
 
 
@@ -627,6 +667,37 @@ hasWingtipInput.addEventListener('change', updateAll);
 sweepAngleInput.addEventListener('input', () => sweepValueEl.textContent = sweepAngleInput.value);
 taperRatioInput.addEventListener('input', () => taperValueEl.textContent = parseFloat(taperRatioInput.value).toFixed(2));
 unitSelector.addEventListener('change', updateUnitLabels);
+
+// --- تفاعل الماوس مع الجنيحات ---
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+let rightAileron, leftAileron;
+
+function onMouseClick(event) {
+    // حساب إحداثيات الماوس في الفضاء الطبيعي (-1 إلى +1)
+    const rect = renderer.domElement.getBoundingClientRect();
+    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+
+    // البحث عن الجنيحات في المشهد
+    rightAileron = scene.getObjectByName('rightAileron');
+    leftAileron = scene.getObjectByName('leftAileron');
+    
+    const objectsToIntersect = [];
+    if (rightAileron) objectsToIntersect.push(rightAileron);
+    if (leftAileron) objectsToIntersect.push(leftAileron);
+
+    const intersects = raycaster.intersectObjects(objectsToIntersect);
+
+    if (intersects.length > 0) {
+        // تحريك الجنيحات بشكل معاكس عند النقر
+        rightAileron.rotation.z += 0.2;
+        leftAileron.rotation.z -= 0.2;
+    }
+}
+window.addEventListener('click', onMouseClick, false);
 
 // --- حلقة العرض ---
 function animate() {
