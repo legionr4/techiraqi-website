@@ -131,6 +131,13 @@
         main {
             max-width: 95%; /* استخدام نسبة مئوية لإعطاء شعور بالعرض الكامل */
         }
+        /* تعديل لتقليل ارتفاع قسم العنوان */
+        .hero-section {
+            padding-top: 1.5rem;
+            padding-bottom: 1.5rem;
+            margin-bottom: 1.5rem;
+            text-align: right; /* محاذاة النص لليمين */
+        }
     </style>
 </head>
 <body>
@@ -204,6 +211,13 @@
             <div class="controls-panel">
                 <h3><i class="fas fa-sliders-h"></i> مدخلات التصميم</h3>
                 
+                <h4><i class="fas fa-save"></i> حفظ واستعادة</h4>
+                <div class="input-group" style="display: flex; gap: 1rem;">
+                    <button id="save-design-btn" class="button" style="flex: 1;">حفظ التصميم</button>
+                    <button id="load-design-btn" class="button" style="flex: 1; background-color: var(--secondary-color);">استعادة تصميم</button>
+                    <input type="file" id="load-design-input" style="display: none;" accept=".json">
+                </div>
+
                 <h4><i class="fas fa-plane-departure"></i> الجناح (Wing)</h4>
                 <div class="input-group">
                     <label for="wing-span">طول الجناح (سم)</label>
@@ -309,10 +323,6 @@
                     <input type="number" id="prop-pitch" value="4.5">
                 </div>
                 <div class="input-group">
-                    <label for="motor-rpm">سرعة دوران المحرك (RPM)</label>
-                    <input type="number" id="motor-rpm" value="10000">
-                </div>
-                <div class="input-group">
                     <label for="prop-blades">عدد ريش المروحة</label>
                     <select id="prop-blades">
                         <option value="2" selected>2</option>
@@ -321,15 +331,111 @@
                     </select>
                 </div>
 
-                <h4><i class="fas fa-balance-scale"></i> معلمات إضافية</h4>
+                <h4><i class="fas fa-cogs"></i> المحرك (Engine/Motor)</h4>
                 <div class="input-group">
-                    <label for="plane-weight">وزن الطائرة الإجمالي (جرام)</label>
-                    <input type="number" id="plane-weight" value="1500">
+                    <label for="engine-type">نوع المحرك</label>
+                    <select id="engine-type">
+                        <option value="electric" selected>كهربائي (Electric)</option>
+                        <option value="glow">ميكانيكي (Glow/Gas)</option>
+                    </select>
+                </div>
+                <!-- خيارات المحرك الكهربائي الديناميكية -->
+                <div id="electric-motor-options" class="hidden">
+                    <div class="input-group">
+                        <label for="electric-motor-type">نوع المحرك الكهربائي</label>
+                        <select id="electric-motor-type">
+                            <option value="brushless" selected>بدون فرشات (Brushless)</option>
+                            <option value="brushed">بفرشات (Brushed DC)</option>
+                        </select>
+                    </div>
+                    <div class="input-group" id="kv-rating-group">
+                        <label for="kv-rating">تصنيف المحرك (KV)</label>
+                        <input type="number" id="kv-rating" value="1400">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="motor-rpm">سرعة دوران المحرك (RPM)</label>
+                    <input type="number" id="motor-rpm" value="10000">
+                </div>
+                <div class="input-group">
+                    <label for="engine-weight">وزن المحرك (جرام)</label>
+                    <input type="number" id="engine-weight" value="150">
+                </div>
+                <div class="input-group">
+                    <label for="engine-torque">عزم المحرك (N.m) - اختياري</label>
+                    <input type="number" id="engine-torque" value="0.15" step="0.01">
+                </div>
+
+                <!-- قسم نظام الطاقة الديناميكي -->
+                <div id="power-source-section">
+                    <!-- إعدادات النظام الكهربائي -->
+                    <div id="electric-setup">
+                        <h4><i class="fas fa-battery-full"></i> البطارية (Battery)</h4>
+                        <div class="input-group">
+                            <label for="battery-type">نوع البطارية</label>
+                            <select id="battery-type">
+                                <option value="lipo" selected>LiPo</option>
+                                <option value="nimh">NiMH</option>
+                                <option value="liion">Li-Ion</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="battery-voltage">فولتية البطارية (V)</label>
+                            <input type="number" id="battery-voltage" value="11.1" step="0.1">
+                        </div>
+                        <div class="input-group">
+                            <label for="battery-capacity">سعة البطارية (mAh)</label>
+                            <input type="number" id="battery-capacity" value="2200" step="100">
+                        </div>
+                        <div class="input-group">
+                            <label for="battery-weight">وزن البطارية (جرام)</label>
+                            <input type="number" id="battery-weight" value="200">
+                        </div>
+                        <div class="input-group">
+                            <label for="battery-position-x">موضع البطارية (سم من مقدمة الجناح)</label>
+                            <input type="number" id="battery-position-x" value="10" step="1">
+                        </div>
+                        <p style="font-size: 0.9rem;">طاقة البطارية: <span id="calculated-watt-hours" style="font-weight:bold; color: var(--primary-color);">N/A</span> واط-ساعة</p>
+                    </div>
+
+                    <!-- إعدادات نظام الوقود -->
+                    <div id="fuel-setup" class="hidden">
+                        <h4><i class="fas fa-gas-pump"></i> خزان الوقود (Fuel Tank)</h4>
+                        <div class="input-group">
+                            <label for="fuel-type">نوع الوقود</label>
+                            <select id="fuel-type">
+                                <option value="nitro" selected>نيترو (Nitro)</option>
+                                <option value="gasoline">بنزين (Gasoline)</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="fuel-tank-capacity">سعة الخزان (مل)</label>
+                            <input type="number" id="fuel-tank-capacity" value="250">
+                        </div>
+                        <div class="input-group">
+                            <label for="fuel-tank-weight">وزن الخزان (فارغ) (جرام)</label>
+                            <input type="number" id="fuel-tank-weight" value="50">
+                        </div>
+                        <div class="input-group">
+                            <label for="fuel-tank-position-x">موضع الخزان (سم من مقدمة الجناح)</label>
+                            <input type="number" id="fuel-tank-position-x" value="15" step="1">
+                        </div>
+                        <p style="font-size: 0.9rem;">وزن الوقود التقديري: <span id="calculated-fuel-weight" style="font-weight:bold; color: var(--primary-color);">N/A</span> جرام</p>
+                        <p style="font-size: 0.9rem;">زمن التشغيل التقديري: <span id="calculated-runtime" style="font-weight:bold; color: var(--primary-color);">N/A</span> دقيقة</p>
+                    </div>
+                </div>
+
+                <h4><i class="fas fa-balance-scale"></i> الوزن والتوازن</h4>
+                <div class="input-group">
+                    <label for="plane-weight">وزن الهيكل (بدون نظام طاقة) (جرام)</label>
+                    <input type="number" id="plane-weight" value="1150">
                 </div>
                 <div class="input-group">
                     <label for="cg-position">مركز الجاذبية (% من عرض الجناح)</label>
                     <input type="number" id="cg-position" value="30">
                 </div>
+                <p style="margin-top: -0.5rem; font-size: 0.9rem;">الوزن الإجمالي: <span id="total-weight-display" style="font-weight:bold; color: var(--primary-color);">N/A</span> جرام</p>
+                <p style="margin-top: -0.5rem; font-size: 0.9rem;">مركز الثقل المحسوب (X): <span id="calculated-cg-x-display" style="font-weight:bold; color: var(--primary-color);">N/A</span> سم من مقدمة الجناح</p>
 
                 <h4><i class="fas fa-feather-alt"></i> الظروف الهوائية</h4>
                 <div class="input-group">

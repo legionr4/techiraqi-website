@@ -18,7 +18,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const tailTypeInput = document.getElementById('tail-type');
     const propDiameterInput = document.getElementById('prop-diameter');
     const propPitchInput = document.getElementById('prop-pitch');
-    const motorRpmInput = document.getElementById('motor-rpm');
     const planeWeightInput = document.getElementById('plane-weight');
     const cgPositionInput = document.getElementById('cg-position');
     const airTempInput = document.getElementById('air-temp');
@@ -39,7 +38,31 @@ document.addEventListener('DOMContentLoaded', () => {
     const landingGearTypeInput = document.getElementById('landing-gear-type');
     const canopyTypeInput = document.getElementById('canopy-type');
     const wingletGroup = document.getElementById('winglet-group');
+    const batteryTypeInput = document.getElementById('battery-type');
+    const batteryVoltageInput = document.getElementById('battery-voltage');
+    const batteryCapacityInput = document.getElementById('battery-capacity');
+    const batteryWeightInput = document.getElementById('battery-weight');
+    const batteryPositionXInput = document.getElementById('battery-position-x');
+    const motorRpmInput = document.getElementById('motor-rpm');
+    const engineTypeInput = document.getElementById('engine-type');
+    const engineWeightInput = document.getElementById('engine-weight');
+    const engineTorqueInput = document.getElementById('engine-torque');
+    const totalWeightDisplay = document.getElementById('total-weight-display');
+    const fuelTypeInput = document.getElementById('fuel-type');
+    const fuelTankCapacityInput = document.getElementById('fuel-tank-capacity');
+    const fuelTankWeightInput = document.getElementById('fuel-tank-weight');
+    const fuelTankPositionXInput = document.getElementById('fuel-tank-position-x');
+    const calculatedWattHoursDisplay = document.getElementById('calculated-watt-hours');
+    const calculatedFuelWeightDisplay = document.getElementById('calculated-fuel-weight');
+    const calculatedRuntimeDisplay = document.getElementById('calculated-runtime');
     const toggleAirflowInput = document.getElementById('toggle-airflow');
+    const electricMotorOptionsDiv = document.getElementById('electric-motor-options');
+    const electricMotorTypeInput = document.getElementById('electric-motor-type');
+    const kvRatingGroup = document.getElementById('kv-rating-group');
+    const kvRatingInput = document.getElementById('kv-rating');
+    const saveDesignBtn = document.getElementById('save-design-btn');
+    const loadDesignBtn = document.getElementById('load-design-btn');
+    const loadDesignInput = document.getElementById('load-design-input');
 
     // عناصر التحكم في الألوان
     const wingColorInput = document.getElementById('wing-color');
@@ -53,6 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const thrustResult = document.getElementById('result-thrust');
     const twrResult = document.getElementById('result-twr');
     const densityResult = document.getElementById('result-density');
+    const calculatedCgXDisplay = document.getElementById('calculated-cg-x-display');
     const clResult = document.getElementById('result-cl');
     const cdResult = document.getElementById('result-cd');
     
@@ -318,6 +342,21 @@ document.addEventListener('DOMContentLoaded', () => {
         controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
 
+        // إنشاء علامات مركز الثقل والرفع مرة واحدة هنا
+        const markerGeo = new THREE.SphereGeometry(0.025, 16, 16);
+        
+        // علامة مركز الثقل (CG) - باللون الأحمر
+        const cgMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.8 });
+        cgMarker = new THREE.Mesh(markerGeo, cgMaterial);
+        cgMarker.name = "CG_Marker";
+        scene.add(cgMarker);
+
+        // علامة مركز الرفع (CL) - باللون الأزرق
+        const clMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff, transparent: true, opacity: 0.8 });
+        clMarker = new THREE.Mesh(markerGeo.clone(), clMaterial); // Use clone for geometry
+        clMarker.name = "CL_Marker";
+        scene.add(clMarker);
+
         // إضافة محاور XYZ ونقطة الأصل
         const axesHelper = new THREE.AxesHelper(2); // الرقم 2 هو حجم المحاور
         scene.add(axesHelper);
@@ -450,6 +489,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const fuselageGeometry = new THREE.LatheGeometry(points, 32).rotateZ(-Math.PI / 2);
 
         const fuselageMesh = new THREE.Mesh(fuselageGeometry, fuselageMaterial);
+        fuselageMesh.name = "fuselage"; // إعطاء اسم لتسهيل العثور عليه
         airplaneGroup.add(fuselageMesh);
 
         // --- إنشاء قمرة القيادة (Canopy) ---
@@ -587,21 +627,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // إضافة المجموعة الكاملة إلى المشهد
         scene.add(airplaneGroup);
-        
-        // --- إنشاء علامات مركز الثقل والرفع ---
-        const markerGeo = new THREE.SphereGeometry(0.025, 16, 16);
-        
-        // علامة مركز الثقل (CG) - باللون الأحمر
-        const cgMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.8 });
-        cgMarker = new THREE.Mesh(markerGeo, cgMaterial);
-        cgMarker.name = "CG_Marker";
-        scene.add(cgMarker);
-
-        // علامة مركز الرفع (CL) - باللون الأزرق
-        const clMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff, transparent: true, opacity: 0.8 });
-        clMarker = new THREE.Mesh(markerGeo.clone(), clMaterial); // Use clone for geometry
-        clMarker.name = "CL_Marker";
-        scene.add(clMarker);
     }
 
     function updateAirplaneModel() {
@@ -676,19 +701,62 @@ document.addEventListener('DOMContentLoaded', () => {
         const cgPercent = parseFloat(cgPositionInput.value) / 100;
 
         // نحصل على الموضع الرأسي لمجموعة الجناح
-        const wingGroup = airplaneGroup.getObjectByName("wingGroup");
-        const wingYOffset = wingGroup ? wingGroup.position.y : 0;
+        // Note: wingGroup.position.y is the vertical offset of the wing relative to the fuselage center.
+        // The CG/CL markers are positioned relative to the wing's own coordinate system (where its Y=0).
+        // So, wingYOffset is not directly needed for the Z (X-axis) position of the markers.
+        // The Z-axis of the wing geometry is aligned with the aircraft's X-axis (length).
+        // The X-axis of the wing geometry is aligned with the aircraft's Z-axis (span).
+        // So, 'z' positions for markers correspond to 'x' positions on the aircraft.
 
+        // --- حساب مركز الثقل (CG) المحسوب (الموضع X) ---
+        const airframeWeightG = parseFloat(planeWeightInput.value);
+        const engineWeightG = parseFloat(engineWeightInput.value);
+        const engineType = engineTypeInput.value;
+
+        let powerSystemWeightG = 0;
+        let powerSystemPositionM = 0;
+
+        if (engineType === 'electric') {
+            powerSystemWeightG = parseFloat(batteryWeightInput.value);
+            powerSystemPositionM = parseFloat(batteryPositionXInput.value) / 100;
+        } else { // 'glow'
+            const fuelTankWeightEmptyG = parseFloat(fuelTankWeightInput.value);
+            const fuelTankCapacityMl = parseFloat(fuelTankCapacityInput.value);
+            const fuelDensity = (fuelTypeInput.value === 'nitro') ? 0.84 : 0.74; // g/ml
+            const fuelWeightG = fuelTankCapacityMl * fuelDensity;
+            powerSystemWeightG = fuelTankWeightEmptyG + fuelWeightG; // Full tank weight
+            powerSystemPositionM = parseFloat(fuelTankPositionXInput.value) / 100;
+        }
+
+        const totalWeightG = airframeWeightG + engineWeightG + powerSystemWeightG;
+
+        // المواضع على المحور X نسبة إلى الحافة الأمامية للجناح (نقطة المرجع X=0)
+        // نفترض أن مركز ثقل الهيكل عند الحافة الأمامية للجناح للتبسيط.
+        const X_airframe_m = 0;
+        const X_engine_m = fuselageLengthInput.value / 100 / 2; // At the nose
+        const X_powerSystem_m = powerSystemPositionM;
+
+        let calculated_cg_x_m = 0;
+        if (totalWeightG > 0) {
+            const totalMoment = (airframeWeightG * X_airframe_m) + (engineWeightG * X_engine_m) + (powerSystemWeightG * X_powerSystem_m);
+            calculated_cg_x_m = totalMoment / totalWeightG;
+        }
+
+
+        // --- مركز الثقل المرغوب (من إدخال المستخدم) للعرض المرئي للعلامة ---
+        // The wing's local Z-axis corresponds to the aircraft's X-axis (length).
+        // The wing's local X-axis corresponds to the aircraft's Z-axis (span).
+        // So, cg_z and cl_z are actually X-coordinates on the aircraft.
         // بعد تدوير الجناح، الحافة الأمامية تكون عند z=0 والحافة الخلفية عند z=-chord
         // مركز الرفع (CL) يكون عادة عند 25% من عرض الجناح من الحافة الأمامية
         const cl_z = -chord * 0.25;
         // مركز الثقل (CG) يتم تحديده من قبل المستخدم كنسبة مئوية من الحافة الأمامية
         const cg_z = -chord * cgPercent;
-
-        // تحديث مواضع العلامات. يتم إزاحة المحور Y قليلاً لتكون مرئية بوضوح
-        // مركز الرفع يظهر فوق الجناح، ومركز الثقل يظهر أسفل جسم الطائرة
-        clMarker.position.set(0, wingYOffset + 0.05, cl_z);
-        cgMarker.position.set(0, wingYOffset - 0.05, cg_z);
+        
+        // Update marker positions based on the DESIRED CG (from user input)
+        // Y-offset is for visual separation from the fuselage/wing
+        clMarker.position.set(0, 0.05, cl_z); // CL marker is above the wing
+        cgMarker.position.set(0, -0.05, cg_z); // CG marker is below the wing
 
         // --- التحقق من الاستقرار ---
         const stabilityWarning = document.getElementById('stability-warning');
@@ -696,18 +764,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // إذا كان مركز الثقل (cg_z) خلف مركز الرفع (cl_z)
         // (قيم z سالبة، لذا القيمة الأصغر تعني أبعد للخلف)
-        // هذا يجعل الطائرة غير مستقرة
-        if (cg_z < cl_z) {
+        // نستخدم مركز الثقل المحسوب للتحقق من الاستقرار.
+        // If calculated_cg_x_m (which is an X-coordinate) is less than cl_z (which is also an X-coordinate),
+        // it means CG is behind CL, which is unstable.
+        if (calculated_cg_x_m > -chord * 0.25) { // CG is behind CL
             stabilityWarning.classList.remove('hidden');
         } else {
             stabilityWarning.classList.add('hidden');
         }
+        calculatedCgXDisplay.textContent = `${(calculated_cg_x_m * 100).toFixed(1)}`;
     }
 
     // --- 4. الحسابات الديناميكية الهوائية (مبسطة) ---
 
     /**
-     * Calculates Lift and Drag coefficients based on Angle of Attack and airfoil type.
+     * Calculates the Wing's Lift Coefficient (Cl) based on Angle of Attack and airfoil type.
      * @param {number} aoa_deg - Angle of Attack in degrees.
      * @param {string} airfoilType - The type of airfoil.
      * @returns {{Cl: number, Cd: number}}
@@ -737,28 +808,75 @@ document.addEventListener('DOMContentLoaded', () => {
         const effective_aoa_deg = aoa_deg - zero_lift_aoa_deg;
         const effective_aoa_rad = THREE.MathUtils.degToRad(effective_aoa_deg);
 
-        // Simplified lift curve slope (2 * PI for thin airfoils)
+        // --- تحسينات مقترحة لـ Cl ---
+        // 1. استخدام منحنى رفع خطي مع تصحيح للميلان (الحالي)
+        // في نموذج أكثر تقدمًا، يمكن استبدال هذا بجداول بحث (Lookup Tables) لبيانات الجنيح الحقيقية.
         let Cl = (2 * Math.PI * effective_aoa_rad) * Math.cos(sweep_rad);
 
-        // Simplified stall model
+        // 2. نموذج توقف (Stall Model) أكثر دقة باستخدام Cl_max
+        const Cl_max = 1.4; // قيمة تقديرية لـ Cl الأقصى قبل التوقف
         if (aoa_deg > stall_angle_deg) {
-            // After stall, lift drops. This is a very simple approximation.
+            // بعد التوقف، ينخفض الرفع. هذا تقريب بسيط.
             Cl *= (1 - (aoa_deg - stall_angle_deg) / 10);
+            Cl = Math.max(0, Cl); // منع الرفع من أن يصبح سالبًا
+        }
+        Cl = Math.min(Cl, Cl_max); // التأكد من أن الرفع لا يتجاوز القيمة القصوى
+
+        // تم نقل حساب السحب إلى دالة منفصلة لتحسين الدقة
+        return { Cl };
+    }
+
+    /**
+     * Calculates the total Drag Coefficient (Cd) for the entire aircraft.
+     * This function combines parasitic drag from all components and induced drag.
+     * @param {number} Cl - Lift Coefficient of the wing.
+     * @param {string} airfoilType - The type of airfoil.
+     * @param {number} wingArea - The wing reference area.
+     * @returns {number} Total Drag Coefficient.
+     */
+    function calculateTotalDragCoefficient(Cl, airfoilType, wingArea) {
+        // --- 1. السحب الطفيلي (Parasitic Drag - Cd0) ---
+        // هذا هو مجموع السحب من جميع المكونات غير المنتجة للرفع.
+        // هذه القيم هي تقديرات تقريبية.
+        const Cd0_wing = 0.008;      // سحب احتكاك وشكل الجناح
+        const Cd0_fuselage = 0.005;  // سحب جسم الطائرة
+        const Cd0_tail = 0.003;      // سحب مجموعة الذيل
+        let Cd0_landingGear = 0;     // سحب معدات الهبوط (يبدأ من الصفر)
+        let Cd0_canopy = 0;          // سحب قمرة القيادة (يبدأ من الصفر)
+
+        // إضافة سحب معدات الهبوط بناءً على النوع المختار
+        const gearType = landingGearTypeInput.value;
+        if (gearType === 'tricycle' || gearType === 'taildragger') {
+            Cd0_landingGear = 0.015; // قيمة تقديرية للعجلات الثابتة
         }
 
-        // Simplified drag model: Cd = Parasitic Drag + Induced Drag
-        const Cd0 = 0.02; // Parasitic drag coefficient (friction, form drag)
-        let k = 0.05;   // Induced drag factor (related to aspect ratio)
+        // إضافة سحب قمرة القيادة إذا كانت موجودة
+        const canopyType = canopyTypeInput.value;
+        if (canopyType !== 'none') {
+            Cd0_canopy = 0.002;
+        }
+
+        const Cd0_total = Cd0_wing + Cd0_fuselage + Cd0_tail + Cd0_landingGear + Cd0_canopy;
+
+        // --- 2. السحب المستحث (Induced Drag) ---
+        // حساب نسبة الأبعاد (Aspect Ratio)
+        const span = parseFloat(wingSpanInput.value) / 100;
+        const AR = (wingArea > 0) ? (span * span) / wingArea : 6; // قيمة افتراضية 6 لتجنب القسمة على صفر
         
-        // Winglets reduce induced drag
+        // عامل كفاءة أوزوالد (e). يتراوح بين 0.7 و 0.95. الجنيحات تحسنه.
+        let oswaldEfficiency = 0.8; 
         const wingletType = wingletTypeInput.value;
         if (wingletType === 'standard' && airfoilType !== 'delta') {
-            k = 0.04; // Reduce induced drag factor by 20%
+            oswaldEfficiency = 0.85; // تحسين بسيط للكفاءة مع الجنيحات
         }
+        
+        const k = 1 / (Math.PI * AR * oswaldEfficiency);
+        const Cd_induced = k * Math.pow(Cl, 2);
 
-        let Cd = Cd0 + k * Math.pow(Cl, 2);
+        // --- 3. السحب الكلي ---
+        const Cd_total = Cd0_total + Cd_induced;
 
-        return { Cl, Cd };
+        return Cd_total;
     }
 
     /**
@@ -807,19 +925,54 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateCalculations() {
+        // إذا كان المحرك بدون فرشات، قم بحساب RPM دائمًا قبل أي شيء آخر
+        if (engineTypeInput.value === 'electric' && electricMotorTypeInput.value === 'brushless') {
+            calculateAndSetRpm();
+        }
+
         // الحصول على القيم من المدخلات
         const span = parseFloat(wingSpanInput.value) / 100; // متر
         const chord = parseFloat(wingChordInput.value) / 100; // متر
         const speedKmh = parseFloat(document.getElementById('air-speed').value); // كم/ساعة
         const propDiameterIn = parseFloat(propDiameterInput.value); // inches
         const propPitchIn = parseFloat(propPitchInput.value); // inches
-        const motorRpm = parseFloat(motorRpmInput.value); // RPM
-        const planeWeightG = parseFloat(planeWeightInput.value); // grams
         const tempC = parseFloat(airTempInput.value);
         const altitudeM = parseFloat(altitudeInput.value);
         const aoa_deg = parseFloat(angleOfAttackInput.value);
         const airfoilType = airfoilTypeInput.value;
+        const motorRpm = parseFloat(motorRpmInput.value);
+        const engineType = engineTypeInput.value;
+        const structureWeightG = parseFloat(planeWeightInput.value); // grams
+        const engineWeightG = parseFloat(engineWeightInput.value); // grams
+        const engineTorqueNm = parseFloat(engineTorqueInput.value); // N.m
+        
+        let powerSystemWeightG = 0;
+        if (engineType === 'electric') {
+            const batteryVoltage = parseFloat(batteryVoltageInput.value);
+            const batteryCapacity = parseFloat(batteryCapacityInput.value);
+            powerSystemWeightG = parseFloat(batteryWeightInput.value);
+            
+            // حساب الواط-ساعة
+            const wattHours = (batteryCapacity * batteryVoltage) / 1000;
+            calculatedWattHoursDisplay.textContent = wattHours.toFixed(2);
 
+        } else { // 'glow'
+            const fuelTankWeightEmptyG = parseFloat(fuelTankWeightInput.value);
+            const fuelTankCapacityMl = parseFloat(fuelTankCapacityInput.value);
+            const fuelDensity = (fuelTypeInput.value === 'nitro') ? 0.84 : 0.74; // g/ml
+            const fuelWeightG = fuelTankCapacityMl * fuelDensity;
+            powerSystemWeightG = fuelTankWeightEmptyG + fuelWeightG; // Full tank weight
+
+            // حساب زمن التشغيل التقديري
+            // نفترض استهلاكًا نموذجيًا (مثل 30 مل/دقيقة) - هذا تقدير تقريبي جدًا
+            const consumptionRateMlMin = 30; 
+            const runtimeMin = fuelTankCapacityMl / consumptionRateMlMin;
+            calculatedFuelWeightDisplay.textContent = fuelWeightG.toFixed(1);
+            calculatedRuntimeDisplay.textContent = runtimeMin.toFixed(1);
+        }
+
+        const totalWeightG = structureWeightG + engineWeightG + powerSystemWeightG;
+        
         // --- حسابات أساسية ---
         const area = calculateWingArea();
         const speedMps = speedKmh * (1000 / 3600); // تحويل إلى متر/ثانية
@@ -827,28 +980,62 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- حسابات ديناميكا الهواء (تقديرية) ---
         // كثافة الهواء الآن ديناميكية
         const airDensity = calculateAirDensity(tempC, altitudeM);
-        // المعاملات الآن ديناميكية
-        const { Cl: liftCoefficient, Cd: dragCoefficient } = getAeroCoefficients(aoa_deg, airfoilType);
+        // 1. حساب معامل الرفع للجناح
+        const { Cl: liftCoefficient } = getAeroCoefficients(aoa_deg, airfoilType);
+        // 2. حساب معامل السحب الكلي للطائرة
+        const totalDragCoefficient = calculateTotalDragCoefficient(liftCoefficient, airfoilType, area);
 
         // معادلة الرفع: L = 0.5 * Cl * ρ * v² * A
         const liftForce = 0.5 * liftCoefficient * airDensity * Math.pow(speedMps, 2) * area;
 
         // معادلة السحب: D = 0.5 * Cd * ρ * v² * A
-        const dragForce = 0.5 * dragCoefficient * airDensity * Math.pow(speedMps, 2) * area;
+        const dragForce = 0.5 * totalDragCoefficient * airDensity * Math.pow(speedMps, 2) * area;
 
         // --- حساب قوة الدفع (Thrust) التقديرية ---
-        // نستخدم صيغة تقديرية مبسطة للدفع الساكن (Static Thrust) تعتمد على نظرية الزخم
-        // Thrust ≈ k * Pitch * ρ * (RPM/60)² * Diameter³
-        // حيث k هو ثابت تجريبي. سنستخدم قيمة 0.1 كتقدير.
-        const propDiameterM = propDiameterIn * 0.0254; // تحويل من بوصة إلى متر
-        const propPitchM = propPitchIn * 0.0254; // تحويل من بوصة إلى متر
-        const revsPerSec = motorRpm / 60;
-        const thrustConstant = 0.1; // ثابت تجريبي تقديري
+        let staticThrust;
 
-        const staticThrust = thrustConstant * propPitchM * airDensity * Math.pow(revsPerSec, 2) * Math.pow(propDiameterM, 3);
+        if (engineTorqueNm > 0) {
+            // حساب الدفع بناءً على عزم المحرك والطاقة (نموذج أكثر دقة للدفع الساكن)
+            // 1. حساب طاقة المحرك (القدرة) بالواط
+            // القدرة (واط) = العزم (نيوتن.متر) * السرعة الزاوية (راديان/ثانية)
+            const angularVelocityRadPerSec = motorRpm * (2 * Math.PI / 60);
+            const enginePowerWatts = engineTorqueNm * angularVelocityRadPerSec;
+
+            // 2. تقدير كفاءة المروحة في الظروف الساكنة (قيمة نموذجية)
+            const propellerEfficiencyStatic = 0.7; // 70% كفاءة
+
+            // 3. حساب القدرة الناتجة من المروحة (القدرة المنقولة للهواء)
+            const propellerOutputPower = enginePowerWatts * propellerEfficiencyStatic;
+
+            // 4. حساب مساحة قرص المروحة (مساحة الدائرة التي تغطيها المروحة)
+            const propDiameterM = propDiameterIn * 0.0254; // تحويل من بوصة إلى متر
+            const propellerArea = Math.PI * Math.pow(propDiameterM / 2, 2);
+
+            // 5. استخدام صيغة الدفع الساكن المعتمدة على القدرة (من نظرية الزخم المثالية، مع تعديل)
+            // Thrust = (2 * rho * A * P_out^2)^(1/3)
+            // حيث:
+            // rho: كثافة الهواء
+            // A: مساحة قرص المروحة
+            // P_out: القدرة الناتجة من المروحة
+            // العامل (2)^(1/3) يأتي من اشتقاق النظرية المثالية
+            const K_thrust_factor = Math.pow(2, 1/3); // تقريباً 1.26
+
+            staticThrust = K_thrust_factor * Math.pow(airDensity * propellerArea * Math.pow(propellerOutputPower, 2), 1/3);
+
+        } else {
+            // العودة إلى حساب الدفع المعتمد على سرعة الدوران (RPM) إذا لم يتم توفير العزم
+            // هذه صيغة تقديرية مبسطة للدفع الساكن تعتمد على نظرية الزخم
+            // Thrust ≈ k * Pitch * ρ * (RPM/60)² * Diameter³
+            const propDiameterM = propDiameterIn * 0.0254; // تحويل من بوصة إلى متر
+            const propPitchM = propPitchIn * 0.0254; // تحويل من بوصة إلى متر
+            const revsPerSec = motorRpm / 60;
+            const thrustConstant = 0.1; // ثابت تجريبي تقديري
+
+            staticThrust = thrustConstant * propPitchM * airDensity * Math.pow(revsPerSec, 2) * Math.pow(propDiameterM, 3);
+        }
 
         // --- حساب نسبة الدفع إلى الوزن (TWR) ---
-        const planeMassKg = planeWeightG / 1000; // تحويل جرام إلى كجم
+        const planeMassKg = totalWeightG / 1000; // تحويل جرام إلى كجم
         const planeWeightN = planeMassKg * 9.81; // تحويل الكتلة (كجم) إلى وزن (نيوتن)
         
         let twrText = 'N/A';
@@ -860,12 +1047,138 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- تحديث واجهة المستخدم بالنتائج ---
         densityResult.textContent = `${airDensity.toFixed(4)} kg/m³`;
         clResult.textContent = liftCoefficient.toFixed(3);
-        cdResult.textContent = dragCoefficient.toFixed(3);
+        cdResult.textContent = totalDragCoefficient.toFixed(3); // استخدام السحب الكلي المحسوب
         areaResult.textContent = `${area.toFixed(2)} م²`;
         liftResult.textContent = `${liftForce.toFixed(2)} نيوتن`;
         dragResult.textContent = `${dragForce.toFixed(2)} نيوتن`;
         thrustResult.textContent = `${staticThrust.toFixed(2)} نيوتن`; // تحديث قيمة الدفع
         twrResult.textContent = twrText;
+        if (totalWeightDisplay) totalWeightDisplay.textContent = totalWeightG.toFixed(0);
+    }
+
+    /**
+     * Calculates RPM for brushless motors based on KV and Voltage and updates the input field.
+     */
+    function calculateAndSetRpm() {
+        if (electricMotorTypeInput.value === 'brushless') {
+            const kv = parseFloat(kvRatingInput.value);
+            const voltage = parseFloat(batteryVoltageInput.value);
+            if (!isNaN(kv) && !isNaN(voltage)) {
+                // RPM ≈ KV * Voltage. A factor of 0.85 is used to estimate RPM under load.
+                const calculatedRpm = kv * voltage * 0.85;
+                motorRpmInput.value = calculatedRpm.toFixed(0);
+            }
+        }
+    }
+
+    /**
+     * Updates the UI to show/hide electric motor specific controls (like KV rating).
+     */
+    function updateElectricMotorUI() {
+        const motorType = electricMotorTypeInput.value;
+        if (motorType === 'brushless') {
+            kvRatingGroup.style.display = 'block';
+            motorRpmInput.disabled = true;
+            motorRpmInput.style.backgroundColor = 'var(--light-bg)'; // Visual cue for disabled
+        } else { // 'brushed'
+            kvRatingGroup.style.display = 'none';
+            motorRpmInput.disabled = false;
+            motorRpmInput.style.backgroundColor = ''; // Revert to default
+        }
+    }
+
+    /**
+     * Updates the UI to show/hide power system controls based on engine type.
+     */
+    function updatePowerSystemUI() {
+        const engineType = engineTypeInput.value;
+        const electricSetupDiv = document.getElementById('electric-setup');
+        const fuelSetupDiv = document.getElementById('fuel-setup');
+
+        if (engineType === 'electric') {
+            electricSetupDiv.classList.remove('hidden');
+            fuelSetupDiv.classList.add('hidden');
+            electricMotorOptionsDiv.classList.remove('hidden');
+            updateElectricMotorUI(); // Update sub-options
+        } else { // 'glow'
+            electricSetupDiv.classList.add('hidden');
+            fuelSetupDiv.classList.remove('hidden');
+            electricMotorOptionsDiv.classList.add('hidden');
+            motorRpmInput.disabled = false; // Always enable for glow engines
+            motorRpmInput.style.backgroundColor = '';
+        }
+    }
+
+    // --- 6. Save and Load Functionality ---
+
+    function saveDesign() {
+        const designData = {};
+        // Select all relevant input elements from the control panel
+        const inputsToSave = document.querySelectorAll('.controls-panel input, .controls-panel select');
+
+        inputsToSave.forEach(input => {
+            // Only save inputs that have an ID and are not file inputs
+            if (input.id && input.type !== 'file') {
+                if (input.type === 'checkbox') {
+                    designData[input.id] = input.checked;
+                } else {
+                    designData[input.id] = input.value;
+                }
+            }
+        });
+
+        const jsonString = JSON.stringify(designData, null, 2); // Pretty print the JSON
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+
+        // Create a temporary link to trigger the download
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'rc_plane_design.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url); // Clean up the object URL
+    }
+
+    function loadDesign(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const designData = JSON.parse(e.target.result);
+                
+                // Set all input values from the loaded file
+                for (const id in designData) {
+                    const input = document.getElementById(id);
+                    if (input) {
+                        if (input.type === 'checkbox') {
+                            input.checked = designData[id];
+                        } else {
+                            input.value = designData[id];
+                        }
+                    }
+                }
+
+                // Trigger all UI and model updates ONCE after loading all values
+                updateWingControls();
+                updateTailControls();
+                updatePowerSystemUI();
+                updateAirplaneModel();
+                updateCalculations();
+                updatePerformanceCharts();
+
+            } catch (error) {
+                console.error("Error loading or parsing design file:", error);
+                alert("فشل تحميل الملف. تأكد من أنه ملف تصميم صالح.");
+            }
+        };
+        reader.readAsText(file);
+        
+        // Reset the file input value to allow loading the same file again
+        event.target.value = '';
     }
 
     // --- 4.6. Airflow Visualization ---
@@ -1010,7 +1323,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         for (let aoa_deg = minAoa; aoa_deg <= maxAoa; aoa_deg += step) {
             aoaLabels.push(aoa_deg);
-            const { Cl, Cd } = getAeroCoefficients(aoa_deg, airfoilType);
+            const { Cl } = getAeroCoefficients(aoa_deg, airfoilType);
+            const Cd = calculateTotalDragCoefficient(Cl, airfoilType, area);
             
             const liftForce = 0.5 * Cl * airDensity * Math.pow(speedMps, 2) * area;
             liftData.push(liftForce.toFixed(2));
@@ -1038,6 +1352,14 @@ document.addEventListener('DOMContentLoaded', () => {
         // Initial UI setup
         updateWingControls();
         updateTailControls();
+        updatePowerSystemUI();
+        // Initial update for calculated CG display
+        updateMarkers();
+
+        // Save/Load Listeners
+        saveDesignBtn.addEventListener('click', saveDesign);
+        loadDesignBtn.addEventListener('click', () => loadDesignInput.click());
+        loadDesignInput.addEventListener('change', loadDesign);
 
         // عند تغيير أي من المدخلات، قم بتحديث النموذج والحسابات
         const fullUpdateControls = document.querySelectorAll(
@@ -1046,7 +1368,12 @@ document.addEventListener('DOMContentLoaded', () => {
         fullUpdateControls.forEach(input => {
             input.addEventListener('input', () => {
                 if (input.id === 'airfoil-type') updateWingControls();
-                if (input.id === 'tail-type') updateTailControls();
+                if (input.id === 'engine-type') {
+                    updatePowerSystemUI();
+                }
+                if (input.id === 'tail-type') {
+                    updateTailControls();
+                }
                 updateAirplaneModel();
                 updateCalculations();
                 updatePerformanceCharts();
@@ -1077,6 +1404,12 @@ document.addEventListener('DOMContentLoaded', () => {
             // only the main calculations.
         });
 
+        // Listener for electric motor type change
+        electricMotorTypeInput.addEventListener('input', () => {
+            updateElectricMotorUI();
+            updateCalculations(); // Recalculate everything when motor type changes
+        });
+
         // Listener for the airflow toggle
         toggleAirflowInput.addEventListener('change', () => {
             airflowVisible = toggleAirflowInput.checked;
@@ -1096,7 +1429,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         fuselageColorInput.addEventListener('input', (event) => {
             if (airplaneGroup) {
-                const fuselage = airplaneGroup.children.find(c => c.geometry.type === 'CylinderGeometry');
+                const fuselage = airplaneGroup.getObjectByName('fuselage');
                 if (fuselage) fuselage.material.color.set(event.target.value);
             }
         });
@@ -1163,4 +1496,3 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 6. التشغيل ---
     init();
 });
-  
