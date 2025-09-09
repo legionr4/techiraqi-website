@@ -440,7 +440,21 @@ function updatePlaneModel() {
         const aileronThickness = getValidNumber(aileronThicknessInput) * conversionFactor;
         const aileronPosition = getValidNumber(aileronPositionInput) * conversionFactor;
 
-        const aileronGeom = new THREE.BoxGeometry(aileronWidth, aileronThickness, aileronLength);
+        // Create a tapered aileron shape
+        const aileronZStart = halfSpan - aileronPosition - aileronLength;
+        const aileronZEnd = halfSpan - aileronPosition;
+        const chordAtAileronStart = rootChord + (rootChord * taperRatio - rootChord) * (aileronZStart / halfSpan);
+        const chordAtAileronEnd = rootChord + (rootChord * taperRatio - rootChord) * (aileronZEnd / halfSpan);
+
+        const aileronShape = new THREE.Shape();
+        aileronShape.moveTo(0, -aileronLength / 2);
+        aileronShape.lineTo(aileronWidth, -aileronLength / 2);
+        aileronShape.lineTo(aileronWidth * (chordAtAileronEnd / chordAtAileronStart), aileronLength / 2);
+        aileronShape.lineTo(0, aileronLength / 2);
+        aileronShape.closePath();
+
+        const aileronGeom = new THREE.ExtrudeGeometry(aileronShape, { depth: aileronThickness, bevelEnabled: false });
+        aileronGeom.center(); // Center the geometry for easier positioning and rotation
         
         const rightAileron = new THREE.Mesh(aileronGeom, aileronMaterial);
         // Position the aileron at the trailing edge of the wing
@@ -454,6 +468,7 @@ function updatePlaneModel() {
 
         const leftAileron = new THREE.Mesh(aileronGeom, aileronMaterial);
         leftAileron.position.copy(rightAileron.position);
+        leftAileron.rotation.y = sweepRad; // Apply sweep to the left aileron as well
         leftAileron.name = 'leftAileron'; // Name for raycasting
         leftWing.add(leftAileron);
     }
