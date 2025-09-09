@@ -1,10 +1,9 @@
 // rc-design.js
 
 // =============================================================================
-//  RC Plane Designer v2.0 - Rebuilt for Stability
+//  RC Plane Designer v2.1 - Rebuilt for Stability
 // =============================================================================
-//  This version has been completely rewritten from scratch to ensure stability
-//  and provide a clean, robust foundation for future development.
+//  This version uses simplified and robust geometry to ensure rendering.
 // =============================================================================
 
 import * as THREE from 'https://unpkg.com/three@0.164.1/build/three.module.js';
@@ -127,26 +126,15 @@ document.addEventListener('DOMContentLoaded', () => {
         fuselage.name = "fuselage";
         modelGroup.add(fuselage);
 
-        // --- Wing ---
+        // --- Wing (Simplified and Robust) ---
         const wingGroup = new THREE.Group();
         wingGroup.name = "wingGroup";
-        let wingMesh;
         const wingThickness = chord * 0.12; // 12% thickness is a common average
 
-        if (DOM.airfoilType.value === 'delta') {
-            const shape = new THREE.Shape();
-            shape.moveTo(chord / 2, 0);
-            shape.lineTo(-chord / 2, span / 2);
-            shape.lineTo(-chord / 2, -span / 2);
-            shape.lineTo(chord / 2, 0);
-            const extrudeSettings = { depth: wingThickness, bevelEnabled: false };
-            const wingGeo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
-            wingGeo.rotateX(Math.PI / 2); // Lay it flat
-            wingGeo.center();
-            wingMesh = new THREE.Mesh(wingGeo, wingMat);
-        } else {
-            const wingGeo = new THREE.BoxGeometry(chord, wingThickness, span);
-            
+        // Use simple BoxGeometry for all wing types to ensure rendering
+        const wingGeo = new THREE.BoxGeometry(chord, wingThickness, span);
+
+        if (DOM.airfoilType.value !== 'delta') {
             // Apply Taper
             const taperRatio = parseFloat(DOM.taperRatio.value);
             const positions = wingGeo.attributes.position;
@@ -165,8 +153,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             wingGeo.attributes.position.needsUpdate = true;
             wingGeo.computeVertexNormals();
-            wingMesh = new THREE.Mesh(wingGeo, wingMat);
         }
+        
+        const wingMesh = new THREE.Mesh(wingGeo, wingMat);
         wingGroup.add(wingMesh);
 
         // Wing Position
