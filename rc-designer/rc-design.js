@@ -30,8 +30,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const taperRatioValueSpan = document.getElementById('taper-ratio-value');
     const taperRatioGroup = document.getElementById('taper-ratio-group');
     const togglePropAnimInput = document.getElementById('toggle-prop-anim');
-    const wingletTypeInput = document.getElementById('winglet-type');
-    const landingGearTypeInput = document.getElementById('landing-gear-type');
 
     // عناصر التحكم في الألوان
     const wingColorInput = document.getElementById('wing-color');
@@ -53,7 +51,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const cgPositionInput = document.getElementById('cg-position');
     const airTempInput = document.getElementById('air-temp');
     const altitudeInput = document.getElementById('altitude');
-    const canopyTypeInput = document.getElementById('canopy-type');
     const wingletGroup = document.getElementById('winglet-group');
     const motorRpmInput = document.getElementById('motor-rpm');
     const toggleAirflowInput = document.getElementById('toggle-airflow');
@@ -798,6 +795,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {number} Total Drag Coefficient.
      */
     function calculateTotalDragCoefficient(Cl, airfoilType, wingArea) {
+        const wingletTypeInput = document.getElementById('winglet-type');
         // --- 1. السحب الطفيلي (Parasitic Drag - Cd0) ---
         // هذا هو مجموع السحب من جميع المكونات غير المنتجة للرفع.
         // هذه القيم هي تقديرات تقريبية.
@@ -805,19 +803,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const Cd0_fuselage = 0.005;  // سحب جسم الطائرة
         const Cd0_tail = 0.003;      // سحب مجموعة الذيل
         let Cd0_landingGear = 0;     // سحب معدات الهبوط (يبدأ من الصفر)
-        let Cd0_canopy = 0;          // سحب قمرة القيادة (يبدأ من الصفر)
+        const Cd0_canopy = 0;          // سحب قمرة القيادة (يبدأ من الصفر)
 
-        // إضافة سحب معدات الهبوط بناءً على النوع المختار
-        const gearType = landingGearTypeInput.value;
-        if (gearType === 'tricycle' || gearType === 'taildragger') {
-            Cd0_landingGear = 0.015; // قيمة تقديرية للعجلات الثابتة
-        }
-
-        // إضافة سحب قمرة القيادة إذا كانت موجودة
-        const canopyType = canopyTypeInput.value;
-        if (canopyType !== 'none') {
-            Cd0_canopy = 0.002;
-        }
 
         const Cd0_total = Cd0_wing + Cd0_fuselage + Cd0_tail + Cd0_landingGear + Cd0_canopy;
 
@@ -828,7 +815,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // عامل كفاءة أوزوالد (e). يتراوح بين 0.7 و 0.95. الجنيحات تحسنه.
         let oswaldEfficiency = 0.8;
-        const wingletType = wingletTypeInput.value;
+        const wingletType = wingletTypeInput ? wingletTypeInput.value : 'none';
         if (wingletType === 'standard' && airfoilType !== 'delta') {
             oswaldEfficiency = 0.85; // تحسين بسيط للكفاءة مع الجنيحات
         }
@@ -888,11 +875,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateCalculations() {
-        // إذا كان المحرك بدون فرشات، قم بحساب RPM دائمًا قبل أي شيء آخر
-        if (engineTypeInput.value === 'electric' && electricMotorTypeInput.value === 'brushless') {
-            calculateAndSetRpm();
-        }
-
         // الحصول على القيم من المدخلات
         const span = parseFloat(wingSpanInput.value) / 100; // متر
         const chord = parseFloat(wingChordInput.value) / 100; // متر
@@ -904,38 +886,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const aoa_deg = parseFloat(document.getElementById('angle-of-attack').value);
         const airfoilType = airfoilTypeInput.value;
         const motorRpm = parseFloat(document.getElementById('motor-rpm').value);
-        /*
-        const structureWeightG = parseFloat(planeWeightInput.value); // grams
-        const engineWeightG = parseFloat(engineWeightInput.value); // grams
-        const engineTorqueNm = parseFloat(engineTorqueInput.value); // N.m
-        
-        let powerSystemWeightG = 0;
-        if (engineType === 'electric') {
-            const batteryVoltage = parseFloat(batteryVoltageInput.value);
-            const batteryCapacity = parseFloat(batteryCapacityInput.value);
-            powerSystemWeightG = parseFloat(batteryWeightInput.value);
-            
-            // حساب الواط-ساعة
-            const wattHours = (batteryCapacity * batteryVoltage) / 1000;
-            calculatedWattHoursDisplay.textContent = wattHours.toFixed(2);
 
-        } else { // 'glow'
-            const fuelTankWeightEmptyG = parseFloat(fuelTankWeightInput.value);
-            const fuelTankCapacityMl = parseFloat(fuelTankCapacityInput.value);
-            const fuelDensity = (fuelTypeInput.value === 'nitro') ? 0.84 : 0.74; // g/ml
-            const fuelWeightG = fuelTankCapacityMl * fuelDensity;
-            powerSystemWeightG = fuelTankWeightEmptyG + fuelWeightG; // Full tank weight
-
-            // حساب زمن التشغيل التقديري
-            // نفترض استهلاكًا نموذجيًا (مثل 30 مل/دقيقة) - هذا تقدير تقريبي جدًا
-            const consumptionRateMlMin = 30; 
-            const runtimeMin = fuelTankCapacityMl / consumptionRateMlMin;
-            calculatedFuelWeightDisplay.textContent = fuelWeightG.toFixed(1);
-            calculatedRuntimeDisplay.textContent = runtimeMin.toFixed(1);
-        }
-
-        const totalWeightG = structureWeightG + engineWeightG + powerSystemWeightG;
-        */
         const totalWeightG = parseFloat(planeWeightInput.value);
 
         // --- حسابات أساسية ---
@@ -956,50 +907,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // معادلة السحب: D = 0.5 * Cd * ρ * v² * A
         const dragForce = 0.5 * totalDragCoefficient * airDensity * Math.pow(speedMps, 2) * area;
 
-        /*
-        // --- حساب قوة الدفع (Thrust) التقديرية ---
-        let staticThrust;
-
-        if (engineTorqueNm > 0) {
-            // حساب الدفع بناءً على عزم المحرك والطاقة (نموذج أكثر دقة للدفع الساكن)
-            // 1. حساب طاقة المحرك (القدرة) بالواط
-            // القدرة (واط) = العزم (نيوتن.متر) * السرعة الزاوية (راديان/ثانية)
-            const angularVelocityRadPerSec = motorRpm * (2 * Math.PI / 60);
-            const enginePowerWatts = engineTorqueNm * angularVelocityRadPerSec;
-
-            // 2. تقدير كفاءة المروحة في الظروف الساكنة (قيمة نموذجية)
-            const propellerEfficiencyStatic = 0.7; // 70% كفاءة
-
-            // 3. حساب القدرة الناتجة من المروحة (القدرة المنقولة للهواء)
-            const propellerOutputPower = enginePowerWatts * propellerEfficiencyStatic;
-
-            // 4. حساب مساحة قرص المروحة (مساحة الدائرة التي تغطيها المروحة)
-            const propDiameterM = propDiameterIn * 0.0254; // تحويل من بوصة إلى متر
-            const propellerArea = Math.PI * Math.pow(propDiameterM / 2, 2);
-
-            // 5. استخدام صيغة الدفع الساكن المعتمدة على القدرة (من نظرية الزخم المثالية، مع تعديل)
-            // Thrust = (2 * rho * A * P_out^2)^(1/3)
-            // حيث:
-            // rho: كثافة الهواء
-            // A: مساحة قرص المروحة
-            // P_out: القدرة الناتجة من المروحة
-            // العامل (2)^(1/3) يأتي من اشتقاق النظرية المثالية
-            const K_thrust_factor = Math.pow(2, 1/3); // تقريباً 1.26
-
-            staticThrust = K_thrust_factor * Math.pow(airDensity * propellerArea * Math.pow(propellerOutputPower, 2), 1/3);
-
-        } else {
-            // العودة إلى حساب الدفع المعتمد على سرعة الدوران (RPM) إذا لم يتم توفير العزم
-            // هذه صيغة تقديرية مبسطة للدفع الساكن تعتمد على نظرية الزخم
-            // Thrust ≈ k * Pitch * ρ * (RPM/60)² * Diameter³
-            const propDiameterM = propDiameterIn * 0.0254; // تحويل من بوصة إلى متر
-            const propPitchM = propPitchIn * 0.0254; // تحويل من بوصة إلى متر
-            const revsPerSec = motorRpm / 60;
-            const thrustConstant = 0.1; // ثابت تجريبي تقديري
-
-            staticThrust = thrustConstant * propPitchM * airDensity * Math.pow(revsPerSec, 2) * Math.pow(propDiameterM, 3);
-        }
-        */
         // Simplified thrust calculation
         const propDiameterM = propDiameterIn * 0.0254; // تحويل من بوصة إلى متر
         const propPitchM = propPitchIn * 0.0254; // تحويل من بوصة إلى متر
@@ -1029,137 +936,7 @@ document.addEventListener('DOMContentLoaded', () => {
         dragResult.textContent = `${dragForce.toFixed(2)} نيوتن`;
         thrustResult.textContent = `${staticThrust.toFixed(2)} نيوتن`; // تحديث قيمة الدفع
         twrResult.textContent = twrText;
-        //if (totalWeightDisplay) totalWeightDisplay.textContent = totalWeightG.toFixed(0);
     }
-
-    /*
-    /**
-     * Calculates RPM for brushless motors based on KV and Voltage and updates the input field.
-     */
-    function calculateAndSetRpm() {
-        if (electricMotorTypeInput.value === 'brushless') {
-            const kv = parseFloat(kvRatingInput.value);
-            const voltage = parseFloat(batteryVoltageInput.value);
-            if (!isNaN(kv) && !isNaN(voltage)) {
-                // RPM ≈ KV * Voltage. A factor of 0.85 is used to estimate RPM under load.
-                const calculatedRpm = kv * voltage * 0.85;
-                motorRpmInput.value = calculatedRpm.toFixed(0);
-            }
-        }
-    }
-
-    /**
-     * Updates the UI to show/hide electric motor specific controls (like KV rating).
-     */
-    function updateElectricMotorUI() {
-        const motorType = electricMotorTypeInput.value;
-        if (motorType === 'brushless') {
-            kvRatingGroup.style.display = 'block';
-            motorRpmInput.disabled = true;
-            motorRpmInput.style.backgroundColor = 'var(--light-bg)'; // Visual cue for disabled
-        } else { // 'brushed'
-            kvRatingGroup.style.display = 'none';
-            motorRpmInput.disabled = false;
-            motorRpmInput.style.backgroundColor = ''; // Revert to default
-        }
-    }
-
-    /**
-     * Updates the UI to show/hide power system controls based on engine type.
-     */
-    function updatePowerSystemUI() {
-        const engineType = engineTypeInput.value;
-        const electricSetupDiv = document.getElementById('electric-setup');
-        const fuelSetupDiv = document.getElementById('fuel-setup');
-
-        if (engineType === 'electric') {
-            electricSetupDiv.classList.remove('hidden');
-            fuelSetupDiv.classList.add('hidden');
-            electricMotorOptionsDiv.classList.remove('hidden');
-            updateElectricMotorUI(); // Update sub-options
-        } else { // 'glow'
-            electricSetupDiv.classList.add('hidden');
-            fuelSetupDiv.classList.remove('hidden');
-            electricMotorOptionsDiv.classList.add('hidden');
-            motorRpmInput.disabled = false; // Always enable for glow engines
-            motorRpmInput.style.backgroundColor = '';
-        }
-    }
-
-
-    /*
-    // --- 6. Save and Load Functionality ---
-
-    function saveDesign() {
-        const designData = {};
-        // Select all relevant input elements from the control panel
-        const inputsToSave = document.querySelectorAll('.controls-panel input, .controls-panel select');
-
-        inputsToSave.forEach(input => {
-            // Only save inputs that have an ID and are not file inputs
-            if (input.id && input.type !== 'file') {
-                if (input.type === 'checkbox') {
-                    designData[input.id] = input.checked;
-                } else {
-                    designData[input.id] = input.value;
-                }
-            }
-        });
-
-        const jsonString = JSON.stringify(designData, null, 2); // Pretty print the JSON
-        const blob = new Blob([jsonString], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-
-        // Create a temporary link to trigger the download
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'rc_plane_design.json';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url); // Clean up the object URL
-    }
-
-    function loadDesign(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const designData = JSON.parse(e.target.result);
-                
-                // Set all input values from the loaded file
-                for (const id in designData) {
-                    const input = document.getElementById(id);
-                    if (input) {
-                        if (input.type === 'checkbox') {
-                            input.checked = designData[id];
-                        } else {
-                            input.value = designData[id];
-                        }
-                    }
-                }
-
-                // Trigger all UI and model updates ONCE after loading all values
-                updateWingControls();
-                updateTailControls();
-                updatePowerSystemUI();
-                updateAirplaneModel();
-                updateCalculations();
-                updatePerformanceCharts();
-
-            } catch (error) {
-                console.error("Error loading or parsing design file:", error);
-                alert("فشل تحميل الملف. تأكد من أنه ملف تصميم صالح.");
-            }
-        };
-        reader.readAsText(file);
-        
-        // Reset the file input value to allow loading the same file again
-        event.target.value = '';
-    }
-    */
 
     // --- 4.6. Airflow Visualization ---
 
@@ -1330,68 +1107,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function setupEventListeners() {
         // Initial UI setup
-        //updateWingControls();
-        //updateTailControls();
-        //updatePowerSystemUI();
+        updateWingControls();
         // Initial update for calculated CG display
         updateMarkers();
 
-        /*
-        // Save/Load Listeners
-        saveDesignBtn.addEventListener('click', saveDesign);
-        loadDesignBtn.addEventListener('click', () => loadDesignInput.click());
-        loadDesignInput.addEventListener('change', loadDesign);
-
-        // عند تغيير أي من المدخلات، قم بتحديث النموذج والحسابات
-        const fullUpdateControls = document.querySelectorAll(
-            '.controls-panel input[type="number"], .controls-panel select'
-        );
-        fullUpdateControls.forEach(input => {
-            input.addEventListener('input', () => {
-                if (input.id === 'airfoil-type') updateWingControls();
-                //if (input.id === 'engine-type') {
-                //    updatePowerSystemUI();
-                //}
-                //if (input.id === 'tail-type') {
-                //    updateTailControls();
-                //}
-                updateAirplaneModel();
-                updateCalculations();
-                updatePerformanceCharts();
-            });
-        });
-
-        sweepAngleInput.addEventListener('input', () => {
-            sweepAngleValueSpan.textContent = sweepAngleInput.value;
-            // This listener is separate to handle the UI update of the value span,
-            // but the model update is also triggered for responsiveness.
-            updateAirplaneModel();
-            updateCalculations();
-            updatePerformanceCharts();
-        });
-
-        taperRatioInput.addEventListener('input', () => {
-            taperRatioValueSpan.textContent = parseFloat(taperRatioInput.value).toFixed(2);
-            updateAirplaneModel();
-            updateCalculations();
-            updatePerformanceCharts();
-        });
-
-        // مستمع خاص لمنزلق زاوية الهجوم لتحديث فوري أكثر
-        angleOfAttackInput.addEventListener('input', () => {
-            updateAngleOfAttack();
-            updateCalculations();
-            // Charts are AoA-based, so they don't need update on single AoA change,
-            // only the main calculations.
-        });
-
-        /*
-        // Listener for electric motor type change
-        electricMotorTypeInput.addEventListener('input', () => {
-            updateElectricMotorUI();
-            updateCalculations(); // Recalculate everything when motor type changes
-        });
-        */
+        // Update wing controls visibility when airfoil type changes
+        airfoilTypeInput.addEventListener('input', updateWingControls);
 
         // Listener for the airflow toggle
         toggleAirflowInput.addEventListener('change', () => {
@@ -1424,8 +1145,21 @@ document.addEventListener('DOMContentLoaded', () => {
         // Simplified event listeners for all inputs
         const allInputs = document.querySelectorAll('.controls-panel input, .controls-panel select');
         allInputs.forEach(input => {
-            input.addEventListener('input', () => {
-                updateAirplaneModel();
+            // Use 'input' for range sliders and 'change' for others for better performance
+            const eventType = (input.type === 'range') ? 'input' : 'change';
+            input.addEventListener(eventType, () => {
+                // Update text spans for range sliders immediately
+                if (input.id === 'sweep-angle') {
+                    sweepAngleValueSpan.textContent = input.value;
+                }
+                if (input.id === 'taper-ratio') {
+                    taperRatioValueSpan.textContent = parseFloat(input.value).toFixed(2);
+                }
+                if (input.id === 'angle-of-attack') {
+                    aoaValueSpan.textContent = parseFloat(input.value).toFixed(1);
+                }
+
+                updateAirplaneModel(); // This also calls updateAngleOfAttack and updateMarkers
                 updateCalculations();
                 updatePerformanceCharts();
             });
