@@ -23,7 +23,7 @@ scene.add(directionalLight);
 // --- إنشاء أجزاء الطائرة ---
 const planeGroup = new THREE.Group();
 const fuselageMaterial = new THREE.MeshStandardMaterial({ color: 0x0056b3, side: THREE.DoubleSide });
-const wingMaterial = new THREE.MeshStandardMaterial({ color: 0xcccccc });
+const wingMaterial = new THREE.MeshStandardMaterial({ color: 0xcccccc, side: THREE.DoubleSide });
 const tailMaterial = new THREE.MeshStandardMaterial({ color: 0xdddddd, side: THREE.DoubleSide });
 
 // جسم الطائرة
@@ -156,6 +156,33 @@ const totalWeightResultEl = document.getElementById('total-weight-result');
 
 let liftChart, dragChart;
 
+/**
+ * Generates points for a simple symmetrical airfoil shape.
+ * @param {number} chord The chord length.
+ * @param {number} thickness The maximum thickness.
+ * @param {number} numPoints The number of points to generate for the top surface.
+ * @returns {THREE.Vector2[]} An array of Vector2 points defining the airfoil outline.
+ */
+function generateAirfoil(chord, thickness, numPoints = 15) {
+    const points = [];
+    const halfThickness = thickness / 2;
+    // A simple parabola function to create a curved airfoil shape
+    const airfoilShape = (x) => 4 * x * (1 - x); 
+
+    // Generate top surface points
+    for (let i = 0; i <= numPoints; i++) {
+        const x_norm = i / numPoints;
+        points.push(new THREE.Vector2(x_norm * chord, halfThickness * airfoilShape(x_norm)));
+    }
+    // Generate bottom surface points
+    for (let i = numPoints - 1; i >= 1; i--) {
+        const x_norm = i / numPoints;
+        points.push(new THREE.Vector2(x_norm * chord, -halfThickness * airfoilShape(x_norm)));
+    }
+    points.forEach(p => p.x -= chord / 2); // Center the airfoil around its midpoint
+    return points;
+}
+
 function updatePlaneModel() {
     const conversionFactor = UNIT_CONVERSIONS[unitSelector.value];
 
@@ -184,30 +211,51 @@ function updatePlaneModel() {
     wingMaterial.color.set(wingColor);
     tailMaterial.color.set(tailColor);
 
-    // --- تحديث أبعاد الجناح (الجزء الجديد) ---
+    // --- تحديث أبعاد الجناح (باستخدام شكل مقطع هوائي حقيقي) ---
     while(wingGroup.children.length > 0){ 
         wingGroup.remove(wingGroup.children[0]); 
     }
 
     const halfSpan = wingSpan / 2;
-    const tipChord = wingChord * taperRatio;
-    const sweepOffset = halfSpan * Math.tan(sweepAngle * Math.PI / 180);
+    const rootChord = wingChord;
+    const sweepRad = sweepAngle * Math.PI / 180;
 
-    // تعريف شكل نصف الجناح في المستوى X-Y
-    const wingShape = new THREE.Shape();
-    wingShape.moveTo(-wingChord / 2, 0); // Back Root
-    wingShape.lineTo(wingChord / 2, 0); // Front Root
-    wingShape.lineTo(sweepOffset + tipChord / 2, halfSpan); // Front Tip
-    wingShape.lineTo(sweepOffset - tipChord / 2, halfSpan); // Back Tip
-    wingShape.lineTo(-wingChord / 2, 0); // Close shape
+    // إنشاء بنية هندسية مخصصة للجناح
+    const wingGeometry = new THREE.BufferGeometry();
+    const vertices = [];
+    const indices = [];
+    const segments = 10; // عدد المقاطع على طول الجناح لزيادة الدقة
+    const pointsPerSection = (15 * 2); // 15 نقطة للسطح العلوي و 15 للسفلي
 
-    const extrudeSettings = { depth: wingThickness, bevelEnabled: false };
-    const wingGeom = new THREE.ExtrudeGeometry(wingShape, extrudeSettings);
-    
-    const rightWing = new THREE.Mesh(wingGeom, wingMaterial);
-    // تدوير الجناح ليتوافق مع محاور العالم (العرض على X، السماكة على Y، الطول على Z)
-    rightWing.rotation.x = -Math.PI / 2;
+    // إنشاء نقاط لكل مقطع على طول الجناح
+    for (let i = 0; i <= segments; i++) {
+        const spanProgress = i / segments;
+        const currentZ = spanProgress * halfSpan;
+        const currentChord = rootChord + (rootChord * taperRatio - rootChord) * spanProgress;
+        const currentSweep = currentZ * Math.tan(sweepRad);
+        const airfoilPoints = generateAirfoil(currentChord, wingThickness, 15);
 
+        airfoilPoints.forEach(p => {
+            vertices.push(p.x + currentSweep, p.y, currentZ);
+        });
+    }
+
+    // إنشاء الأوجه (المثلثات) التي تربط النقاط ببعضها
+    for (let i = 0; i < segments; i++) {
+        for (let j = 0; j < pointsPerSection; j++) {
+            const p1 = i * pointsPerSection + j;
+            const p2 = i * pointsPersection + ((j + 1) % pointsPerSection);
+            const p3 = (i + 1) * pointsPerSection + j;
+            const p4 = (i + 1) * pointsPerSection + ((j + 1) % pointsPerSection);
+            indices.push(p1, p3, p4, p1, p4, p2);
+        }
+    }
+
+    wingGeometry.setIndex(indices);
+    wingGeometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    wingGeometry.computeVertexNormals(); // لحساب الإضاءة بشكل صحيح
+
+    const rightWing = new THREE.Mesh(wingGeometry, wingMaterial);
     const leftWing = rightWing.clone();
     leftWing.scale.z = -1; // عكس الجناح الأيسر
 
