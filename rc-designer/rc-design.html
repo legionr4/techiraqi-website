@@ -114,6 +114,14 @@
                 grid-template-columns: 1fr 1fr;
             }
         }
+        /* تعديلات لتوسيع واجهة العرض */
+        main {
+            max-width: 95%; /* استخدام نسبة مئوية لإعطاء شعور بالعرض الكامل */
+        }
+        .viewer-panel {
+            flex: 3; /* إعطاء مساحة أكبر لنافذة العرض ثلاثي الأبعاد */
+            min-height: 65vh; /* زيادة ارتفاع نافذة العرض */
+        }
     </style>
 </head>
 <body>
@@ -174,6 +182,11 @@
                     <input type="range" id="sweep-angle" min="-30" max="45" value="0" step="1" style="padding: 0;">
                 </div>
 
+                <div class="input-group" id="taper-ratio-group">
+                    <label for="taper-ratio">نسبة استدقاق الجناح (Taper): <span id="taper-ratio-value" style="font-weight:bold; color: var(--primary-color);">1.00</span></label>
+                    <input type="range" id="taper-ratio" min="0.1" max="1.0" value="1.0" step="0.05" style="padding: 0;">
+                </div>
+
                 <div class="input-group" id="winglet-group">
                     <label for="winglet-type">شكل طرف الجناح (Winglet)</label>
                     <select id="winglet-type">
@@ -182,18 +195,14 @@
                     </select>
                 </div>
 
-                <h4><i class="fas fa-ruler-combined"></i> الذيل (Empennage)</h4>
+                <h4><i class="fas fa-ruler-horizontal"></i> جسم الطائرة (Fuselage)</h4>
                 <div class="input-group">
-                    <label for="h-stab-span">طول الذيل الأفقي (سم)</label>
-                    <input type="number" id="h-stab-span" value="40">
+                    <label for="fuselage-length">طول جسم الطائرة (سم)</label>
+                    <input type="number" id="fuselage-length" value="100">
                 </div>
                 <div class="input-group">
-                    <label for="h-stab-chord">عرض الذيل الأفقي (سم)</label>
-                    <input type="number" id="h-stab-chord" value="12">
-                </div>
-                <div class="input-group">
-                    <label for="v-stab-height">ارتفاع الذيل العمودي (سم)</label>
-                    <input type="number" id="v-stab-height" value="15">
+                    <label for="fuselage-diameter">قطر جسم الطائرة (سم)</label>
+                    <input type="number" id="fuselage-diameter" value="16">
                 </div>
 
                 <h4><i class="fas fa-fan"></i> المروحة (Propeller)</h4>
@@ -208,6 +217,14 @@
                 <div class="input-group">
                     <label for="motor-rpm">سرعة دوران المحرك (RPM)</label>
                     <input type="number" id="motor-rpm" value="10000">
+                </div>
+                <div class="input-group">
+                    <label for="prop-blades">عدد ريش المروحة</label>
+                    <select id="prop-blades">
+                        <option value="2" selected>2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                    </select>
                 </div>
 
                 <h4><i class="fas fa-balance-scale"></i> معلمات إضافية</h4>
@@ -256,6 +273,10 @@
                 <div class="input-group" style="flex-direction: row; align-items: center; gap: 10px;">
                     <input type="checkbox" id="toggle-airflow" style="width: auto; height: auto;">
                     <label for="toggle-airflow" style="margin-bottom: 0;">إظهار تدفق الهواء</label>
+                </div>
+                <div class="input-group" style="flex-direction: row; align-items: center; gap: 10px;">
+                    <input type="checkbox" id="toggle-prop-anim" style="width: auto; height: auto;" checked>
+                    <label for="toggle-prop-anim" style="margin-bottom: 0;">تشغيل دوران المروحة</label>
                 </div>
 
                 <div class="results-panel">

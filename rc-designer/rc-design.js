@@ -26,6 +26,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const sweepAngleInput = document.getElementById('sweep-angle');
     const sweepAngleValueSpan = document.getElementById('sweep-angle-value');
     const sweepAngleGroup = document.getElementById('sweep-angle-group');
+    const fuselageLengthInput = document.getElementById('fuselage-length');
+    const fuselageDiameterInput = document.getElementById('fuselage-diameter');
+    const propBladesInput = document.getElementById('prop-blades');
+    const taperRatioInput = document.getElementById('taper-ratio');
+    const taperRatioValueSpan = document.getElementById('taper-ratio-value');
+    const taperRatioGroup = document.getElementById('taper-ratio-group');
+    const togglePropAnimInput = document.getElementById('toggle-prop-anim');
     const wingletTypeInput = document.getElementById('winglet-type');
     const wingletGroup = document.getElementById('winglet-group');
     const toggleAirflowInput = document.getElementById('toggle-airflow');
@@ -57,6 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let liftChart, dragChart; // متغيرات الرسوم البيانية
     let airflowParticles; // For airflow visualization
     let airflowVisible = false;
+    let isPropellerSpinning = true;
 
     /**
      * Creates a realistic rectangular/swept wing geometry using ExtrudeGeometry.
@@ -174,25 +182,30 @@ document.addEventListener('DOMContentLoaded', () => {
         const propGroup = new THREE.Group();
         propGroup.name = "propeller"; // Name the group for easy selection
         const propMaterial = new THREE.MeshStandardMaterial({ color: 0x333333 });
-
+    
         const propDiameter = parseFloat(propDiameterInput.value) * 0.0254; // inches to meters
         const bladeWidth = propDiameter * 0.1;
         const bladeThickness = 0.01;
-
-        // Create blade geometry (a long, thin box). Blades are in the YZ plane.
-        const bladeGeometry = new THREE.BoxGeometry(bladeWidth, propDiameter, bladeThickness);
-        
-        // Create two blades
-        const blade1 = new THREE.Mesh(bladeGeometry, propMaterial);
-        const blade2 = blade1.clone();
-        blade2.rotation.x = Math.PI / 2; // Rotate the second blade to form a cross
-
+        const numBlades = parseInt(propBladesInput.value, 10);
+    
+        const bladeLength = propDiameter / 2;
+        const bladeGeometry = new THREE.BoxGeometry(bladeWidth, bladeLength, bladeThickness);
+        // Move the pivot point of the blade to its base
+        bladeGeometry.translate(0, bladeLength / 2, 0);
+    
+        for (let i = 0; i < numBlades; i++) {
+            const blade = new THREE.Mesh(bladeGeometry, propMaterial);
+            // Rotate the blade around the hub's center (X-axis)
+            blade.rotation.x = (i * Math.PI * 2) / numBlades;
+            propGroup.add(blade);
+        }
+    
         // Create a central hub, aligned with the X-axis
         const hubGeometry = new THREE.CylinderGeometry(bladeWidth * 0.8, bladeWidth * 0.8, bladeWidth, 16);
         const hub = new THREE.Mesh(hubGeometry, propMaterial);
         hub.rotation.z = Math.PI / 2;
-
-        propGroup.add(blade1, blade2, hub);
+    
+        propGroup.add(hub);
 
         return propGroup;
     }
@@ -221,6 +234,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // إضافة متحكمات الماوس (لتحريك المشهد)
         controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
+
+        // إضافة محاور XYZ ونقطة الأصل
+        const axesHelper = new THREE.AxesHelper(2); // الرقم 2 هو حجم المحاور
+        scene.add(axesHelper);
 
         // إنشاء نموذج الطائرة الأولي
         createAirplaneModel();
@@ -276,6 +293,29 @@ document.addEventListener('DOMContentLoaded', () => {
             // Rotate the rectangular wing to align it correctly
             wingMesh.rotation.y = -Math.PI / 2;
         }
+
+        // Apply Taper Ratio for non-delta wings
+        if (airfoilType !== 'delta') {
+            const taperRatio = parseFloat(taperRatioInput.value);
+            if (taperRatio < 1.0) {
+                const positions = wingGeometry.attributes.position;
+                const span_half = span / 2;
+
+                for (let i = 0; i < positions.count; i++) {
+                    // The extruded geometry has: x -> along the chord, y -> thickness, z -> along the span
+                    const z = positions.getZ(i); // Span-wise position
+                    
+                    // It's linear from 1.0 at the root (z=0) to taperRatio at the tip (z = +/- span_half)
+                    const scale = 1.0 - (1.0 - taperRatio) * (Math.abs(z) / span_half);
+
+                    // Scale the chord (x) and thickness (y)
+                    positions.setX(i, positions.getX(i) * scale);
+                    positions.setY(i, positions.getY(i) * scale);
+                }
+                positions.needsUpdate = true;
+                wingGeometry.computeVertexNormals();
+            }
+        }
         airplaneGroup.add(wingMesh);
 
         // --- إنشاء أطراف الجناح (Winglets) ---
@@ -302,11 +342,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- إنشاء جسم الطائرة (Fuselage) ---
         // هذا مجرد مثال، يمكنك تعديل الأبعاد
-        const fuselageLength = 1.0;
-        const fuselageGeometry = new THREE.CylinderGeometry(0.08, 0.06, fuselageLength);
+        const fuselageLength = parseFloat(fuselageLengthInput.value) / 100;
+        const fuselageDiameter = parseFloat(fuselageDiameterInput.value) / 100; // cm to m
+        const radiusTop = fuselageDiameter / 2;
+        const radiusBottom = radiusTop * 0.75; // للحفاظ على شكل مدبب قليلاً
+        const fuselageGeometry = new THREE.CylinderGeometry(radiusTop, radiusBottom, fuselageLength, 32);
         const fuselageMesh = new THREE.Mesh(fuselageGeometry, fuselageMaterial);
         fuselageMesh.rotation.z = Math.PI / 2; // تدوير الجسم ليكون أفقيًا
-        fuselageMesh.position.y = -0.05; // وضعه تحت الجناح
+        fuselageMesh.position.y = 0; // وضعه في المنتصف ليتقاطع مع الجناح
         airplaneGroup.add(fuselageMesh);
 
         // --- إنشاء الذيل (Empennage) ---
@@ -337,7 +380,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const propellerGroup = createPropellerModel();
         // Position at the front of the fuselage
         propellerGroup.position.x = fuselageLength / 2; // Position at the nose
-        propellerGroup.position.y = -0.05; // Align with fuselage center
+        propellerGroup.position.y = 0; // Align with fuselage center
         airplaneGroup.add(propellerGroup);
 
         // إضافة المجموعة الكاملة إلى المشهد
@@ -393,9 +436,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const airfoilType = airfoilTypeInput.value;
         if (airfoilType === 'delta') {
             sweepAngleGroup.style.display = 'none';
+            taperRatioGroup.style.display = 'none';
             wingletGroup.style.display = 'none';
         } else {
             sweepAngleGroup.style.display = 'block';
+            taperRatioGroup.style.display = 'block';
             wingletGroup.style.display = 'block';
         }
     }
@@ -492,6 +537,26 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
+     * Calculates the wing area based on its geometry.
+     * @returns {number} Wing area in m².
+     */
+    function calculateWingArea() {
+        const span = parseFloat(wingSpanInput.value) / 100;
+        const rootChord = parseFloat(wingChordInput.value) / 100;
+        const airfoilType = airfoilTypeInput.value;
+
+        if (airfoilType === 'delta') {
+            // Area of a triangle
+            return 0.5 * span * rootChord;
+        } else {
+            // Area of a trapezoid (or rectangle if taper is 1.0)
+            const taperRatio = parseFloat(taperRatioInput.value);
+            const tipChord = rootChord * taperRatio;
+            return span * (rootChord + tipChord) / 2;
+        }
+    }
+
+    /**
      * Calculates air density based on the International Standard Atmosphere model.
      * @param {number} temperatureC - Temperature in Celsius.
      * @param {number} altitudeM - Altitude in meters.
@@ -531,7 +596,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const airfoilType = airfoilTypeInput.value;
 
         // --- حسابات أساسية ---
-        const area = span * chord; // م²
+        const area = calculateWingArea();
         const speedMps = speedKmh * (1000 / 3600); // تحويل إلى متر/ثانية
 
         // --- حسابات ديناميكا الهواء (تقديرية) ---
@@ -704,7 +769,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const span = parseFloat(wingSpanInput.value) / 100;
         const chord = parseFloat(wingChordInput.value) / 100;
         const airfoilType = airfoilTypeInput.value;
-        const area = span * chord;
+        const area = calculateWingArea();
         const tempC = parseFloat(airTempInput.value);
         const altitudeM = parseFloat(altitudeInput.value);
         const airDensity = calculateAirDensity(tempC, altitudeM);
@@ -770,6 +835,13 @@ document.addEventListener('DOMContentLoaded', () => {
             updatePerformanceCharts();
         });
 
+        taperRatioInput.addEventListener('input', () => {
+            taperRatioValueSpan.textContent = parseFloat(taperRatioInput.value).toFixed(2);
+            updateAirplaneModel();
+            updateCalculations();
+            updatePerformanceCharts();
+        });
+
         // مستمع خاص لمنزلق زاوية الهجوم لتحديث فوري أكثر
         angleOfAttackInput.addEventListener('input', () => {
             updateAngleOfAttack();
@@ -784,6 +856,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (airflowParticles) {
                 airflowParticles.visible = airflowVisible;
             }
+        });
+
+        togglePropAnimInput.addEventListener('change', () => {
+            isPropellerSpinning = togglePropAnimInput.checked;
         });
 
         // ربط أحداث تغيير اللون
@@ -839,10 +915,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function animate() {
         requestAnimationFrame(animate);
 
-        updateAirflow(); // Update airflow on each frame
+        if (airflowVisible) updateAirflow(); // Update airflow only if visible
 
         // Spin the propeller (which is inside the airplaneGroup)
-        if (airplaneGroup) {
+        if (isPropellerSpinning && airplaneGroup) {
             const propellerGroup = airplaneGroup.getObjectByName("propeller");
             if (propellerGroup) {
                 // The propeller spins around its own forward axis (X-axis of the propeller model)
