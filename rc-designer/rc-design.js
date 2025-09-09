@@ -441,10 +441,9 @@ function updatePlaneModel() {
         const aileronThickness = getValidNumber(aileronThicknessInput) * conversionFactor;
         const aileronPosition = getValidNumber(aileronPositionInput) * conversionFactor;
 
-        // Aileron geometry is a simple box.
-        // We translate it so its origin (pivot point) is at the center of its leading edge.
+        // Aileron geometry is a simple box. We translate it so its origin (pivot point) is at the center of its leading edge.
         const aileronGeom = new THREE.BoxGeometry(aileronWidth, aileronThickness, aileronLength);
-        aileronGeom.translate(aileronWidth / 2, 0, 0); // Hinge at x=0
+        aileronGeom.translate(aileronWidth / 2, 0, 0); // Move the geometry so the hinge is at x=0
 
         // Create the aileron meshes
         const rightAileron = new THREE.Mesh(aileronGeom, aileronMaterial);
@@ -453,23 +452,24 @@ function updatePlaneModel() {
         const leftAileron = new THREE.Mesh(aileronGeom, aileronMaterial);
         leftAileron.name = 'leftAileron';
 
-        // Create pivot groups to handle positioning and sweep
+        // Create pivot groups to handle positioning, sweep, and rotation
         const rightAileronPivot = new THREE.Group();
         rightAileronPivot.add(rightAileron);
         const leftAileronPivot = new THREE.Group();
         leftAileronPivot.add(leftAileron);
-        
-        // Position the aileron at the trailing edge of the wing
-        const aileronZ = halfSpan - aileronPosition - (aileronLength / 2);
-        const chordAtAileron = rootChord + (rootChord * taperRatio - rootChord) * (aileronZ / halfSpan);
-        const sweepAtAileron = (aileronZ > 0 ? aileronZ : 0) * Math.tan(sweepRad); // The X offset due to sweep
-        const hingeX = sweepAtAileron + (chordAtAileron / 2) - aileronWidth;
+
+        // Calculate the position for the pivot (the hinge line)
+        const aileronAvgZ = halfSpan - aileronPosition - (aileronLength / 2);
+        const chordAtHinge = rootChord + (rootChord * taperRatio - rootChord) * (aileronAvgZ / halfSpan);
+        const sweepAtHinge = (aileronAvgZ > 0 ? aileronAvgZ : 0) * Math.tan(sweepRad);
+        // The wing is flipped, so the trailing edge is at +chord/2. The hinge is at the trailing edge minus the aileron width.
+        const hingeX = sweepAtHinge + (chordAtHinge / 2) - aileronWidth;
 
         // Position and rotate the PIVOTS
-        rightAileronPivot.position.set(hingeX, 0, aileronZ);
+        rightAileronPivot.position.set(hingeX, 0, aileronAvgZ);
         rightAileronPivot.rotation.y = sweepRad;
 
-        leftAileronPivot.position.set(hingeX, 0, aileronZ);
+        leftAileronPivot.position.set(hingeX, 0, aileronAvgZ);
         leftAileronPivot.rotation.y = sweepRad;
 
         // Add pivots to the wings
@@ -755,8 +755,8 @@ function onMouseClick(event) {
 
     if (intersects.length > 0) {
         // تحريك الجنيحات بشكل معاكس عند النقر
-        rightAileron.rotation.z += 0.2;
-        leftAileron.rotation.z -= 0.2;
+        rightAileron.parent.rotation.z += 0.2; // Rotate the PIVOT, not the aileron itself
+        leftAileron.parent.rotation.z -= 0.2;
     }
 }
 window.addEventListener('click', onMouseClick, false);
