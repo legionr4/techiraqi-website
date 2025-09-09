@@ -152,6 +152,7 @@ const rudderWidthInput = document.getElementById('rudder-width');
 const tailSweepAngleInput = document.getElementById('tail-sweep-angle');
 const tailTaperRatioInput = document.getElementById('tail-taper-ratio');
 const tailAirfoilTypeInput = document.getElementById('tail-airfoil-type');
+const tailThicknessInput = document.getElementById('tail-thickness');
 
 const hStabSpanGroup = document.getElementById('h-stab-span-group');
 const hStabChordGroup = document.getElementById('h-stab-chord-group');
@@ -406,18 +407,18 @@ function updatePlaneModel() {
     // إنشاء الأوجه (المثلثات) التي تربط النقاط ببعضها
     for (let i = 0; i < segments; i++) {
         const z_start = (i / segments) * halfSpan;
+        const z_end = ((i + 1) / segments) * halfSpan; // نهاية المقطع الحالي على طول الجناح
 
         for (let j = 0; j < pointsPerSection; j++) {
             // Check if this face is part of the aileron cutout
-            const isAileronZone = aileronActive && z_start >= aileronZStart && z_start < aileronZEnd;
+            const segmentOverlapsAileron = aileronActive && (z_start < aileronZEnd && z_end > aileronZStart);
             const p1_vertex_index = (i * pointsPerSection + j) * 3;
             const p1_x = vertices[p1_vertex_index];
             const currentChord = rootChord + (rootChord * taperRatio - rootChord) * (z_start / halfSpan);
             const sweepAtZ = z_start * Math.tan(sweepRad);
             // The wing is flipped, so leading edge is at +x, trailing edge is at -x.
             const isTrailingEdgeFace = (p1_x - sweepAtZ) < (-currentChord / 2) + aileronWidth;
-
-            if (isAileronZone && isTrailingEdgeFace) {
+            if (segmentOverlapsAileron && isTrailingEdgeFace) {
                 continue; // Skip creating this face, effectively creating a hole
             }
 
@@ -551,7 +552,7 @@ function updatePlaneModel() {
     while (tailGroup.children.length > 0) tailGroup.remove(tailGroup.children[0]);
     while (tailControlsGroup.children.length > 0) tailControlsGroup.remove(tailControlsGroup.children[0]);
 
-    const tailThickness = wingThickness * 0.75; // Tail is usually thinner
+    const tailThickness = getValidNumber(tailThicknessInput) * conversionFactor;
     const hasElevator = hasElevatorInput.checked;
     const elevatorWidth = getValidNumber(elevatorWidthInput) * conversionFactor;
     const hasRudder = hasRudderInput.checked;
@@ -825,7 +826,7 @@ function calculateAerodynamics() {
     const structureMaterialDensity = MATERIAL_DENSITIES[structureMaterial]; // Density in kg/m³
     const wingWeightKg = wingVolume * structureMaterialDensity; // Weight in kg
 
-    const tailThickness = wingThickness * 0.75; // Tail is usually thinner
+    const tailThickness = getValidNumber(tailThicknessInput) * conversionFactor;
     const tailVolume = totalTailArea * tailThickness;
     const tailWeightKg = tailVolume * structureMaterialDensity;
 
