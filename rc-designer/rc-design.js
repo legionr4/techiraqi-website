@@ -153,9 +153,13 @@ const tailSweepAngleInput = document.getElementById('tail-sweep-angle');
 const tailTaperRatioInput = document.getElementById('tail-taper-ratio');
 const tailAirfoilTypeInput = document.getElementById('tail-airfoil-type');
 
+const hStabSpanGroup = document.getElementById('h-stab-span-group');
+const hStabChordGroup = document.getElementById('h-stab-chord-group');
 const vStabGroup = document.getElementById('v-stab-group');
 const vStabChordGroup = document.getElementById('v-stab-chord-group');
 const vTailAngleGroup = document.getElementById('v-tail-angle-group');
+const vStabHeightLabel = vStabGroup.querySelector('label');
+const vStabChordLabel = vStabChordGroup.querySelector('label');
 const wingThicknessInput = document.getElementById('wing-thickness');
 const wingPositionInput = document.getElementById('wing-position');
 const airfoilTypeInput = document.getElementById('airfoil-type');
@@ -331,9 +335,21 @@ function updatePlaneModel() {
     }
 
     // Tail Controls visibility
-    vTailAngleGroup.style.display = tailType === 'v-tail' ? 'flex' : 'none';
-    vStabGroup.style.display = tailType !== 'v-tail' ? 'flex' : 'none';
-    vStabChordGroup.style.display = tailType !== 'v-tail' ? 'flex' : 'none';
+    const isVTail = tailType === 'v-tail';
+
+    // إظهار/إخفاء الحقول بناءً على نوع الذيل
+    hStabSpanGroup.style.display = isVTail ? 'none' : 'flex';
+    hStabChordGroup.style.display = isVTail ? 'none' : 'flex';
+    vTailAngleGroup.style.display = isVTail ? 'flex' : 'none';
+
+    // تغيير تسميات حقول الذيل العمودي عند اختيار V-Tail
+    if (isVTail) {
+        vStabHeightLabel.innerHTML = 'طول لوح الذيل V (<span class="unit-label">سم</span>)';
+        vStabChordLabel.innerHTML = 'عرض لوح الذيل V (<span class="unit-label">سم</span>)';
+    } else {
+        vStabHeightLabel.innerHTML = 'ارتفاع الذيل العمودي (<span class="unit-label">سم</span>)';
+        vStabChordLabel.innerHTML = 'عرض الذيل العمودي (<span class="unit-label">سم</span>)';
+    }
 
     elevatorControls.style.display = hasElevatorInput.checked ? 'block' : 'none';
     if (hasRudderInput.checked && tailType !== 'v-tail') {
