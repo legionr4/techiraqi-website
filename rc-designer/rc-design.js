@@ -149,6 +149,7 @@ const hasRudderInput = document.getElementById('has-rudder');
 const rudderWidthInput = document.getElementById('rudder-width');
 const tailSweepAngleInput = document.getElementById('tail-sweep-angle');
 const tailTaperRatioInput = document.getElementById('tail-taper-ratio');
+const tailAirfoilTypeInput = document.getElementById('tail-airfoil-type');
 
 const vStabGroup = document.getElementById('v-stab-group');
 const vStabChordGroup = document.getElementById('v-stab-chord-group');
@@ -293,6 +294,7 @@ function updatePlaneModel() {
     const vStabChord = getValidNumber(vStabChordInput) * conversionFactor;
     const vTailAngle = getValidNumber(vTailAngleInput);
     const tailSweepAngle = getValidNumber(tailSweepAngleInput);
+    const tailAirfoilType = tailAirfoilTypeInput.value;
     const tailTaperRatio = getValidNumber(tailTaperRatioInput);
     
     // قيم المروحة تبقى بالبوصة كما هي متعارف عليها
@@ -335,7 +337,7 @@ function updatePlaneModel() {
         rudderControls.style.display = 'block';
         rudderControls.querySelector('label').textContent = 'عرض سطح التحكم (Ruddervator)';
     } else {
-        aileronControls.style.display = 'none';
+        rudderControls.style.display = 'none';
     }
 
 
@@ -917,8 +919,10 @@ function onMouseClick(event) {
         if (clickedObject.name === 'leftRuddervator') clickedObject.parent.rotation.z += 0.2;
 
         // تحريك الجنيحات بشكل معاكس عند النقر
-        rightAileron.parent.rotation.z += 0.2; // Rotate the PIVOT, not the aileron itself
-        leftAileron.parent.rotation.z -= 0.2;
+        if (rightAileron && leftAileron) {
+            rightAileron.parent.rotation.z += 0.2; // Rotate the PIVOT, not the aileron itself
+            leftAileron.parent.rotation.z -= 0.2;
+        }
     }
 }
 window.addEventListener('click', onMouseClick, false);
