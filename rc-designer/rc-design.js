@@ -356,15 +356,15 @@ document.addEventListener('DOMContentLoaded', () => {
             // Position at the right wingtip. The wing is centered, so tip is at span/2.
             const rightWinglet = new THREE.Mesh(wingletGeo, wingMaterial);
             rightWinglet.position.set(0, 0, span / 2); 
-            // Rotate to be vertical with cant and toe-out angles
-            rightWinglet.rotation.set(THREE.MathUtils.degToRad(15), THREE.MathUtils.degToRad(-10), -Math.PI / 2);
+            // Rotate to be vertical (around X-axis), with a slight outward cant (around Y-axis)
+            rightWinglet.rotation.set(-Math.PI / 2, THREE.MathUtils.degToRad(15), 0);
             wingGroup.add(rightWinglet);
 
             // Left Winglet
             const leftWinglet = new THREE.Mesh(wingletGeo.clone(), wingMaterial);
             leftWinglet.position.set(0, 0, -span / 2);
-            // Mirror the rotation for the left side
-            leftWinglet.rotation.set(THREE.MathUtils.degToRad(15), THREE.MathUtils.degToRad(10), Math.PI / 2);
+            // Mirror the rotation for the left side (cant is in the opposite direction)
+            leftWinglet.rotation.set(-Math.PI / 2, THREE.MathUtils.degToRad(-15), 0);
             wingGroup.add(leftWinglet);
         }
 
@@ -449,14 +449,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // اللوح الأيمن
                 const rightPanel = new THREE.Mesh(vTailPanelGeo, tailMaterial);
-                rightPanel.rotation.z = -vTailAngle; // تدوير للأعلى
-                rightPanel.position.x = (panelSpan / 2) * Math.sin(vTailAngle);
+                rightPanel.rotation.x = -vTailAngle; // تدوير حول المحور الأمامي/الخلفي
                 empennageGroup.add(rightPanel);
 
                 // اللوح الأيسر
                 const leftPanel = new THREE.Mesh(vTailPanelGeo.clone(), tailMaterial);
-                leftPanel.rotation.z = vTailAngle; // تدوير للأعلى في الاتجاه المعاكس
-                leftPanel.position.x = -(panelSpan / 2) * Math.sin(vTailAngle);
+                leftPanel.rotation.x = vTailAngle; // تدوير في الاتجاه المعاكس
                 empennageGroup.add(leftPanel);
                 break;
             }
