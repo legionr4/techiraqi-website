@@ -482,7 +482,7 @@ function updatePlaneModel() {
 
         // Aileron geometry is a simple box. We translate it so its origin (pivot point) is at the center of its leading edge.
         const aileronGeom = new THREE.BoxGeometry(aileronWidth, aileronThickness, aileronLength);
-        aileronGeom.translate(aileronWidth / 2, 0, 0); // Move the geometry so the hinge is at x=0
+        aileronGeom.translate(-aileronWidth / 2, 0, 0); // Move the geometry so the hinge is at x=0 and it extends backwards
 
         // Create the aileron meshes
         const rightAileron = new THREE.Mesh(aileronGeom, aileronMaterial);
@@ -581,7 +581,7 @@ function updatePlaneModel() {
     // --- Tail Control Surfaces ---
     if (hasElevator && tailType !== 'v-tail') {
         const elevatorGeom = new THREE.BoxGeometry(elevatorWidth, tailThickness, tailSpan); // Correct: width, height, depth
-        elevatorGeom.translate(elevatorWidth / 2, 0, 0); // Set pivot to leading edge
+        elevatorGeom.translate(-elevatorWidth / 2, 0, 0); // Set pivot to leading edge, extending backwards
         const elevator = new THREE.Mesh(elevatorGeom, aileronMaterial);
         elevator.name = 'elevator';
         const elevatorPivot = new THREE.Group();
@@ -593,7 +593,7 @@ function updatePlaneModel() {
 
     if (hasRudder && tailType !== 'v-tail') {
         const rudderGeom = new THREE.BoxGeometry(rudderWidth, vStabHeight, tailThickness);
-        rudderGeom.translate(rudderWidth / 2, 0, 0); // Set pivot to leading edge
+        rudderGeom.translate(-rudderWidth / 2, 0, 0); // Set pivot to leading edge, extending backwards
         const rudder = new THREE.Mesh(rudderGeom, aileronMaterial);
         rudder.name = 'rudder';
         const rudderPivot = new THREE.Group();
@@ -646,15 +646,9 @@ function calculateAerodynamics() {
     const tipChord = wingChord * taperRatio;
     const wingArea = wingSpan * (wingChord + tipChord) / 2; // Area of a trapezoid
     const alphaRad = angleOfAttack * (Math.PI / 180);
-    
-    let aileronArea = 0;
-    if (hasAileronInput.checked) {
-        const aileronLength = getValidNumber(aileronLengthInput) * conversionFactor;
-        const aileronWidth = getValidNumber(aileronWidthInput) * conversionFactor;
-        aileronArea = aileronLength * aileronWidth;
-    }
-    const mainWingArea = wingArea - (2 * aileronArea); // Subtract area of two ailerons
 
+    // نستخدم مساحة الجناح الكلية للحسابات. أسطح التحكم هي جزء من الجناح وتساهم في الرفع والوزن.
+    const mainWingArea = wingArea;
     // --- Tail Area Calculation ---
     const tailSpan = getValidNumber(tailSpanInput) * conversionFactor;
     const tailChord = getValidNumber(tailChordInput) * conversionFactor;
