@@ -31,13 +31,15 @@ const fuselage = new THREE.Mesh(fuselageGeom, material);
 planeGroup.add(fuselage);
 
 // الجناح الرئيسي
-const wingGeom = new THREE.BoxGeometry(1.5, 0.02, 0.2);
+// (width: chord, height: thickness, depth: span)
+const wingGeom = new THREE.BoxGeometry(1, 1, 1); // Unit cube
 const wing = new THREE.Mesh(wingGeom, wingMaterial);
 wing.position.y = 0.05;
 planeGroup.add(wing);
 
 // الذيل الأفقي
-const tailGeom = new THREE.BoxGeometry(0.5, 0.015, 0.15);
+// (width: chord, height: thickness, depth: span)
+const tailGeom = new THREE.BoxGeometry(1, 1, 1); // Unit cube
 const tail = new THREE.Mesh(tailGeom, wingMaterial);
 tail.position.set(-0.5, 0.05, 0);
 planeGroup.add(tail);
@@ -91,8 +93,11 @@ function updatePlaneModel() {
 
     // تحديث الأبعاد
     fuselage.scale.x = fuselageLength;
-    wing.scale.set(wingSpan, 1, wingChord / 0.2);
-    tail.scale.set(tailSpan, 1, tailChord / 0.15);
+    // The wing/tail geometry is a 1x1x1 cube.
+    // We scale it to (chord, thickness, span).
+    // Thickness is kept constant as in the original design.
+    wing.scale.set(wingChord, 0.02, wingSpan);
+    tail.scale.set(tailChord, 0.015, tailSpan);
     vTail.scale.y = (tailChord / 0.15) * 1.5; // Make vertical tail proportional
 
     // تحديث المواقع
