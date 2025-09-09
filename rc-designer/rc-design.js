@@ -357,7 +357,8 @@ function updatePlaneModel() {
             const p1_x = vertices[p1_vertex_index];
             const currentChord = rootChord + (rootChord * taperRatio - rootChord) * (z_start / halfSpan);
             const sweepAtZ = z_start * Math.tan(sweepRad);
-            const isTrailingEdgeFace = (p1_x - sweepAtZ) < (-currentChord / 2) + aileronWidth;
+            // The wing is flipped, so trailing edge is at +chord/2
+            const isTrailingEdgeFace = (p1_x - sweepAtZ) > (currentChord / 2) - aileronWidth;
 
             if (isAileronZone && isTrailingEdgeFace) {
                 continue; // Skip creating this face, effectively creating a hole
@@ -440,37 +441,40 @@ function updatePlaneModel() {
         const aileronThickness = getValidNumber(aileronThicknessInput) * conversionFactor;
         const aileronPosition = getValidNumber(aileronPositionInput) * conversionFactor;
 
-        // Create a tapered aileron shape
-        const aileronZStart = halfSpan - aileronPosition - aileronLength;
-        const aileronZEnd = halfSpan - aileronPosition;
-        const chordAtAileronStart = rootChord + (rootChord * taperRatio - rootChord) * (aileronZStart / halfSpan);
-        const chordAtAileronEnd = rootChord + (rootChord * taperRatio - rootChord) * (aileronZEnd / halfSpan);
+        // Aileron geometry is a simple box.
+        // We translate it so its origin (pivot point) is at the center of its leading edge.
+        const aileronGeom = new THREE.BoxGeometry(aileronWidth, aileronThickness, aileronLength);
+        aileronGeom.translate(aileronWidth / 2, 0, 0); // Hinge at x=0
 
-        const aileronShape = new THREE.Shape();
-        aileronShape.moveTo(0, -aileronLength / 2);
-        aileronShape.lineTo(aileronWidth, -aileronLength / 2);
-        aileronShape.lineTo(aileronWidth * (chordAtAileronEnd / chordAtAileronStart), aileronLength / 2);
-        aileronShape.lineTo(0, aileronLength / 2);
-        aileronShape.closePath();
-
-        const aileronGeom = new THREE.ExtrudeGeometry(aileronShape, { depth: aileronThickness, bevelEnabled: false });
-        aileronGeom.center(); // Center the geometry for easier positioning and rotation
-        
+        // Create the aileron meshes
         const rightAileron = new THREE.Mesh(aileronGeom, aileronMaterial);
+        rightAileron.name = 'rightAileron'; // Name for raycasting
+
+        const leftAileron = new THREE.Mesh(aileronGeom, aileronMaterial);
+        leftAileron.name = 'leftAileron';
+
+        // Create pivot groups to handle positioning and sweep
+        const rightAileronPivot = new THREE.Group();
+        rightAileronPivot.add(rightAileron);
+        const leftAileronPivot = new THREE.Group();
+        leftAileronPivot.add(leftAileron);
+        
         // Position the aileron at the trailing edge of the wing
         const aileronZ = halfSpan - aileronPosition - (aileronLength / 2);
         const chordAtAileron = rootChord + (rootChord * taperRatio - rootChord) * (aileronZ / halfSpan);
         const sweepAtAileron = (aileronZ > 0 ? aileronZ : 0) * Math.tan(sweepRad); // The X offset due to sweep
-        rightAileron.position.set(sweepAtAileron - (chordAtAileron / 2) + (aileronWidth / 2), 0, aileronZ); // Corrected X position to be at the trailing edge
-        rightAileron.rotation.y = sweepRad; // Apply the same sweep angle to the aileron
-        rightAileron.name = 'rightAileron'; // Name for raycasting
-        rightWing.add(rightAileron);
+        const hingeX = sweepAtAileron + (chordAtAileron / 2) - aileronWidth;
 
-        const leftAileron = new THREE.Mesh(aileronGeom, aileronMaterial);
-        leftAileron.position.copy(rightAileron.position);
-        leftAileron.rotation.y = sweepRad; // Apply sweep to the left aileron as well
-        leftAileron.name = 'leftAileron'; // Name for raycasting
-        leftWing.add(leftAileron);
+        // Position and rotate the PIVOTS
+        rightAileronPivot.position.set(hingeX, 0, aileronZ);
+        rightAileronPivot.rotation.y = sweepRad;
+
+        leftAileronPivot.position.set(hingeX, 0, aileronZ);
+        leftAileronPivot.rotation.y = sweepRad;
+
+        // Add pivots to the wings
+        rightWing.add(rightAileronPivot);
+        leftWing.add(leftAileronPivot);
     }
 
 
@@ -728,7 +732,6 @@ unitSelector.addEventListener('change', updateUnitLabels);
 // --- تفاعل الماوس مع الجنيحات ---
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
-let rightAileron, leftAileron;
 
 function onMouseClick(event) {
     // حساب إحداثيات الماوس في الفضاء الطبيعي (-1 إلى +1)
@@ -739,19 +742,21 @@ function onMouseClick(event) {
     raycaster.setFromCamera(mouse, camera);
 
     // البحث عن الجنيحات في المشهد
-    rightAileron = scene.getObjectByName('rightAileron');
-    leftAileron = scene.getObjectByName('leftAileron');
+    const rightAileron = scene.getObjectByName('rightAileron');
+    const leftAileron = scene.getObjectByName('leftAileron');
     
     const objectsToIntersect = [];
     if (rightAileron) objectsToIntersect.push(rightAileron);
     if (leftAileron) objectsToIntersect.push(leftAileron);
 
-    const intersects = raycaster.intersectObjects(objectsToIntersect);
+    if (objectsToIntersect.length === 0) return;
+
+    const intersects = raycaster.intersectObjects(objectsToIntersect, true);
 
     if (intersects.length > 0) {
         // تحريك الجنيحات بشكل معاكس عند النقر
-        rightAileron.rotation.x += 0.2; // Corrected: Rotate around X-axis for up/down motion
-        leftAileron.rotation.x -= 0.2;  // Corrected: Rotate around X-axis for up/down motion
+        rightAileron.rotation.z += 0.2;
+        leftAileron.rotation.z -= 0.2;
     }
 }
 window.addEventListener('click', onMouseClick, false);
