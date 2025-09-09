@@ -530,55 +530,110 @@ function updatePlaneModel() {
     while (tailGroup.children.length > 0) tailGroup.remove(tailGroup.children[0]);
     while (tailControlsGroup.children.length > 0) tailControlsGroup.remove(tailControlsGroup.children[0]);
 
-    const tailThickness = wingThickness * 0.75; // الذيل عادة أرق من الجناح
-
-    // --- حساب الأبعاد الفعالة (مع خصم أسطح التحكم) ---
+    const tailThickness = wingThickness * 0.75; // Tail is usually thinner
     const hasElevator = hasElevatorInput.checked;
     const elevatorWidth = getValidNumber(elevatorWidthInput) * conversionFactor;
-    const hStabChordEffective = hasElevator ? tailChord - elevatorWidth : tailChord;
-
     const hasRudder = hasRudderInput.checked;
     const rudderWidth = getValidNumber(rudderWidthInput) * conversionFactor;
-    const vStabChordEffective = hasRudder ? vStabChord - rudderWidth : vStabChord;
 
-    // --- إنشاء الأجزاء الثابتة للذيل ---
-    const hStabGeom = new THREE.BoxGeometry(hStabChordEffective, tailThickness, tailSpan);
-    const hStab = new THREE.Mesh(hStabGeom, tailMaterial);
-    // تحديد موضع الجزء الثابت بحيث تكون حافته الأمامية عند بداية الذيل
-    hStab.position.x = -fuselageLength / 2 + hStabChordEffective / 2;
+    const createSurface = (span, rootChord, taperRatio, sweepAngle, thickness, airfoil, isVertical = false) => {
+        const halfSpan = span / 2;
+        const sweepRad = sweepAngle * Math.PI / 180;
+        const geometry = new THREE.BufferGeometry();
+        const vertices = [];
+        const indices = [];
+        const segments = 5; // Fewer segments for tail is fine
+        const pointsPerSection = (15 * 2);
 
-    const vStabGeom = new THREE.BoxGeometry(vStabChordEffective, vStabHeight, tailThickness); // Correct: width, height, depth
-    const vStab = new THREE.Mesh(vStabGeom, fuselageMaterial);
-    // تحديد موضع الجزء الثابت بحيث تكون حافته الأمامية عند بداية الذيل
-    vStab.position.x = -fuselageLength / 2 + vStabChordEffective / 2;
+        for (let i = 0; i <= segments; i++) {
+            const spanProgress = i / segments;
+            const currentY = spanProgress * halfSpan;
+            const currentChord = rootChord + (rootChord * taperRatio - rootChord) * spanProgress;
+            const currentSweep = currentY * Math.tan(sweepRad);
+            const airfoilPoints = generateAirfoil(currentChord, thickness, airfoil, 15);
+
+            airfoilPoints.forEach(p => {
+                if (isVertical) {
+                    vertices.push(p.x + currentSweep, currentY, p.y); // Swap Y and Z for vertical stabilizer
+                } else {
+                    vertices.push(p.x + currentSweep, p.y, currentY);
+                }
+            });
+        }
+
+        for (let i = 0; i < segments; i++) {
+            for (let j = 0; j < pointsPerSection; j++) {
+                const p1 = i * pointsPerSection + j;
+                const p2 = i * pointsPerSection + ((j + 1) % pointsPerSection);
+                const p3 = (i + 1) * pointsPerSection + j;
+                const p4 = (i + 1) * pointsPerSection + ((j + 1) % pointsPerSection);
+                indices.push(p1, p3, p4, p1, p4, p2);
+            }
+        }
+
+        const tipStartIndex = segments * pointsPerSection;
+        for (let j = 1; j < pointsPerSection - 1; j++) {
+            indices.push(tipStartIndex, tipStartIndex + j + 1, tipStartIndex + j);
+        }
+
+        geometry.setIndex(indices);
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+        geometry.computeVertexNormals();
+        return geometry;
+    };
 
     // --- Tail Assembly ---
     if (tailType === 'conventional') {
-        hStab.position.y = 0;
-        vStab.position.y = vStabHeight / 2;
+        const hStabChordEffective = hasElevator ? tailChord - elevatorWidth : tailChord;
+        const vStabChordEffective = hasRudder ? vStabChord - rudderWidth : vStabChord;
+
+        const hStabGeom = createSurface(tailSpan, hStabChordEffective, tailTaperRatio, tailSweepAngle, tailThickness, tailAirfoilType);
+        const hStab = new THREE.Mesh(hStabGeom, tailMaterial);
+        // Position the fixed part so its leading edge is aligned with the full tail's leading edge
+        hStab.position.x = -fuselageLength / 2 - (tailChord - hStabChordEffective) / 2;
+        hStab.rotation.y = Math.PI; // Flip to have leading edge forward
+
+        const vStabGeom = createSurface(vStabHeight, vStabChordEffective, 0.8, 15, tailThickness, tailAirfoilType, true);
+        const vStab = new THREE.Mesh(vStabGeom, fuselageMaterial);
+        vStab.position.x = -fuselageLength / 2 - (vStabChord - vStabChordEffective) / 2;
+        vStab.rotation.y = Math.PI;
+
         tailGroup.add(hStab, vStab);
     } else if (tailType === 't-tail') {
-        vStab.position.y = vStabHeight / 2;
-        hStab.position.y = vStabHeight;
+        const hStabChordEffective = hasElevator ? tailChord - elevatorWidth : tailChord;
+        const vStabChordEffective = hasRudder ? vStabChord - rudderWidth : vStabChord;
+
+        const hStabGeom = createSurface(tailSpan, hStabChordEffective, tailTaperRatio, tailSweepAngle, tailThickness, tailAirfoilType);
+        const hStab = new THREE.Mesh(hStabGeom, tailMaterial);
+        hStab.position.set(-fuselageLength / 2 - (tailChord - hStabChordEffective) / 2, vStabHeight, 0);
+        hStab.rotation.y = Math.PI;
+
+        const vStabGeom = createSurface(vStabHeight, vStabChordEffective, 0.8, 15, tailThickness, tailAirfoilType, true);
+        const vStab = new THREE.Mesh(vStabGeom, fuselageMaterial);
+        vStab.position.x = -fuselageLength / 2 - (vStabChord - vStabChordEffective) / 2;
+        vStab.rotation.y = Math.PI;
+
         tailGroup.add(hStab, vStab);
     } else if (tailType === 'v-tail') {
+        const vStabChordEffective = hasRudder ? vStabChord - rudderWidth : vStabChord;
         const angleRad = vTailAngle * Math.PI / 180;
-        const vTailPanelGeom = new THREE.BoxGeometry(vStabChord, vStabHeight, tailThickness);
-        
+        const vTailPanelGeom = createSurface(vStabHeight, vStabChordEffective, 0.8, 15, tailThickness, tailAirfoilType, true);
+
         const rightVPanel = new THREE.Mesh(vTailPanelGeom, tailMaterial);
-        rightVPanel.position.y = vStabHeight / 2;
-        rightVPanel.rotation.z = -angleRad;
-        
+        rightVPanel.rotation.z = -angleRad; // Rotate the whole panel
+
         const leftVPanel = rightVPanel.clone();
         leftVPanel.rotation.z = angleRad;
 
         const vTailAssembly = new THREE.Group();
         vTailAssembly.add(rightVPanel, leftVPanel);
-        vTailAssembly.position.x = -fuselageLength / 2 + vStabChord / 2;
+        vTailAssembly.position.x = -fuselageLength / 2 - (vStabChord - vStabChordEffective) / 2;
+        vTailAssembly.rotation.y = Math.PI;
         tailGroup.add(vTailAssembly);
     }
 
     // --- Tail Control Surfaces ---
+    // Note: This part is simplified and doesn't account for taper/sweep of the control surface itself.
     if (hasElevator && tailType !== 'v-tail') {
         const elevatorGeom = new THREE.BoxGeometry(elevatorWidth, tailThickness, tailSpan); // Correct: width, height, depth
         elevatorGeom.translate(-elevatorWidth / 2, 0, 0); // Set pivot to leading edge, extending backwards
@@ -587,7 +642,8 @@ function updatePlaneModel() {
         const elevatorPivot = new THREE.Group();
         elevatorPivot.add(elevator);
         // Position the pivot at the trailing edge of the fixed h-stab
-        elevatorPivot.position.set(hStab.position.x + hStabChordEffective / 2, hStab.position.y, 0);
+        const hStabTrailingEdgeX = -fuselageLength / 2 + tailChord / 2;
+        elevatorPivot.position.set(hStabTrailingEdgeX - elevatorWidth, (tailType === 't-tail' ? vStabHeight : 0), 0);
         tailControlsGroup.add(elevatorPivot);
     }
 
@@ -599,7 +655,8 @@ function updatePlaneModel() {
         const rudderPivot = new THREE.Group();
         rudderPivot.add(rudder);
         // Position the pivot at the trailing edge of the fixed v-stab
-        rudderPivot.position.set(vStab.position.x + vStabChordEffective / 2, vStab.position.y, 0);
+        const vStabTrailingEdgeX = -fuselageLength / 2 + vStabChord / 2;
+        rudderPivot.position.set(vStabTrailingEdgeX - rudderWidth, vStabHeight / 2, 0);
         tailControlsGroup.add(rudderPivot);
     } else if (hasRudderInput.checked && tailType === 'v-tail') {
         // This part is complex and can be added in a future step to ensure stability
