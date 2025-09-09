@@ -377,8 +377,8 @@ function updatePlaneModel() {
         // Position the aileron at the trailing edge of the wing
         const aileronZ = halfSpan - aileronPosition - (aileronLength / 2);
         const chordAtAileron = rootChord + (rootChord * taperRatio - rootChord) * (aileronZ / halfSpan);
-        const sweepAtAileron = (aileronZ > 0 ? aileronZ : 0) * Math.tan(sweepRad);
-        rightAileron.position.set(sweepAtAileron + (chordAtAileron / 2) - (aileronWidth / 2), 0, aileronZ);
+        const sweepAtAileron = (aileronZ > 0 ? aileronZ : 0) * Math.tan(sweepRad); // The X offset due to sweep
+        rightAileron.position.set(sweepAtAileron - (chordAtAileron / 2) + (aileronWidth / 2), 0, aileronZ); // Corrected X position to be at the trailing edge
         rightAileron.name = 'rightAileron'; // Name for raycasting
         rightWing.add(rightAileron);
 
@@ -420,6 +420,7 @@ function updatePlaneModel() {
         for (let i = 0; i < tipSection.length; i += 3) {
             tipCentroid.x += tipSection[i];
             tipCentroid.y += tipSection[i + 1];
+            tipCentroid.z += tipSection[i + 2]; // Corrected: Added Z coordinate to the calculation
         }
         tipCentroid.divideScalar(pointsPerSection);
         rightWingtip.position.copy(tipCentroid);
