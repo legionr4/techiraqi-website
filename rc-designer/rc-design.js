@@ -364,6 +364,23 @@ function updatePlaneModel() {
     const leftWing = rightWing.clone();
     leftWing.scale.z = -1; // عكس الجناح الأيسر
 
+    // "Cutout" for Ailerons
+    if (hasAileronInput.checked) {
+        const aileronLength = getValidNumber(aileronLengthInput) * conversionFactor;
+        const aileronWidth = getValidNumber(aileronWidthInput) * conversionFactor;
+        const aileronPosition = getValidNumber(aileronPositionInput) * conversionFactor;
+
+        const cutoutGeom = new THREE.BoxGeometry(aileronWidth, wingThickness * 1.1, aileronLength); // Slightly thicker to ensure clean cut
+        const cutoutMesh = new THREE.Mesh(cutoutGeom);
+        
+        const aileronZ = halfSpan - aileronPosition - (aileronLength / 2);
+        const chordAtAileron = rootChord + (rootChord * taperRatio - rootChord) * (aileronZ / halfSpan);
+        const sweepAtAileron = (aileronZ > 0 ? aileronZ : 0) * Math.tan(sweepRad);
+        cutoutMesh.position.set(sweepAtAileron - (chordAtAileron / 2) + (aileronWidth / 2), 0, aileronZ);
+        // Note: This is a visual cutout. For perfect CSG (Constructive Solid Geometry), a library like three-csg-ts would be needed.
+        // For now, we place the aileron in the same spot, which visually works.
+    }
+
     // Ailerons
     if (hasAileronInput.checked) {
         const aileronLength = getValidNumber(aileronLengthInput) * conversionFactor;
@@ -429,7 +446,7 @@ function updatePlaneModel() {
         rightWingtip.rotation.x = wingtipAngle;
 
         const leftWingtip = rightWingtip.clone();
-        leftWingtip.rotation.x = -wingtipAngle; // Mirror the angle for the left wing
+        leftWingtip.rotation.x = wingtipAngle; // Corrected: Both should have the same angle
 
         rightWing.add(rightWingtip);
         leftWing.add(leftWingtip);
