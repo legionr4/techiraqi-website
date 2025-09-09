@@ -136,12 +136,22 @@ const unitSelector = document.getElementById('unit-selector');
 const wingSpanInput = document.getElementById('wing-span');
 const wingChordInput = document.getElementById('wing-chord');
 const tailSpanInput = document.getElementById('tail-span');
+
 const tailChordInput = document.getElementById('tail-chord');
 const wingThicknessInput = document.getElementById('wing-thickness');
 const wingPositionInput = document.getElementById('wing-position');
 const airfoilTypeInput = document.getElementById('airfoil-type');
 const sweepAngleInput = document.getElementById('sweep-angle');
 const taperRatioInput = document.getElementById('taper-ratio');
+
+const hasWingtipInput = document.getElementById('has-wingtip');
+const wingtipLengthInput = document.getElementById('wingtip-length');
+const wingtipWidthInput = document.getElementById('wingtip-width');
+const wingtipThicknessInput = document.getElementById('wingtip-thickness');
+const wingtipPositionInput = document.getElementById('wingtip-position');
+const wingtipAngleInput = document.getElementById('wingtip-angle');
+const wingtipControls =  document.getElementById('wingtip-controls');
+
 
 const fuselageLengthInput = document.getElementById('fuselage-length');
 const wingMaterialInput = document.getElementById('wing-material');
@@ -161,6 +171,8 @@ const tailColorInput = document.getElementById('tail-color');
 const sweepValueEl = document.getElementById('sweep-value');
 const taperValueEl = document.getElementById('taper-value');
 const unitLabels = document.querySelectorAll('.unit-label');
+
+
 
 const liftResultEl = document.getElementById('lift-result');
 const dragResultEl = document.getElementById('drag-result');
@@ -183,19 +195,22 @@ let liftChart, dragChart;
 function generateAirfoil(chord, thickness, airfoilType, numPoints = 15) {
     const points = [];
     const halfThickness = thickness / 2;
-    const airfoilCurve = (x) => 4 * x * (1 - x); // Simple parabola for curvature
+    // معادلة محسنة لشكل المقطع الهوائي تعطي حافة أمامية مستديرة وحافة خلفية حادة
+    const airfoilCurve = (x) => 0.594689181 * (0.298222773 * Math.sqrt(x) - 0.127125232 * x - 0.357907906 * Math.pow(x, 2) + 0.291984971 * Math.pow(x, 3) - 0.105174606 * Math.pow(x, 4));
 
     if (airfoilType === 'rectangular') {
         // Top side
         for (let i = 0; i <= numPoints; i++) {
             const x_norm = i / numPoints;
-            points.push(new THREE.Vector2(x_norm * chord, halfThickness));
+            points.push(new THREE.Vector2(x_norm * chord, halfThickness)); // Simple rectangle
         }
         // Bottom side
         for (let i = numPoints - 1; i >= 1; i--) {
             const x_norm = i / numPoints;
             points.push(new THREE.Vector2(x_norm * chord, -halfThickness));
         }
+        // Center horizontally
+        points.forEach(p => p.x -= chord / 2);
     } else if (airfoilType === 'flat-bottom') {
         // Top surface
         for (let i = 0; i <= numPoints; i++) {
@@ -203,28 +218,31 @@ function generateAirfoil(chord, thickness, airfoilType, numPoints = 15) {
             points.push(new THREE.Vector2(x_norm * chord, thickness * airfoilCurve(x_norm)));
         }
         // Bottom surface (flat)
-        for (let i = numPoints - 1; i >= 1; i--) {
-            const x_norm = i / numPoints;
-            points.push(new THREE.Vector2(x_norm * chord, 0));
-        }
+        points.push(new THREE.Vector2(chord, 0));
+        points.push(new THREE.Vector2(0, 0));
+
         // Center vertically
         points.forEach(p => p.y -= thickness / 2);
+        // Center horizontally
+        points.forEach(p => p.x -= chord / 2);
     } else { // Symmetrical and Semi-symmetrical
         let bottomFactor = (airfoilType === 'semi-symmetrical') ? 0.6 : 1.0;
         // Top surface
         for (let i = 0; i <= numPoints; i++) {
             const x_norm = i / numPoints;
-            points.push(new THREE.Vector2(x_norm * chord, halfThickness * airfoilCurve(x_norm)));
+            points.push(new THREE.Vector2(x_norm * chord, thickness * airfoilCurve(x_norm)));
         }
         // Bottom surface
         for (let i = numPoints - 1; i >= 1; i--) {
             const x_norm = i / numPoints;
-            points.push(new THREE.Vector2(x_norm * chord, -bottomFactor * halfThickness * airfoilCurve(x_norm)));
+            points.push(new THREE.Vector2(x_norm * chord, -bottomFactor * thickness * airfoilCurve(x_norm)));
         }
+        // Center vertically
+        points.forEach(p => p.y -= (thickness - bottomFactor * thickness) / 2);
+        // Center horizontally
+        points.forEach(p => p.x -= chord / 2);
     }
 
-    // Center all profiles horizontally
-    points.forEach(p => p.x -= chord / 2);
     return points;
 }
 
@@ -239,6 +257,7 @@ function updatePlaneModel() {
     const airfoilType = airfoilTypeInput.value;
     const sweepAngle = getValidNumber(sweepAngleInput);
     const taperRatio = getValidNumber(taperRatioInput);
+
 
     // قراءة القيم الأخرى
     const tailSpan = getValidNumber(tailSpanInput) * conversionFactor;
@@ -256,6 +275,19 @@ function updatePlaneModel() {
     fuselageMaterial.color.set(fuselageColor);
     wingMaterial.color.set(wingColor);
     tailMaterial.color.set(tailColor);
+
+     // Wingtip Controls visibility
+    if(hasWingtipInput.checked){
+        wingtipControls.style.display = 'block';
+    }else{
+         wingtipControls.style.display = 'none';
+    }
+
+
+
+
+
+
 
     // --- تحديث أبعاد الجناح (باستخدام شكل مقطع هوائي حقيقي) ---
     while(wingGroup.children.length > 0){ 
@@ -313,6 +345,48 @@ function updatePlaneModel() {
     leftWing.scale.z = -1; // عكس الجناح الأيسر
 
     wingGroup.add(rightWing, leftWing);
+     // Wingtip
+    if (hasWingtipInput.checked) {
+        const wingtipLength = getValidNumber(wingtipLengthInput) * conversionFactor;
+        const wingtipWidth = getValidNumber(wingtipWidthInput) * conversionFactor;
+        const wingtipThickness = getValidNumber(wingtipThicknessInput) * conversionFactor;
+        const wingtipPosition = getValidNumber(wingtipPositionInput) * conversionFactor;
+        const wingtipAngle = getValidNumber(wingtipAngleInput) * Math.PI / 180; // Convert to radians
+
+        const wingtipShape = new THREE.Shape();
+        wingtipShape.moveTo(-wingtipWidth / 2, 0);
+        wingtipShape.lineTo(wingtipWidth / 2, 0);
+        wingtipShape.lineTo(wingtipWidth / 2, wingtipLength);
+        wingtipShape.lineTo(-wingtipWidth / 2, wingtipLength);
+        wingtipShape.closePath();
+
+        const extrudeSettings = {
+            depth: wingtipThickness,
+            bevelEnabled: false,
+        };
+
+        const wingtipGeometry = new THREE.ExtrudeGeometry(wingtipShape, extrudeSettings);
+        const wingtipMaterial = new THREE.MeshStandardMaterial({ color: wingMaterial.color, side: THREE.DoubleSide });
+        const rightWingtip = new THREE.Mesh(wingtipGeometry, wingtipMaterial);
+
+          // Rotate Wingtip
+        rightWingtip.rotation.x = -Math.PI / 2;
+          // Apply Wingtip Angle
+        rightWingtip.rotation.z = wingtipAngle; 
+
+        // Adjust Wingtip Position   
+        rightWingtip.position.set(0, 0, halfSpan); // Set Z position
+
+        const leftWingtip = rightWingtip.clone();
+        leftWingtip.scale.z = -1;
+
+        rightWing.add(rightWingtip);
+        leftWing.add(leftWingtip);
+
+    }
+
+
+
 
     // تحديث موضع الجناح (علوي/متوسط/سفلي)
     const fuselageHeight = fuselage.geometry.parameters.height;
@@ -421,6 +495,7 @@ function initCharts() {
     const dragChartCanvas = document.getElementById('drag-chart');
 
     const commonOptions = {
+
         responsive: true,
         maintainAspectRatio: false,
         scales: {
@@ -545,6 +620,9 @@ allControls.forEach(control => {
     }
 });
 
+hasWingtipInput.addEventListener('change', updateAll);
+
+
 // تحديث عرض قيم شريط التمرير
 sweepAngleInput.addEventListener('input', () => sweepValueEl.textContent = sweepAngleInput.value);
 taperRatioInput.addEventListener('input', () => taperValueEl.textContent = parseFloat(taperRatioInput.value).toFixed(2));
@@ -570,5 +648,6 @@ window.addEventListener('resize', () => {
     const viewerDiv = document.querySelector('.viewer');
     camera.aspect = viewerDiv.clientWidth / viewerDiv.clientHeight;
     camera.updateProjectionMatrix();
+
     renderer.setSize(viewerDiv.clientWidth, viewerDiv.clientHeight);
 });

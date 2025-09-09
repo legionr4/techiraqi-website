@@ -190,6 +190,73 @@
                         <label for="taper-ratio">نسبة الاستدقاق (Taper): <span id="taper-value">1.00</span></label>
                         <input type="range" id="taper-ratio" min="0.2" max="1.0" value="1.0" step="0.05">
                     </div>
+                     <div class="input-group">
+                        <label for="has-aileron">إضافة جناح قلاب (Aileron)؟</label>
+                        <input type="checkbox" id="has-aileron">
+                    </div>
+
+                    <div id="aileron-controls" style="margin-top: 10px; display:none;">
+                        <div class="input-group">
+                            <label for="aileron-length">طول الجنيح (<span class="unit-label">سم</span>):</label>
+                            <input type="number" id="aileron-length" value="30" step="1">
+                        </div>
+                        <div class="input-group">
+                            <label for="aileron-width">عرض الجنيح (<span class="unit-label">سم</span>):</label>
+                            <input type="number" id="aileron-width" value="5" step="0.5">
+                        </div>
+                         <div class="input-group">
+                            <label for="aileron-thickness">سمك الجنيح (<span class="unit-label">سم</span>):</label>
+                            <input type="number" id="aileron-thickness" value="0.5" step="0.1">
+                        </div>
+
+
+                        <div class="input-group">
+                            <label for="aileron-position">المسافة من نهاية الجناح (<span class="unit-label">سم</span>):</label>
+                            <input type="number" id="aileron-position" value="10" step="1">
+                        </div>
+
+                        <!--<div class="input-group">
+                            <label for="aileron-angle">زاوية الجنيح (°):</label>
+                            <input type="number" id="aileron-angle" value="20" step="5">
+                        </div>-->
+                    </div>
+
+
+
+
+
+
+
+                     <div class="input-group">
+                        <label for="has-wingtip">إضافة طرف جناح؟</label>
+                        <input type="checkbox" id="has-wingtip">
+                    </div>
+
+                    <div id="wingtip-controls" style="margin-top: 10px; display:none;">
+                        <div class="input-group">
+                            <label for="wingtip-length">طول الطرف (<span class="unit-label">سم</span>):</label>
+                            <input type="number" id="wingtip-length" value="10" step="1">
+                        </div>
+                        <div class="input-group">
+                            <label for="wingtip-width">عرض الطرف (<span class="unit-label">سم</span>):</label>
+                            <input type="number" id="wingtip-width" value="3" step="0.5">
+                        </div>
+                        <div class="input-group">
+                            <label for="wingtip-thickness">سمك الطرف (<span class="unit-label">سم</span>):</label>
+                            <input type="number" id="wingtip-thickness" value="1" step="0.1">
+                        </div>
+                        <div class="input-group">
+                            <label for="wingtip-position">المسافة من نهاية الجناح (<span class="unit-label">سم</span>):</label>
+                            <input type="number" id="wingtip-position" value="0" step="1">
+                        </div>
+
+                        <div class="input-group">
+                            <label for="wingtip-angle">زاوية الطرف (°):</label>
+                            <input type="number" id="wingtip-angle" value="45" step="5">
+                        </div>
+                    </div>
+
+
                 </fieldset>
 
                 <fieldset>

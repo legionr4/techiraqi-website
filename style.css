@@ -590,6 +590,10 @@ footer {
     outline: 3px solid var(--primary-hover);
     outline-offset: 2px;
 }
+ /* rc-design.html related */
+    #aileron-controls {
+        margin-top: 10px;
+    }
 
 /* ==========================================================================
    5. Page: Contact
