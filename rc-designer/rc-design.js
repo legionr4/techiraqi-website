@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const sweepAngleGroup = document.getElementById('sweep-angle-group');
     const fuselageLengthInput = document.getElementById('fuselage-length');
     const fuselageDiameterInput = document.getElementById('fuselage-diameter');
+    const fuselageShapeInput = document.getElementById('fuselage-shape');
     const propBladesInput = document.getElementById('prop-blades');
     const taperRatioInput = document.getElementById('taper-ratio');
     const taperRatioValueSpan = document.getElementById('taper-ratio-value');
@@ -294,10 +295,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const wingGroup = new THREE.Group();
         wingGroup.name = "wingGroup";
 
-        // المواد المستخدمة في النموذج
-        wingMaterial = new THREE.MeshStandardMaterial({ color: wingColorInput.value, side: THREE.DoubleSide });
-        tailMaterial = new THREE.MeshStandardMaterial({ color: tailColorInput.value, side: THREE.DoubleSide });
-        fuselageMaterial = new THREE.MeshStandardMaterial({ color: fuselageColorInput.value });
+        // إنشاء المواد من جديد في كل مرة لضمان التحديث الصحيح
+        wingMaterial = new THREE.MeshStandardMaterial({ color: wingColorInput.value, side: THREE.DoubleSide, name: "wingMat" });
+        tailMaterial = new THREE.MeshStandardMaterial({ color: tailColorInput.value, side: THREE.DoubleSide, name: "tailMat" });
+        fuselageMaterial = new THREE.MeshStandardMaterial({ color: fuselageColorInput.value, name: "fuselageMat" });
 
         // --- إنشاء الجناح ---
         // الأبعاد الأولية من المدخلات
@@ -370,24 +371,29 @@ document.addEventListener('DOMContentLoaded', () => {
         // هذا مجرد مثال، يمكنك تعديل الأبعاد
         const fuselageLength = parseFloat(fuselageLengthInput.value) / 100;
         const fuselageDiameter = parseFloat(fuselageDiameterInput.value) / 100; // cm to m
-        const radiusTop = fuselageDiameter / 2;
+        const fuselageShape = fuselageShapeInput.value;
+        let fuselageGeometry;
 
+        if (fuselageShape === 'square') {
+            // شكل صندوقي بسيط
+            fuselageGeometry = new THREE.BoxGeometry(fuselageLength, fuselageDiameter, fuselageDiameter);
+        } else { // 'round'
+            // --- استخدام LatheGeometry لشكل انسيابي (شكل قطرة الماء) ---
+            // 1. تحديد نقاط المقطع العرضي لجسم الطائرة من الذيل إلى المقدمة
+            const fuselageProfile = new THREE.SplineCurve([
+                new THREE.Vector2(0.01, -fuselageLength * 0.5),      // طرف الذيل (أكبر من صفر بقليل لتجنب المشاكل الهندسية)
+                new THREE.Vector2(fuselageDiameter / 2 * 0.8, -fuselageLength * 0.4), // بداية استدقاق الذيل
+                new THREE.Vector2(fuselageDiameter / 2, fuselageLength * 0.1),  // أعرض نقطة، متقدمة عن المنتصف
+                new THREE.Vector2(fuselageDiameter / 2 * 0.85, fuselageLength * 0.4), // بداية منحنى المقدمة
+                new THREE.Vector2(0.01, fuselageLength * 0.5)       // طرف المقدمة
+            ]);
 
-        // --- استخدام LatheGeometry لشكل انسيابي (شكل قطرة الماء) ---
-        // 1. تحديد نقاط المقطع العرضي لجسم الطائرة من الذيل إلى المقدمة
-        const fuselageProfile = new THREE.SplineCurve([
-            new THREE.Vector2(0.01, -fuselageLength * 0.5),      // طرف الذيل (أكبر من صفر بقليل لتجنب المشاكل الهندسية)
-            new THREE.Vector2(radiusTop * 0.8, -fuselageLength * 0.4), // بداية استدقاق الذيل
-            new THREE.Vector2(radiusTop, fuselageLength * 0.1),  // أعرض نقطة، متقدمة عن المنتصف
-            new THREE.Vector2(radiusTop * 0.85, fuselageLength * 0.4), // بداية منحنى المقدمة
-            new THREE.Vector2(0.01, fuselageLength * 0.5)       // طرف المقدمة
-        ]);
+            // 2. الحصول على مجموعة من النقاط السلسة من المنحنى
+            const points = fuselageProfile.getPoints(50);
 
-        // 2. الحصول على مجموعة من النقاط السلسة من المنحنى
-        const points = fuselageProfile.getPoints(50);
-
-        // 3. إنشاء الشكل ثلاثي الأبعاد عن طريق تدوير المقطع العرضي حول المحور
-        const fuselageGeometry = new THREE.LatheGeometry(points, 32).rotateZ(-Math.PI / 2);
+            // 3. إنشاء الشكل ثلاثي الأبعاد عن طريق تدوير المقطع العرضي حول المحور
+            fuselageGeometry = new THREE.LatheGeometry(points, 32).rotateZ(-Math.PI / 2);
+        }
 
         const fuselageMesh = new THREE.Mesh(fuselageGeometry, fuselageMaterial);
         fuselageMesh.name = "fuselage"; // إعطاء اسم لتسهيل العثور عليه
