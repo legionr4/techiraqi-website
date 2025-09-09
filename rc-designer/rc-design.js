@@ -296,9 +296,9 @@ document.addEventListener('DOMContentLoaded', () => {
         wingGroup.name = "wingGroup";
 
         // إنشاء المواد من جديد في كل مرة لضمان التحديث الصحيح
-        wingMaterial = new THREE.MeshStandardMaterial({ color: wingColorInput.value, side: THREE.DoubleSide, name: "wingMat" });
-        tailMaterial = new THREE.MeshStandardMaterial({ color: tailColorInput.value, side: THREE.DoubleSide, name: "tailMat" });
-        fuselageMaterial = new THREE.MeshStandardMaterial({ color: fuselageColorInput.value, name: "fuselageMat" });
+        wingMaterial = new THREE.MeshStandardMaterial({ color: wingColorInput.value, side: THREE.DoubleSide });
+        tailMaterial = new THREE.MeshStandardMaterial({ color: tailColorInput.value, side: THREE.DoubleSide });
+        fuselageMaterial = new THREE.MeshStandardMaterial({ color: fuselageColorInput.value });
 
         // --- إنشاء الجناح ---
         // الأبعاد الأولية من المدخلات
@@ -957,15 +957,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 if (input.id === 'toggle-prop-anim') {
                     isPropellerSpinning = input.checked;
-                }
-                if (input.id === 'wing-color' && wingMaterial) {
-                    wingMaterial.color.set(input.value);
-                }
-                if (input.id === 'fuselage-color' && fuselageMaterial) {
-                    fuselageMaterial.color.set(input.value);
-                }
-                if (input.id === 'tail-color' && tailMaterial) {
-                    tailMaterial.color.set(input.value);
                 }
 
                 updateAirplaneModel(); // This also calls updateAngleOfAttack and updateMarkers
