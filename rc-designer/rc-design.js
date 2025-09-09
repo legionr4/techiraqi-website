@@ -144,8 +144,10 @@ const vStabHeightInput = document.getElementById('v-stab-height');
 const vStabChordInput = document.getElementById('v-stab-chord');
 const vTailAngleInput = document.getElementById('v-tail-angle');
 const hasElevatorInput = document.getElementById('has-elevator');
+const elevatorControls = document.getElementById('elevator-controls');
 const elevatorWidthInput = document.getElementById('elevator-width');
 const hasRudderInput = document.getElementById('has-rudder');
+const rudderControls = document.getElementById('rudder-controls');
 const rudderWidthInput = document.getElementById('rudder-width');
 const tailSweepAngleInput = document.getElementById('tail-sweep-angle');
 const tailTaperRatioInput = document.getElementById('tail-taper-ratio');
@@ -173,6 +175,8 @@ const aileronLengthInput = document.getElementById('aileron-length');
 const aileronWidthInput = document.getElementById('aileron-width');
 const aileronThicknessInput = document.getElementById('aileron-thickness');
 const aileronPositionInput = document.getElementById('aileron-position');
+const elevatorLengthInput = document.getElementById('elevator-length');
+const rudderLengthInput = document.getElementById('rudder-length');
 const aileronControls = document.getElementById('aileron-controls');
 
 
@@ -332,8 +336,7 @@ function updatePlaneModel() {
     vStabGroup.style.display = tailType !== 'v-tail' ? 'flex' : 'none';
     vStabChordGroup.style.display = tailType !== 'v-tail' ? 'flex' : 'none';
 
-    document.getElementById('elevator-controls').style.display = hasElevatorInput.checked ? 'block' : 'none';
-    const rudderControls = document.getElementById('rudder-controls');
+    elevatorControls.style.display = hasElevatorInput.checked ? 'block' : 'none';
     if (hasRudderInput.checked && tailType !== 'v-tail') {
         rudderControls.style.display = 'block';
     } else if (hasRudderInput.checked && tailType === 'v-tail') {
@@ -537,7 +540,7 @@ function updatePlaneModel() {
     const rudderWidth = getValidNumber(rudderWidthInput) * conversionFactor;
 
     const createSurface = (span, rootChord, taperRatio, sweepAngle, thickness, airfoil, isVertical = false) => {
-        const halfSpan = span / 2;
+        const effectiveSpan = isVertical ? span : span / 2; // الأسطح العمودية تمتد بطولها الكامل من القاعدة
         const sweepRad = sweepAngle * Math.PI / 180;
         const geometry = new THREE.BufferGeometry();
         const vertices = [];
@@ -547,7 +550,7 @@ function updatePlaneModel() {
 
         for (let i = 0; i <= segments; i++) {
             const spanProgress = i / segments;
-            const currentY = spanProgress * halfSpan;
+            const currentY = spanProgress * effectiveSpan;
             const currentChord = rootChord + (rootChord * taperRatio - rootChord) * spanProgress;
             const currentSweep = currentY * Math.tan(sweepRad);
             const airfoilPoints = generateAirfoil(currentChord, thickness, airfoil, 15);
@@ -590,17 +593,15 @@ function updatePlaneModel() {
         // Create right half of the horizontal stabilizer
         const hStabGeom = createSurface(tailSpan, hStabChordEffective, tailTaperRatio, tailSweepAngle, tailThickness, tailAirfoilType, false);
         const rightHStab = new THREE.Mesh(hStabGeom, tailMaterial);
-        rightHStab.position.x = -fuselageLength / 2;
-        rightHStab.rotation.y = Math.PI;
+        rightHStab.position.x = -fuselageLength / 2 - tailChord / 2;
 
         // Clone and mirror for the left half
         const leftHStab = rightHStab.clone();
         leftHStab.scale.z = -1;
 
-        const vStabGeom = createSurface(vStabHeight, vStabChordEffective, 0.8, 15, tailThickness, tailAirfoilType, true);
+        const vStabGeom = createSurface(vStabHeight, vStabChordEffective, tailTaperRatio, tailSweepAngle, tailThickness, tailAirfoilType, true);
         const vStab = new THREE.Mesh(vStabGeom, fuselageMaterial);
-        vStab.position.x = -fuselageLength / 2;
-        vStab.rotation.y = Math.PI;
+        vStab.position.x = -fuselageLength / 2 - vStabChord / 2;
 
         tailGroup.add(rightHStab, leftHStab, vStab);
     } else if (tailType === 't-tail') {
@@ -609,19 +610,17 @@ function updatePlaneModel() {
 
         const hStabGeom = createSurface(tailSpan, hStabChordEffective, tailTaperRatio, tailSweepAngle, tailThickness, tailAirfoilType);
         const hStab = new THREE.Mesh(hStabGeom, tailMaterial);
-        hStab.position.set(-fuselageLength / 2, vStabHeight, 0);
-        hStab.rotation.y = Math.PI;
+        hStab.position.set(-fuselageLength / 2 - tailChord / 2, vStabHeight, 0);
 
-        const vStabGeom = createSurface(vStabHeight, vStabChordEffective, 0.8, 15, tailThickness, tailAirfoilType, true);
+        const vStabGeom = createSurface(vStabHeight, vStabChordEffective, tailTaperRatio, tailSweepAngle, tailThickness, tailAirfoilType, true);
         const vStab = new THREE.Mesh(vStabGeom, fuselageMaterial);
-        vStab.position.x = -fuselageLength / 2;
-        vStab.rotation.y = Math.PI;
+        vStab.position.x = -fuselageLength / 2 - vStabChord / 2;
 
         tailGroup.add(hStab, vStab);
     } else if (tailType === 'v-tail') {
         const vStabChordEffective = hasRudder ? vStabChord - rudderWidth : vStabChord;
         const angleRad = vTailAngle * Math.PI / 180;
-        const vTailPanelGeom = createSurface(vStabHeight, vStabChordEffective, 0.8, 15, tailThickness, tailAirfoilType, true);
+        const vTailPanelGeom = createSurface(vStabHeight, vStabChordEffective, tailTaperRatio, tailSweepAngle, tailThickness, tailAirfoilType, true);
 
         const rightVPanel = new THREE.Mesh(vTailPanelGeom, tailMaterial);
         rightVPanel.rotation.z = -angleRad; // Rotate the whole panel
@@ -631,36 +630,56 @@ function updatePlaneModel() {
 
         const vTailAssembly = new THREE.Group();
         vTailAssembly.add(rightVPanel, leftVPanel);
-        vTailAssembly.position.x = -fuselageLength / 2;
-        vTailAssembly.rotation.y = Math.PI;
+        vTailAssembly.position.x = -fuselageLength / 2 - vStabChord / 2;
         tailGroup.add(vTailAssembly);
     }
 
     // --- Tail Control Surfaces ---
-    // Note: This part is simplified and doesn't account for taper/sweep of the control surface itself.
     if (hasElevator && tailType !== 'v-tail') {
-        const elevatorGeom = new THREE.BoxGeometry(elevatorWidth, tailThickness, tailSpan); // Correct: width, height, depth
-        elevatorGeom.translate(-elevatorWidth / 2, 0, 0); // Set pivot to leading edge, extending backwards
-        const elevator = new THREE.Mesh(elevatorGeom, aileronMaterial);
-        elevator.name = 'elevator';
-        const elevatorPivot = new THREE.Group();
-        elevatorPivot.add(elevator);
-        // Position the pivot at the trailing edge of the fixed h-stab
-        const hStabChordEffective = tailChord - elevatorWidth;
-        elevatorPivot.position.set(-fuselageLength / 2 - hStabChordEffective, (tailType === 't-tail' ? vStabHeight : 0), 0);
-        tailControlsGroup.add(elevatorPivot);
+        // إنشاء سطح مائل ومستدق لنصف الرافع
+        const elevatorLength = getValidNumber(elevatorLengthInput) * conversionFactor;
+        const elevatorHalfGeom = createSurface(elevatorLength * 2, elevatorWidth, tailTaperRatio, tailSweepAngle, tailThickness, 'rectangular');
+        // يتم إنشاء الشكل الهندسي حول جذره. انقله ليدور حول حافته الأمامية.
+        elevatorHalfGeom.translate(-elevatorWidth / 2, 0, 0);
+
+        // الرافع الأيمن
+        const rightElevator = new THREE.Mesh(elevatorHalfGeom, aileronMaterial);
+        rightElevator.name = 'rightElevator';
+        const rightElevatorPivot = new THREE.Group();
+        rightElevatorPivot.add(rightElevator);
+
+        // الرافع الأيسر (استنساخ وعكس)
+        const leftElevatorPivot = rightElevatorPivot.clone();
+        leftElevatorPivot.scale.z = -1;
+        leftElevatorPivot.children[0].name = 'leftElevator';
+
+        // تحديد موضع المحاور عند خط المفصل (الحافة الخلفية للمثبت الثابت)
+        const hStabRootChordEffective = tailChord - elevatorWidth;
+        const hingeLineX = -fuselageLength / 2 - elevatorWidth;
+        
+        rightElevatorPivot.position.set(hingeLineX, (tailType === 't-tail' ? vStabHeight : 0), 0);
+        leftElevatorPivot.position.set(hingeLineX, (tailType === 't-tail' ? vStabHeight : 0), 0);
+
+        tailControlsGroup.add(rightElevatorPivot, leftElevatorPivot);
     }
 
     if (hasRudder && tailType !== 'v-tail') {
-        const rudderGeom = new THREE.BoxGeometry(rudderWidth, vStabHeight, tailThickness);
-        rudderGeom.translate(-rudderWidth / 2, 0, 0); // Set pivot to leading edge, extending backwards
+        // إنشاء سطح مائل ومستدق للدفة
+        const rudderLength = getValidNumber(rudderLengthInput) * conversionFactor;
+        const rudderGeom = createSurface(rudderLength, rudderWidth, tailTaperRatio, tailSweepAngle, tailThickness, 'rectangular', true);
+        // نقل المحور إلى الحافة الأمامية
+        rudderGeom.translate(-rudderWidth / 2, 0, 0);
+
         const rudder = new THREE.Mesh(rudderGeom, aileronMaterial);
         rudder.name = 'rudder';
         const rudderPivot = new THREE.Group();
         rudderPivot.add(rudder);
-        // Position the pivot at the trailing edge of the fixed v-stab
-        const vStabChordEffective = vStabChord - rudderWidth;
-        rudderPivot.position.set(-fuselageLength / 2 - vStabChordEffective, vStabHeight / 2, 0);
+        // تحديد موضع المحور عند خط المفصل (الحافة الخلفية للمثبت العمودي الثابت)
+        const vStabRootChordEffective = vStabChord - rudderWidth;
+        const hingeLineX = -fuselageLength / 2 - rudderWidth;
+        
+        rudderPivot.position.set(hingeLineX, 0, 0); // تبدأ الهندسة من y=0
+
         tailControlsGroup.add(rudderPivot);
     } else if (hasRudderInput.checked && tailType === 'v-tail') {
         // This part is complex and can be added in a future step to ensure stability
@@ -945,7 +964,8 @@ function onMouseClick(event) {
     // البحث عن الجنيحات في المشهد
     const rightAileron = scene.getObjectByName('rightAileron');
     const leftAileron = scene.getObjectByName('leftAileron');
-    const elevator = scene.getObjectByName('elevator');
+    const rightElevator = scene.getObjectByName('rightElevator');
+    const leftElevator = scene.getObjectByName('leftElevator');
     const rudder = scene.getObjectByName('rudder');
     const rightRuddervator = scene.getObjectByName('rightRuddervator');
     const leftRuddervator = scene.getObjectByName('leftRuddervator');
@@ -953,7 +973,8 @@ function onMouseClick(event) {
     const objectsToIntersect = [];
     if (rightAileron) objectsToIntersect.push(rightAileron);
     if (leftAileron) objectsToIntersect.push(leftAileron);
-    if (elevator) objectsToIntersect.push(elevator);
+    if (rightElevator) objectsToIntersect.push(rightElevator);
+    if (leftElevator) objectsToIntersect.push(leftElevator);
     if (rudder) objectsToIntersect.push(rudder);
     if (rightRuddervator) objectsToIntersect.push(rightRuddervator);
     if (leftRuddervator) objectsToIntersect.push(leftRuddervator);
@@ -964,10 +985,13 @@ function onMouseClick(event) {
 
     if (intersects.length > 0) {
         const clickedObject = intersects[0].object;
-        if (clickedObject.name === 'elevator') clickedObject.parent.rotation.y += 0.2;
-        if (clickedObject.name === 'rudder') clickedObject.parent.rotation.z += 0.2;
-        if (clickedObject.name === 'rightRuddervator') clickedObject.parent.rotation.z += 0.2;
-        if (clickedObject.name === 'leftRuddervator') clickedObject.parent.rotation.z += 0.2;
+        if (clickedObject.name === 'rightElevator' || clickedObject.name === 'leftElevator') {
+            // يجب أن يتحرك نصفي الرافع معًا (للتحكم في الانحدار)
+            if (rightElevator) rightElevator.parent.rotation.z += 0.2;
+            if (leftElevator) leftElevator.parent.rotation.z += 0.2;
+        }
+        if (clickedObject.name === 'rudder') clickedObject.parent.rotation.y += 0.2; // الدفة تتحكم في الانعراج
+        if (clickedObject.name === 'rightRuddervator' || clickedObject.name === 'leftRuddervator') clickedObject.parent.rotation.z += 0.2;
 
         // تحريك الجنيحات بشكل معاكس عند النقر
         if (rightAileron && leftAileron) {
