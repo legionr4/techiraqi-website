@@ -639,12 +639,12 @@ function updatePlaneModel() {
         const rightVPanel = new THREE.Mesh(vTailPanelGeom, tailMaterial);
         // إزاحة اللوحة اليمنى إلى جانب جسم الطائرة
         rightVPanel.position.z = fuselage.geometry.parameters.depth / 2;
-        rightVPanel.rotation.z = -angleRad; // Rotate the whole panel
+        rightVPanel.rotation.x = -angleRad; // تدوير حول المحور X للحصول على شكل V
 
         const leftVPanel = rightVPanel.clone();
         // إزاحة اللوحة اليسرى إلى الجانب الآخر
         leftVPanel.position.z = -fuselage.geometry.parameters.depth / 2;
-        leftVPanel.rotation.z = angleRad;
+        leftVPanel.rotation.x = angleRad; // تدوير معاكس للجهة الأخرى
 
         const vTailAssembly = new THREE.Group();
         vTailAssembly.add(rightVPanel, leftVPanel);
@@ -659,8 +659,8 @@ function updatePlaneModel() {
         // إنشاء سطح مائل ومستدق لنصف الرافع
         const elevatorLength = getValidNumber(elevatorLengthInput) * conversionFactor;
         const elevatorHalfGeom = createSurface(elevatorLength * 2, elevatorWidth, tailTaperRatio, tailSweepAngle, tailThickness, 'rectangular');
-        // يتم إنشاء الشكل الهندسي حول جذره. انقله ليدور حول حافته الأمامية.
-        elevatorHalfGeom.translate(-elevatorWidth / 2, 0, 0);
+        // ننقل الشكل الهندسي بحيث تكون حافته الخلفية عند x=0، مما يجعل الحافة الأمامية (المفصل) عند x=-elevatorWidth
+        elevatorHalfGeom.translate(elevatorWidth / 2, 0, 0);
 
         // الرافع الأيمن
         const rightElevator = new THREE.Mesh(elevatorHalfGeom, aileronMaterial);
@@ -673,12 +673,12 @@ function updatePlaneModel() {
         leftElevatorPivot.scale.z = -1;
         leftElevatorPivot.children[0].name = 'leftElevator';
 
-        // تحديد موضع المحاور عند خط المفصل (الحافة الخلفية للمثبت الثابت)
-        const hStabRootChordEffective = tailChord - elevatorWidth;
-        const hingeLineX = -fuselageLength / 2 - hStabRootChordEffective;
+        // نضع المحور عند الحافة الخلفية للذيل بأكمله، وسوف يتم رسم الرافع للأمام من هذه النقطة
+        const pivotX = -fuselageLength / 2 - tailChord;
+        const elevatorY = (tailType === 't-tail' ? vStabHeight + fuselage.geometry.parameters.height / 2 : 0);
         
-        rightElevatorPivot.position.set(hingeLineX, (tailType === 't-tail' ? vStabHeight : 0), 0);
-        leftElevatorPivot.position.set(hingeLineX, (tailType === 't-tail' ? vStabHeight : 0), 0);
+        rightElevatorPivot.position.set(pivotX, elevatorY, 0);
+        leftElevatorPivot.position.set(pivotX, elevatorY, 0);
 
         tailControlsGroup.add(rightElevatorPivot, leftElevatorPivot);
     }
@@ -687,18 +687,17 @@ function updatePlaneModel() {
         // إنشاء سطح مائل ومستدق للدفة
         const rudderLength = getValidNumber(rudderLengthInput) * conversionFactor;
         const rudderGeom = createSurface(rudderLength, rudderWidth, tailTaperRatio, tailSweepAngle, tailThickness, 'rectangular', true);
-        // نقل المحور إلى الحافة الأمامية
-        rudderGeom.translate(-rudderWidth / 2, 0, 0);
+        // ننقل الشكل الهندسي بحيث تكون حافته الخلفية عند x=0
+        rudderGeom.translate(rudderWidth / 2, 0, 0);
 
         const rudder = new THREE.Mesh(rudderGeom, aileronMaterial);
         rudder.name = 'rudder';
         const rudderPivot = new THREE.Group();
         rudderPivot.add(rudder);
-        // تحديد موضع المحور عند خط المفصل (الحافة الخلفية للمثبت العمودي الثابت)
-        const vStabRootChordEffective = vStabChord - rudderWidth;
-        const hingeLineX = -fuselageLength / 2 - vStabRootChordEffective;
+        // نضع المحور عند الحافة الخلفية للذيل العمودي بأكمله
+        const pivotX = -fuselageLength / 2 - vStabChord;
         
-        rudderPivot.position.set(hingeLineX, 0, 0); // تبدأ الهندسة من y=0
+        rudderPivot.position.set(pivotX, fuselage.geometry.parameters.height / 2, 0); // تبدأ الهندسة من y=0، لذا نرفعها
 
         tailControlsGroup.add(rudderPivot);
     } else if (hasRudderInput.checked && tailType === 'v-tail') {
