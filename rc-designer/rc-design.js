@@ -181,8 +181,7 @@ const aileronControls = document.getElementById('aileron-controls');
 
 
 const fuselageLengthInput = document.getElementById('fuselage-length');
-const wingMaterialInput = document.getElementById('wing-material');
-const tailMaterialInput = document.getElementById('tail-material');
+const structureMaterialInput = document.getElementById('structure-material');
 const propDiameterInput = document.getElementById('prop-diameter');
 const propBladesInput = document.getElementById('prop-blades');
 const propPitchInput = document.getElementById('prop-pitch');
@@ -425,6 +424,9 @@ function updatePlaneModel() {
     wingGeometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
     wingGeometry.computeVertexNormals(); // لحساب الإضاءة بشكل صحيح
 
+    // إزاحة الجناح ليبدأ من جانب جسم الطائرة بدلاً من المركز
+    wingGeometry.translate(0, 0, fuselage.geometry.parameters.depth / 2);
+
     const rightWing = new THREE.Mesh(wingGeometry, wingMaterial);
     const leftWing = rightWing.clone();
     leftWing.scale.z = -1; // عكس الجناح الأيسر
@@ -504,8 +506,8 @@ function updatePlaneModel() {
         const aileronAvgZ = halfSpan - aileronPosition - (aileronLength / 2);
         const chordAtHinge = rootChord + (rootChord * taperRatio - rootChord) * (aileronAvgZ / halfSpan);
         const sweepAtHinge = (aileronAvgZ > 0 ? aileronAvgZ : 0) * Math.tan(sweepRad);
-        // The wing is flipped, so leading edge is at +x, trailing edge is at -x. The hinge is at the trailing edge.
-        const hingeX = sweepAtHinge - (chordAtHinge / 2);
+        // The wing's new trailing edge (the hinge line) is at the original trailing edge position, moved forward by the aileron width.
+        const hingeX = sweepAtHinge - (chordAtHinge / 2) + aileronWidth;
 
         // Position and rotate the PIVOTS
         rightAileronPivot.position.set(hingeX, 0, aileronAvgZ);
@@ -592,8 +594,10 @@ function updatePlaneModel() {
 
         // Create right half of the horizontal stabilizer
         const hStabGeom = createSurface(tailSpan, hStabChordEffective, tailTaperRatio, tailSweepAngle, tailThickness, tailAirfoilType, false);
+        // إزاحة المثبت الأفقي ليبدأ من جانب جسم الطائرة
+        hStabGeom.translate(0, 0, fuselage.geometry.parameters.depth / 2);
         const rightHStab = new THREE.Mesh(hStabGeom, tailMaterial);
-        rightHStab.position.x = -fuselageLength / 2 - tailChord / 2;
+        rightHStab.position.x = -fuselageLength / 2 - hStabChordEffective / 2;
 
         // Clone and mirror for the left half
         const leftHStab = rightHStab.clone();
@@ -601,36 +605,52 @@ function updatePlaneModel() {
 
         const vStabGeom = createSurface(vStabHeight, vStabChordEffective, tailTaperRatio, tailSweepAngle, tailThickness, tailAirfoilType, true);
         const vStab = new THREE.Mesh(vStabGeom, fuselageMaterial);
-        vStab.position.x = -fuselageLength / 2 - vStabChord / 2;
+        vStab.position.x = -fuselageLength / 2 - vStabChordEffective / 2;
+        // رفع المثبت العمودي ليجلس فوق جسم الطائرة
+        vStab.position.y = fuselage.geometry.parameters.height / 2;
 
         tailGroup.add(rightHStab, leftHStab, vStab);
     } else if (tailType === 't-tail') {
         const hStabChordEffective = hasElevator ? tailChord - elevatorWidth : tailChord;
         const vStabChordEffective = hasRudder ? vStabChord - rudderWidth : vStabChord;
 
-        const hStabGeom = createSurface(tailSpan, hStabChordEffective, tailTaperRatio, tailSweepAngle, tailThickness, tailAirfoilType);
-        const hStab = new THREE.Mesh(hStabGeom, tailMaterial);
-        hStab.position.set(-fuselageLength / 2 - tailChord / 2, vStabHeight, 0);
+        // Create right half of the horizontal stabilizer
+        const hStabGeom = createSurface(tailSpan, hStabChordEffective, tailTaperRatio, tailSweepAngle, tailThickness, tailAirfoilType, false);
+        const rightHStab = new THREE.Mesh(hStabGeom, tailMaterial);
+        // رفع المثبت الأفقي ليجلس فوق المثبت العمودي
+        rightHStab.position.set(-fuselageLength / 2 - hStabChordEffective / 2, vStabHeight + fuselage.geometry.parameters.height / 2, 0);
+
+        // Clone and mirror for the left half
+        const leftHStab = rightHStab.clone();
+        leftHStab.scale.z = -1;
 
         const vStabGeom = createSurface(vStabHeight, vStabChordEffective, tailTaperRatio, tailSweepAngle, tailThickness, tailAirfoilType, true);
         const vStab = new THREE.Mesh(vStabGeom, fuselageMaterial);
-        vStab.position.x = -fuselageLength / 2 - vStabChord / 2;
+        vStab.position.x = -fuselageLength / 2 - vStabChordEffective / 2;
+        // رفع المثبت العمودي ليجلس فوق جسم الطائرة
+        vStab.position.y = fuselage.geometry.parameters.height / 2;
 
-        tailGroup.add(hStab, vStab);
+        tailGroup.add(rightHStab, leftHStab, vStab);
     } else if (tailType === 'v-tail') {
         const vStabChordEffective = hasRudder ? vStabChord - rudderWidth : vStabChord;
         const angleRad = vTailAngle * Math.PI / 180;
         const vTailPanelGeom = createSurface(vStabHeight, vStabChordEffective, tailTaperRatio, tailSweepAngle, tailThickness, tailAirfoilType, true);
 
         const rightVPanel = new THREE.Mesh(vTailPanelGeom, tailMaterial);
+        // إزاحة اللوحة اليمنى إلى جانب جسم الطائرة
+        rightVPanel.position.z = fuselage.geometry.parameters.depth / 2;
         rightVPanel.rotation.z = -angleRad; // Rotate the whole panel
 
         const leftVPanel = rightVPanel.clone();
+        // إزاحة اللوحة اليسرى إلى الجانب الآخر
+        leftVPanel.position.z = -fuselage.geometry.parameters.depth / 2;
         leftVPanel.rotation.z = angleRad;
 
         const vTailAssembly = new THREE.Group();
         vTailAssembly.add(rightVPanel, leftVPanel);
-        vTailAssembly.position.x = -fuselageLength / 2 - vStabChord / 2;
+        vTailAssembly.position.x = -fuselageLength / 2 - vStabChordEffective / 2;
+        // رفع مجموعة الذيل لتجلس فوق جسم الطائرة
+        vTailAssembly.position.y = fuselage.geometry.parameters.height / 2;
         tailGroup.add(vTailAssembly);
     }
 
@@ -655,7 +675,7 @@ function updatePlaneModel() {
 
         // تحديد موضع المحاور عند خط المفصل (الحافة الخلفية للمثبت الثابت)
         const hStabRootChordEffective = tailChord - elevatorWidth;
-        const hingeLineX = -fuselageLength / 2 - elevatorWidth;
+        const hingeLineX = -fuselageLength / 2 - hStabRootChordEffective;
         
         rightElevatorPivot.position.set(hingeLineX, (tailType === 't-tail' ? vStabHeight : 0), 0);
         leftElevatorPivot.position.set(hingeLineX, (tailType === 't-tail' ? vStabHeight : 0), 0);
@@ -676,7 +696,7 @@ function updatePlaneModel() {
         rudderPivot.add(rudder);
         // تحديد موضع المحور عند خط المفصل (الحافة الخلفية للمثبت العمودي الثابت)
         const vStabRootChordEffective = vStabChord - rudderWidth;
-        const hingeLineX = -fuselageLength / 2 - rudderWidth;
+        const hingeLineX = -fuselageLength / 2 - vStabRootChordEffective;
         
         rudderPivot.position.set(hingeLineX, 0, 0); // تبدأ الهندسة من y=0
 
@@ -712,8 +732,6 @@ function calculateAerodynamics() {
     const wingThickness = getValidNumber(wingThicknessInput) * conversionFactor;
     const taperRatio = getValidNumber(taperRatioInput);
     const airfoilType = airfoilTypeInput.value;
-    const wingMaterial = wingMaterialInput.value;
-    const tailMaterial = tailMaterialInput.value;
     const angleOfAttack = getValidNumber(angleOfAttackInput);
     const airSpeed = getValidNumber(airSpeedInput);
     const airDensity = getValidNumber(airDensityInput);
@@ -721,6 +739,7 @@ function calculateAerodynamics() {
     const propPitch = getValidNumber(propPitchInput); // inches
     const propRpm = getValidNumber(propRpmInput);
     const planeComponentsWeightGrams = getValidNumber(planeWeightInput);
+    const structureMaterial = structureMaterialInput.value;
 
     // --- حسابات محدثة ---
     const tipChord = wingChord * taperRatio;
@@ -777,13 +796,12 @@ function calculateAerodynamics() {
 
     // 4. حساب الوزن (Weight Calculation)
     const wingVolume = mainWingArea * wingThickness; // Volume in m³
-    const wingMaterialDensity = MATERIAL_DENSITIES[wingMaterial]; // Density in kg/m³
-    const wingWeightKg = wingVolume * wingMaterialDensity; // Weight in kg
+    const structureMaterialDensity = MATERIAL_DENSITIES[structureMaterial]; // Density in kg/m³
+    const wingWeightKg = wingVolume * structureMaterialDensity; // Weight in kg
 
     const tailThickness = wingThickness * 0.75; // Tail is usually thinner
     const tailVolume = totalTailArea * tailThickness;
-    const tailMaterialDensity = MATERIAL_DENSITIES[tailMaterial];
-    const tailWeightKg = tailVolume * tailMaterialDensity;
+    const tailWeightKg = tailVolume * structureMaterialDensity;
 
     const planeComponentsWeightKg = planeComponentsWeightGrams / 1000;
     const totalWeightKg = wingWeightKg + tailWeightKg + planeComponentsWeightKg;
