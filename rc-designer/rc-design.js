@@ -217,85 +217,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return propGroup;
     }
 
-    /**
-     * Creates the landing gear model based on user selection.
-     * @param {string} gearType - 'tricycle' or 'taildragger'.
-     * @param {number} fuselageLength - The length of the fuselage.
-     * @param {number} fuselageDiameter - The diameter of the fuselage.
-     * @param {number} wingYOffset - The vertical offset of the wing.
-     * @returns {THREE.Group|null}
-     */
-    function createLandingGear(gearType, fuselageLength, fuselageDiameter, wingYOffset) {
-        if (gearType === 'none') {
-            return null;
-        }
-
-        const gearGroup = new THREE.Group();
-        gearGroup.name = "landingGear";
-
-        const wheelMaterial = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.8 });
-        const strutMaterial = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, metalness: 0.5, roughness: 0.5 });
-
-        const mainWheelRadius = fuselageDiameter * 0.35;
-        const mainWheelThickness = mainWheelRadius * 0.4;
-        const smallWheelRadius = mainWheelRadius * 0.6;
-        const smallWheelThickness = smallWheelRadius * 0.5;
-        const strutRadius = mainWheelRadius * 0.15;
-
-        // Using Torus for a better wheel look
-        const mainWheelGeom = new THREE.TorusGeometry(mainWheelRadius, mainWheelThickness, 16, 32).rotateX(Math.PI / 2);
-        const smallWheelGeom = new THREE.TorusGeometry(smallWheelRadius, smallWheelThickness, 12, 24).rotateX(Math.PI / 2);
-
-        const fuselageBottomY = -fuselageDiameter / 2;
-
-        if (gearType === 'tricycle') {
-            // 1. Nose Gear
-            const noseStrutHeight = fuselageDiameter * 0.6;
-            const noseStrut = new THREE.Mesh(new THREE.CylinderGeometry(strutRadius, strutRadius, noseStrutHeight, 8), strutMaterial);
-            noseStrut.position.set(fuselageLength * 0.4, fuselageBottomY - noseStrutHeight / 2, 0);
-            const noseWheel = new THREE.Mesh(smallWheelGeom, wheelMaterial);
-            noseWheel.position.set(fuselageLength * 0.4, fuselageBottomY - noseStrutHeight, 0);
-            gearGroup.add(noseStrut, noseWheel);
-
-            // 2. Main Gears (under the wing)
-            const mainStrutHeight = fuselageDiameter * 0.5;
-            const mainGearX = 0; // Positioned near CG
-            const mainGearZ = fuselageDiameter * 0.8;
-            const strutStartPoint = wingYOffset !== 0 ? wingYOffset - mainWheelRadius : fuselageBottomY;
-
-            const rightStrut = new THREE.Mesh(new THREE.CylinderGeometry(strutRadius, strutRadius, mainStrutHeight, 8), strutMaterial);
-            rightStrut.position.set(mainGearX, strutStartPoint - mainStrutHeight / 2, mainGearZ);
-            const rightWheel = new THREE.Mesh(mainWheelGeom, wheelMaterial);
-            rightWheel.position.set(mainGearX, strutStartPoint - mainStrutHeight, mainGearZ);
-            gearGroup.add(rightStrut, rightWheel);
-
-            const leftStrut = rightStrut.clone();
-            leftStrut.position.z *= -1;
-            const leftWheel = rightWheel.clone();
-            leftWheel.position.z *= -1;
-            gearGroup.add(leftStrut, leftWheel);
-
-        } else if (gearType === 'taildragger') {
-            // 1. Main Gears (forward of CG)
-            const mainStrutHeight = fuselageDiameter * 0.6;
-            const mainGearX = fuselageLength * 0.15;
-            const mainGearZ = fuselageDiameter * 0.9;
-            const rightStrut = new THREE.Mesh(new THREE.CylinderGeometry(strutRadius, strutRadius, mainStrutHeight, 8), strutMaterial);
-            rightStrut.position.set(mainGearX, fuselageBottomY - mainStrutHeight / 2, mainGearZ);
-            const rightWheel = new THREE.Mesh(mainWheelGeom, wheelMaterial);
-            rightWheel.position.set(mainGearX, fuselageBottomY - mainStrutHeight, mainGearZ);
-            gearGroup.add(rightStrut, rightWheel);
-            gearGroup.add(rightStrut.clone().translateX(-mainGearZ * 2), rightWheel.clone().translateX(-mainGearZ * 2)); // Simplified cloning
-
-            // 2. Tail Wheel
-            const tailWheel = new THREE.Mesh(smallWheelGeom, wheelMaterial);
-            tailWheel.position.set(-fuselageLength * 0.48, fuselageBottomY - smallWheelRadius, 0);
-            gearGroup.add(tailWheel);
-        }
-
-        return gearGroup;
-    }
-
     function init() {
         // إنشاء المشهد
         scene = new THREE.Scene();
@@ -472,46 +393,6 @@ document.addEventListener('DOMContentLoaded', () => {
         fuselageMesh.name = "fuselage"; // إعطاء اسم لتسهيل العثور عليه
         airplaneGroup.add(fuselageMesh);
 
-        /*
-        // --- إنشاء قمرة القيادة (Canopy) ---
-        const canopyType = canopyTypeInput.value;
-        if (canopyType !== 'none') {
-            // استخدام مادة فيزيائية لإعطاء تأثير زجاجي واقعي
-            const canopyMaterial = new THREE.MeshPhysicalMaterial({
-                color: 0xadd8e6, // لون أزرق فاتح شفاف
-                transmission: 0.9, // شفافية بنسبة 90%
-                roughness: 0.1,
-                metalness: 0.1,
-                thickness: 0.05, // مطلوب لتأثير الانكسار
-                ior: 1.5, // معامل الانكسار (مثل الزجاج)
-                transparent: true,
-                opacity: 0.5 // شفافية احتياطية للمتصفحات التي لا تدعم Transmission
-            });
-
-            let canopyMesh;
-
-            switch (canopyType) {
-                case 'bubble': {
-                    // إنشاء نصف كرة وتغيير أبعادها لتبدو بيضاوية
-                    const bubbleGeo = new THREE.SphereGeometry(radiusTop * 0.9, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
-                    bubbleGeo.scale(0.8, 0.7, 1.2); // تغيير الأبعاد: أقل عرضًا، أقل ارتفاعًا، وأكثر طولًا
-                    canopyMesh = new THREE.Mesh(bubbleGeo, canopyMaterial);
-                    canopyMesh.position.set(fuselageLength * 0.2, radiusTop * 0.95, 0);
-                    break;
-                }
-                case 'tandem': {
-                    // استخدام شكل الكبسولة للحصول على شكل طويل ومستدير
-                    const tandemGeo = new THREE.CapsuleGeometry(radiusTop * 0.5, fuselageLength * 0.3, 16, 32);
-                    tandemGeo.rotateZ(Math.PI / 2); // محاذاتها مع جسم الطائرة
-                    canopyMesh = new THREE.Mesh(tandemGeo, canopyMaterial);
-                    canopyMesh.position.set(fuselageLength * 0.1, radiusTop, 0);
-                    break;
-                }
-            }
-            if (canopyMesh) airplaneGroup.add(canopyMesh);
-        }
-        */
-
         // --- تحديد موضع الجناح بناءً على اختيار المستخدم ---
         const wingPosition = wingPositionInput.value;
         let wingYOffset = 0;
@@ -602,13 +483,6 @@ document.addEventListener('DOMContentLoaded', () => {
         propellerGroup.position.y = 0; // يبقى في المنتصف
         airplaneGroup.add(propellerGroup);
 
-        /*
-        // --- إنشاء معدات الهبوط (Landing Gear) ---
-        const gearType = landingGearTypeInput.value;
-        const landingGearGroup = createLandingGear(gearType, fuselageLength, fuselageDiameter, wingYOffset);
-        if (landingGearGroup) airplaneGroup.add(landingGearGroup);
-        */
-
         // إضافة المجموعة الكاملة إلى المشهد
         scene.add(airplaneGroup);
     }
@@ -634,29 +508,6 @@ document.addEventListener('DOMContentLoaded', () => {
         updateAngleOfAttack();
         updateMarkers(); // تحديث مواضع العلامات عند تغيير أبعاد النموذج
     }
-
-    /*
-    function updateTailControls() {
-        const tailType = tailTypeInput.value;
-        const hStabSpanGroup = document.getElementById('h-stab-span-group');
-        const hStabChordGroup = document.getElementById('h-stab-chord-group');
-        const vStabHeightGroup = document.getElementById('v-stab-height-group');
-
-        // إظهار جميع الحقول بشكل افتراضي
-        hStabSpanGroup.style.display = 'block';
-        hStabChordGroup.style.display = 'block';
-        vStabHeightGroup.style.display = 'block';
-
-        if (tailType === 'v-tail') {
-            // في حالة الذيل V، نخفي حقل ارتفاع المثبت العمودي
-            vStabHeightGroup.style.display = 'none';
-            // يمكن تغيير تسمية الحقول الأخرى لتكون أوضح
-            hStabSpanGroup.querySelector('label').textContent = 'طول الذيل V (من الحافة للحافة)';
-        } else {
-            hStabSpanGroup.querySelector('label').textContent = 'طول الذيل الأفقي (سم)';
-        }
-    }
-    */
 
     function updateAngleOfAttack() {
         if (!airplaneGroup) return;
@@ -686,18 +537,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const chord = parseFloat(wingChordInput.value) / 100; // متر
         const cgPercent = parseFloat(cgPositionInput.value) / 100;
 
-        // نحصل على الموضع الرأسي لمجموعة الجناح
-        /*
-        // Note: wingGroup.position.y is the vertical offset of the wing relative to the fuselage center.
-        // The CG/CL markers are positioned relative to the wing's own coordinate system (where its Y=0).
-        // So, wingYOffset is not directly needed for the Z (X-axis) position of the markers.
-        // The Z-axis of the wing geometry is aligned with the aircraft's X-axis (length).
-        // The X-axis of the wing geometry is aligned with the aircraft's Z-axis (span).
-        // So, 'z' positions for markers correspond to 'x' positions on the aircraft.
-
-        // --- حساب مركز الثقل (CG) المحسوب (الموضع X) ---
-        */
-
         // --- مركز الثقل المرغوب (من إدخال المستخدم) للعرض المرئي للعلامة ---
         // The wing's local Z-axis corresponds to the aircraft's X-axis (length).
         // The wing's local X-axis corresponds to the aircraft's Z-axis (span).
@@ -716,11 +555,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- التحقق من الاستقرار ---
         if (stabilityWarning) {
             // إذا كان مركز الثقل (cg_z) خلف مركز الرفع (cl_z)
-            // (قيم z سالبة، لذا القيمة الأصغر تعني أبعد للخلف)
-            // نستخدم مركز الثقل المحسوب للتحقق من الاستقرار.
-            // If calculated_cg_x_m (which is an X-coordinate) is less than cl_z (which is also an X-coordinate),
-            // it means CG is behind CL, which is unstable.
-            // For now, we use the user-defined CG for the warning
+            // (قيم z سالبة، لذا القيمة الأصغر تعني أبعد للخلف).
             if (cg_z < cl_z) { // CG is behind CL
                 stabilityWarning.classList.remove('hidden');
             } else {
@@ -789,7 +624,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {number} Total Drag Coefficient.
      */
     function calculateTotalDragCoefficient(Cl, airfoilType, wingArea) {
-        const wingletTypeInput = document.getElementById('winglet-type');
         // --- 1. السحب الطفيلي (Parasitic Drag - Cd0) ---
         // هذا هو مجموع السحب من جميع المكونات غير المنتجة للرفع.
         // هذه القيم هي تقديرات تقريبية.
