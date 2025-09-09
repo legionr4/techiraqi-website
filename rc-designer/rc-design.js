@@ -750,8 +750,8 @@ function onMouseClick(event) {
 
     if (intersects.length > 0) {
         // تحريك الجنيحات بشكل معاكس عند النقر
-        rightAileron.rotation.z += 0.2;
-        leftAileron.rotation.z -= 0.2;
+        rightAileron.rotation.x += 0.2; // Corrected: Rotate around X-axis for up/down motion
+        leftAileron.rotation.x -= 0.2;  // Corrected: Rotate around X-axis for up/down motion
     }
 }
 window.addEventListener('click', onMouseClick, false);
