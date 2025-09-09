@@ -97,6 +97,22 @@ function getValidNumber(inputElement) {
     }
 }
 
+/**
+ * Creates a debounced function that delays invoking `func` until after `wait` milliseconds
+ * have elapsed since the last time the debounced function was invoked.
+ * @param {Function} func The function to debounce.
+ * @param {number} wait The number of milliseconds to delay.
+ * @returns {Function} Returns the new debounced function.
+ */
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => { clearTimeout(timeout); func(...args); };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
 const form = document.getElementById('plane-form');
 const allControls = form.querySelectorAll('input, select');
 
@@ -244,7 +260,7 @@ function updatePlaneModel() {
     for (let i = 0; i < segments; i++) {
         for (let j = 0; j < pointsPerSection; j++) {
             const p1 = i * pointsPerSection + j;
-            const p2 = i * pointsPersection + ((j + 1) % pointsPerSection);
+            const p2 = i * pointsPerSection + ((j + 1) % pointsPerSection);
             const p3 = (i + 1) * pointsPerSection + j;
             const p4 = (i + 1) * pointsPerSection + ((j + 1) % pointsPerSection);
             indices.push(p1, p3, p4, p1, p4, p2);
@@ -479,9 +495,15 @@ function updateUnitLabels() {
 }
 
 // --- ربط الأحداث ---
+const debouncedUpdate = debounce(updateAll, 150); // تأخير 150ms لتحسين الأداء
+
 allControls.forEach(control => {
-    const eventType = (control.type === 'range' || control.type === 'number') ? 'input' : 'change';
-    control.addEventListener(eventType, updateAll);
+    // استخدام دالة debounced للمدخلات التي تتغير بسرعة (مثل range و number)
+    if (control.type === 'range' || control.type === 'number') {
+        control.addEventListener('input', debouncedUpdate);
+    } else { // للمدخلات الأخرى (مثل select و color)، التحديث فوري عند التغيير
+        control.addEventListener('change', updateAll);
+    }
 });
 
 // تحديث عرض قيم شريط التمرير
