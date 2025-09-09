@@ -272,14 +272,52 @@
                 </fieldset>
 
                 <fieldset>
-                    <legend>أبعاد الذيل</legend>
+                    <legend>تصميم الذيل</legend>
                     <div class="input-group">
-                        <label for="tail-span">طول الذيل (<span class="unit-label">سم</span>)</label>
+                        <label for="tail-type">نوع الذيل</label>
+                        <select id="tail-type">
+                            <option value="conventional" selected>تقليدي (Conventional)</option>
+                            <option value="t-tail">على شكل T (T-Tail)</option>
+                            <option value="v-tail">على شكل V (V-Tail)</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="tail-span">طول الذيل الأفقي (<span class="unit-label">سم</span>)</label>
                         <input type="number" id="tail-span" value="50" step="1">
                     </div>
                     <div class="input-group">
-                        <label for="tail-chord">عرض الذيل (<span class="unit-label">سم</span>)</label>
+                        <label for="tail-chord">عرض الذيل الأفقي (<span class="unit-label">سم</span>)</label>
                         <input type="number" id="tail-chord" value="15" step="1">
+                    </div>
+                    <div class="input-group" id="v-stab-group">
+                        <label for="v-stab-height">ارتفاع الذيل العمودي (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="v-stab-height" value="20" step="1">
+                    </div>
+                    <div class="input-group" id="v-stab-chord-group">
+                        <label for="v-stab-chord">عرض الذيل العمودي (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="v-stab-chord" value="18" step="1">
+                    </div>
+                    <div class="input-group" id="v-tail-angle-group" style="display:none;">
+                        <label for="v-tail-angle">زاوية الذيل V (°)</label>
+                        <input type="number" id="v-tail-angle" value="35" step="1">
+                    </div>
+
+                    <div class="input-group">
+                        <label for="has-elevator">إضافة رافع (Elevator)؟</label>
+                        <input type="checkbox" id="has-elevator">
+                    </div>
+                    <div id="elevator-controls" style="display:none;">
+                        <label for="elevator-width">عرض الرافع (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="elevator-width" value="4" step="0.5">
+                    </div>
+
+                    <div class="input-group">
+                        <label for="has-rudder">إضافة دفة (Rudder)؟</label>
+                        <input type="checkbox" id="has-rudder">
+                    </div>
+                    <div id="rudder-controls" style="display:none;">
+                        <label for="rudder-width">عرض الدفة (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="rudder-width" value="5" step="0.5">
                     </div>
                 </fieldset>
 
