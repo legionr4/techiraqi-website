@@ -22,21 +22,18 @@ scene.add(directionalLight);
 
 // --- إنشاء أجزاء الطائرة ---
 const planeGroup = new THREE.Group();
-const fuselageMaterial = new THREE.MeshStandardMaterial({ color: 0x0056b3 });
+const fuselageMaterial = new THREE.MeshStandardMaterial({ color: 0x0056b3, side: THREE.DoubleSide });
 const wingMaterial = new THREE.MeshStandardMaterial({ color: 0xcccccc });
-const tailMaterial = new THREE.MeshStandardMaterial({ color: 0xdddddd });
+const tailMaterial = new THREE.MeshStandardMaterial({ color: 0xdddddd, side: THREE.DoubleSide });
 
 // جسم الطائرة
 const fuselageGeom = new THREE.BoxGeometry(1, 0.15, 0.15);
 const fuselage = new THREE.Mesh(fuselageGeom, fuselageMaterial);
 planeGroup.add(fuselage);
 
-// الجناح الرئيسي
-// (width: chord, height: thickness, depth: span)
-const wingGeom = new THREE.BoxGeometry(1, 1, 1); // Unit cube
-const wing = new THREE.Mesh(wingGeom, wingMaterial);
-wing.position.y = 0.05;
-planeGroup.add(wing);
+// مجموعة الجناح (سيتم إنشاؤها ديناميكيًا)
+const wingGroup = new THREE.Group();
+planeGroup.add(wingGroup);
 
 // الذيل الأفقي
 // (width: chord, height: thickness, depth: span)
@@ -62,15 +59,76 @@ planeGroup.add(propellerGroup);
 scene.add(planeGroup);
 
 // --- دوال التحديث والحساب ---
+
+/**
+ * يقرأ قيمة رقمية من حقل الإدخال، ويتحقق من صحتها (ضد القيم غير الرقمية، والحد الأدنى/الأقصى)،
+ * ويقدم ملاحظات مرئية للمدخلات غير الصحيحة.
+ * @param {HTMLInputElement} inputElement عنصر الإدخال المراد تحليله.
+ * @returns {number} الرقم الصحيح الذي تم تحليله أو قيمته الافتراضية.
+ */
+function getValidNumber(inputElement) {
+    // إعادة تعيين لون الحدود أولاً
+    inputElement.style.borderColor = ''; // العودة إلى الافتراضي من ورقة الأنماط
+
+    const value = parseFloat(inputElement.value);
+    const min = parseFloat(inputElement.min);
+    const max = parseFloat(inputElement.max);
+
+    let isValid = !isNaN(value);
+
+    if (isValid && !isNaN(min)) {
+        isValid = value >= min;
+    }
+    if (isValid && !isNaN(max)) {
+        isValid = value <= max;
+    }
+    
+    // معظم أبعادنا المادية لا ينبغي أن تكون سلبية
+    if (inputElement.type === 'number' && inputElement.id !== 'angle-of-attack' && value < 0) {
+        isValid = false;
+    }
+
+    if (isValid) {
+        return value;
+    } else {
+        inputElement.style.borderColor = '#dc3545'; // لون الخطر
+        // الرجوع إلى القيمة الافتراضية المحددة في سمة `value` في HTML
+        return parseFloat(inputElement.defaultValue) || 0;
+    }
+}
+
 const form = document.getElementById('plane-form');
-const inputs = form.querySelectorAll('input'); // Keep this for attaching event listeners
+const allControls = form.querySelectorAll('input, select');
+
+// قاموس معاملات التحويل إلى المتر
+const UNIT_CONVERSIONS = {
+    'm': 1.0,
+    'cm': 0.01,
+    'mm': 0.001,
+    'in': 0.0254
+};
+
+// قاموس كثافة المواد (كجم/م³)
+const MATERIAL_DENSITIES = {
+    'foam': 45,   // متوسط كثافة فوم EPO
+    'balsa': 160, // خشب البلسا
+    'plastic': 1050 // بلاستيك ABS
+};
 
 // تخزين عناصر الإدخال والنتائج لتحسين الأداء
+const unitSelector = document.getElementById('unit-selector');
 const wingSpanInput = document.getElementById('wing-span');
 const wingChordInput = document.getElementById('wing-chord');
 const tailSpanInput = document.getElementById('tail-span');
 const tailChordInput = document.getElementById('tail-chord');
+const wingThicknessInput = document.getElementById('wing-thickness');
+const wingPositionInput = document.getElementById('wing-position');
+const airfoilTypeInput = document.getElementById('airfoil-type');
+const sweepAngleInput = document.getElementById('sweep-angle');
+const taperRatioInput = document.getElementById('taper-ratio');
+
 const fuselageLengthInput = document.getElementById('fuselage-length');
+const wingMaterialInput = document.getElementById('wing-material');
 const propDiameterInput = document.getElementById('prop-diameter');
 const propBladesInput = document.getElementById('prop-blades');
 const propPitchInput = document.getElementById('prop-pitch');
@@ -83,19 +141,40 @@ const fuselageColorInput = document.getElementById('fuselage-color');
 const wingColorInput = document.getElementById('wing-color');
 const tailColorInput = document.getElementById('tail-color');
 
+// عناصر عرض قيم شريط التمرير
+const sweepValueEl = document.getElementById('sweep-value');
+const taperValueEl = document.getElementById('taper-value');
+const unitLabels = document.querySelectorAll('.unit-label');
+
 const liftResultEl = document.getElementById('lift-result');
 const dragResultEl = document.getElementById('drag-result');
 const thrustResultEl = document.getElementById('thrust-result');
 const twrResultEl = document.getElementById('twr-result');
+const wingAreaResultEl = document.getElementById('wing-area-result');
+const wingWeightResultEl = document.getElementById('wing-weight-result');
+const totalWeightResultEl = document.getElementById('total-weight-result');
+
+let liftChart, dragChart;
 
 function updatePlaneModel() {
-    const wingSpan = parseFloat(wingSpanInput.value);
-    const wingChord = parseFloat(wingChordInput.value);
-    const tailSpan = parseFloat(tailSpanInput.value);
-    const tailChord = parseFloat(tailChordInput.value);
-    const fuselageLength = parseFloat(fuselageLengthInput.value);
-    const propDiameter = parseFloat(propDiameterInput.value) * 0.0254; // to meters
-    const propBlades = parseInt(propBladesInput.value);
+    const conversionFactor = UNIT_CONVERSIONS[unitSelector.value];
+
+    // قراءة قيم الجناح
+    const wingSpan = getValidNumber(wingSpanInput) * conversionFactor;
+    const wingChord = getValidNumber(wingChordInput) * conversionFactor;
+    const wingThickness = getValidNumber(wingThicknessInput) * conversionFactor;
+    const wingPosition = wingPositionInput.value;
+    const sweepAngle = getValidNumber(sweepAngleInput);
+    const taperRatio = getValidNumber(taperRatioInput);
+
+    // قراءة القيم الأخرى
+    const tailSpan = getValidNumber(tailSpanInput) * conversionFactor;
+    const tailChord = getValidNumber(tailChordInput) * conversionFactor;
+    const fuselageLength = getValidNumber(fuselageLengthInput) * conversionFactor;
+    
+    // قيم المروحة تبقى بالبوصة كما هي متعارف عليها
+    const propDiameter = getValidNumber(propDiameterInput) * 0.0254; // to meters
+    const propBlades = parseInt(getValidNumber(propBladesInput));
     const fuselageColor = fuselageColorInput.value;
     const wingColor = wingColorInput.value;
     const tailColor = tailColorInput.value;
@@ -105,12 +184,43 @@ function updatePlaneModel() {
     wingMaterial.color.set(wingColor);
     tailMaterial.color.set(tailColor);
 
-    // تحديث الأبعاد
+    // --- تحديث أبعاد الجناح (الجزء الجديد) ---
+    while(wingGroup.children.length > 0){ 
+        wingGroup.remove(wingGroup.children[0]); 
+    }
+
+    const halfSpan = wingSpan / 2;
+    const tipChord = wingChord * taperRatio;
+    const sweepOffset = halfSpan * Math.tan(sweepAngle * Math.PI / 180);
+
+    // تعريف شكل نصف الجناح في المستوى X-Y
+    const wingShape = new THREE.Shape();
+    wingShape.moveTo(-wingChord / 2, 0); // Back Root
+    wingShape.lineTo(wingChord / 2, 0); // Front Root
+    wingShape.lineTo(sweepOffset + tipChord / 2, halfSpan); // Front Tip
+    wingShape.lineTo(sweepOffset - tipChord / 2, halfSpan); // Back Tip
+    wingShape.lineTo(-wingChord / 2, 0); // Close shape
+
+    const extrudeSettings = { depth: wingThickness, bevelEnabled: false };
+    const wingGeom = new THREE.ExtrudeGeometry(wingShape, extrudeSettings);
+    
+    const rightWing = new THREE.Mesh(wingGeom, wingMaterial);
+    // تدوير الجناح ليتوافق مع محاور العالم (العرض على X، السماكة على Y، الطول على Z)
+    rightWing.rotation.x = -Math.PI / 2;
+
+    const leftWing = rightWing.clone();
+    leftWing.scale.z = -1; // عكس الجناح الأيسر
+
+    wingGroup.add(rightWing, leftWing);
+
+    // تحديث موضع الجناح (علوي/متوسط/سفلي)
+    const fuselageHeight = fuselage.geometry.parameters.height;
+    if (wingPosition === 'high') wingGroup.position.y = fuselageHeight / 2;
+    else if (wingPosition === 'mid') wingGroup.position.y = 0;
+    else if (wingPosition === 'low') wingGroup.position.y = -fuselageHeight / 2;
+
+    // --- تحديث الأبعاد الأخرى ---
     fuselage.scale.x = fuselageLength;
-    // The wing/tail geometry is a 1x1x1 cube.
-    // We scale it to (chord, thickness, span).
-    // Thickness is kept constant as in the original design.
-    wing.scale.set(wingChord, 0.02, wingSpan);
     tail.scale.set(tailChord, 0.015, tailSpan);
     vTail.scale.y = (tailChord / 0.15) * 1.5; // Make vertical tail proportional
 
@@ -132,24 +242,38 @@ function updatePlaneModel() {
 
 function calculateAerodynamics() {
     // قراءة القيم
-    const wingSpan = parseFloat(wingSpanInput.value);
-    const wingChord = parseFloat(wingChordInput.value);
-    const angleOfAttack = parseFloat(angleOfAttackInput.value);
-    const airSpeed = parseFloat(airSpeedInput.value);
-    const airDensity = parseFloat(airDensityInput.value);
-    const propDiameter = parseFloat(propDiameterInput.value) * 0.0254; // to meters
-    const propPitch = parseFloat(propPitchInput.value); // inches
-    const propRpm = parseFloat(propRpmInput.value);
-    const planeWeightGrams = parseFloat(planeWeightInput.value);
+    const conversionFactor = UNIT_CONVERSIONS[unitSelector.value];
 
-    // --- حسابات مبسطة جداً ---
-    const wingArea = wingSpan * wingChord;
+    // قراءة القيم
+    const wingSpan = getValidNumber(wingSpanInput) * conversionFactor;
+    const wingChord = getValidNumber(wingChordInput) * conversionFactor;
+    const wingThickness = getValidNumber(wingThicknessInput) * conversionFactor;
+    const taperRatio = getValidNumber(taperRatioInput);
+    const airfoilType = airfoilTypeInput.value;
+    const wingMaterial = wingMaterialInput.value;
+    const angleOfAttack = getValidNumber(angleOfAttackInput);
+    const airSpeed = getValidNumber(airSpeedInput);
+    const airDensity = getValidNumber(airDensityInput);
+    const propDiameter = getValidNumber(propDiameterInput) * 0.0254; // to meters
+    const propPitch = getValidNumber(propPitchInput); // inches
+    const propRpm = getValidNumber(propRpmInput);
+    const planeComponentsWeightGrams = getValidNumber(planeWeightInput);
+
+    // --- حسابات محدثة ---
+    const tipChord = wingChord * taperRatio;
+    const wingArea = wingSpan * (wingChord + tipChord) / 2; // Area of a trapezoid
     const alphaRad = angleOfAttack * (Math.PI / 180);
 
     // 1. قوة الرفع (Lift)
     // L = 0.5 * Cl * rho * V^2 * A
     // Cl (معامل الرفع) ≈ 2 * PI * alpha (تقريب لنظرية الجنيح الرقيق)
-    const cl = 2 * Math.PI * alphaRad;
+    let airfoilLiftFactor = 1.0;
+    if (airfoilType === 'flat-bottom') {
+        airfoilLiftFactor = 1.1; // عامل رفع أعلى قليلاً
+    } else if (airfoilType === 'symmetrical') {
+        airfoilLiftFactor = 0.95; // عامل رفع أقل قليلاً عند زوايا الهجوم الصغيرة
+    }
+    const cl = airfoilLiftFactor * 2 * Math.PI * alphaRad;
     const lift = 0.5 * cl * airDensity * Math.pow(airSpeed, 2) * wingArea;
 
     // 2. قوة السحب (Drag)
@@ -168,25 +292,154 @@ function calculateAerodynamics() {
     const n_rps = propRpm / 60; // revolutions per second
     const thrust = 4.392399 * Math.pow(10, -8) * propRpm * Math.pow(propDiameter / 0.0254, 3.5) / Math.sqrt(propPitch) * (4.23333 * Math.pow(10, -4) * propRpm * propPitch - airSpeed * 0.5144);
 
-    // 4. نسبة الدفع إلى الوزن (Thrust-to-Weight Ratio)
-    const planeMassKg = planeWeightGrams / 1000;
-    const weightInNewtons = planeMassKg * 9.81;
+    // 4. حساب الوزن (Weight Calculation)
+    const wingVolume = wingArea * wingThickness; // Volume in m³
+    const materialDensity = MATERIAL_DENSITIES[wingMaterial]; // Density in kg/m³
+    const wingWeightKg = wingVolume * materialDensity; // Weight in kg
+    const planeComponentsWeightKg = planeComponentsWeightGrams / 1000;
+    const totalWeightKg = wingWeightKg + planeComponentsWeightKg;
+
+    // 5. نسبة الدفع إلى الوزن (Thrust-to-Weight Ratio)
+    const weightInNewtons = totalWeightKg * 9.81;
     const twr = weightInNewtons > 0 ? (thrust / weightInNewtons) : 0;
 
     // عرض النتائج
     liftResultEl.textContent = lift > 0 ? lift.toFixed(2) : '0.00';
     dragResultEl.textContent = drag > 0 ? drag.toFixed(2) : '0.00';
     thrustResultEl.textContent = thrust > 0 ? thrust.toFixed(2) : '0.00';
+    wingAreaResultEl.textContent = wingArea > 0 ? `${wingArea.toFixed(2)}` : '0.00';
+    wingWeightResultEl.textContent = (wingWeightKg * 1000).toFixed(0);
+    totalWeightResultEl.textContent = (totalWeightKg * 1000).toFixed(0);
     twrResultEl.textContent = twr > 0 ? twr.toFixed(2) : '0.00';
+}
+
+function initCharts() {
+    const liftChartCanvas = document.getElementById('lift-chart');
+    const dragChartCanvas = document.getElementById('drag-chart');
+
+    const commonOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            x: {
+                title: {
+                    display: true,
+                    text: 'سرعة الهواء (م/ث)'
+                }
+            },
+            y: {
+                title: {
+                    display: true,
+                    text: 'القوة (نيوتن)'
+                },
+                beginAtZero: true
+            }
+        },
+        plugins: {
+            legend: {
+                display: false
+            }
+        }
+    };
+
+    liftChart = new Chart(liftChartCanvas.getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'قوة الرفع',
+                data: [],
+                borderColor: 'rgba(0, 123, 255, 1)',
+                backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                fill: true,
+                tension: 0.1
+            }]
+        },
+        options: { ...commonOptions }
+    });
+
+    dragChart = new Chart(dragChartCanvas.getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'قوة السحب',
+                data: [],
+                borderColor: 'rgba(220, 53, 69, 1)',
+                backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                fill: true,
+                tension: 0.1
+            }]
+        },
+        options: { ...commonOptions }
+    });
+}
+
+function updateCharts() {
+    const conversionFactor = UNIT_CONVERSIONS[unitSelector.value];
+    const wingSpan = getValidNumber(wingSpanInput) * conversionFactor;
+    const wingChord = getValidNumber(wingChordInput) * conversionFactor;
+    const taperRatio = getValidNumber(taperRatioInput);
+    const airfoilType = airfoilTypeInput.value;
+    const angleOfAttack = getValidNumber(angleOfAttackInput);
+    const airDensity = getValidNumber(airDensityInput);
+
+    const tipChord = wingChord * taperRatio;
+    const wingArea = wingSpan * (wingChord + tipChord) / 2;
+    if (wingArea <= 0) return;
+
+    const alphaRad = angleOfAttack * (Math.PI / 180);
+    let airfoilLiftFactor = 1.0;
+    if (airfoilType === 'flat-bottom') airfoilLiftFactor = 1.1;
+    else if (airfoilType === 'symmetrical') airfoilLiftFactor = 0.95;
+    const cl = airfoilLiftFactor * 2 * Math.PI * alphaRad;
+    const aspectRatio = Math.pow(wingSpan, 2) / wingArea;
+    const cdi = Math.pow(cl, 2) / (Math.PI * aspectRatio * 0.8);
+    const cd = 0.025 + cdi;
+
+    const speedPoints = [], liftPoints = [], dragPoints = [];
+    for (let i = 0; i <= 25; i++) {
+        const speed = i * 2; // from 0 to 50 m/s
+        speedPoints.push(speed);
+        const dynamicPressure = 0.5 * airDensity * Math.pow(speed, 2);
+        liftPoints.push(dynamicPressure * wingArea * cl);
+        dragPoints.push(dynamicPressure * wingArea * cd);
+    }
+
+    liftChart.data.labels = speedPoints;
+    liftChart.data.datasets[0].data = liftPoints;
+    liftChart.update();
+
+    dragChart.data.labels = speedPoints;
+    dragChart.data.datasets[0].data = dragPoints;
+    dragChart.update();
 }
 
 function updateAll() {
     updatePlaneModel();
     calculateAerodynamics();
+    if (liftChart && dragChart) {
+        updateCharts();
+    }
+}
+
+function updateUnitLabels() {
+    const selectedUnitLabel = unitSelector.options[unitSelector.selectedIndex].dataset.label;
+    unitLabels.forEach(label => {
+        label.textContent = selectedUnitLabel;
+    });
 }
 
 // --- ربط الأحداث ---
-inputs.forEach(input => input.addEventListener('input', updateAll));
+allControls.forEach(control => {
+    const eventType = (control.type === 'range' || control.type === 'number') ? 'input' : 'change';
+    control.addEventListener(eventType, updateAll);
+});
+
+// تحديث عرض قيم شريط التمرير
+sweepAngleInput.addEventListener('input', () => sweepValueEl.textContent = sweepAngleInput.value);
+taperRatioInput.addEventListener('input', () => taperValueEl.textContent = parseFloat(taperRatioInput.value).toFixed(2));
+unitSelector.addEventListener('change', updateUnitLabels);
 
 // --- حلقة العرض ---
 function animate() {
@@ -198,6 +451,8 @@ function animate() {
 }
 
 // --- التشغيل الأولي ---
+initCharts();
+updateUnitLabels();
 updateAll();
 animate();
 

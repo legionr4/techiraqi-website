@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>تصميم طائرة RC</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <style>
         body {
@@ -78,6 +79,10 @@
             border-radius: 4px;
             cursor: pointer;
         }
+        .input-group input[type="range"] {
+            padding: 0; /* Fix for range input padding */
+            flex-basis: 45%;
+        }
         .results {
             margin-top: 20px;
             padding: 15px;
@@ -94,6 +99,31 @@
             font-weight: bold;
             color: #1976d2;
         }
+        .charts-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 20px auto;
+        }
+        .chart-card {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .chart-card h3 {
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #4a4a4a;
+        }
+        @media (max-width: 992px) {
+            .charts-container {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
@@ -105,34 +135,86 @@
             <h2>المعلمات والنتائج</h2>
             <form id="plane-form">
                 <fieldset>
-                    <legend>أبعاد الجناح</legend>
+                    <legend>الوحدات</legend>
                     <div class="input-group">
-                        <label for="wing-span">طول الجناح (متر)</label>
-                        <input type="number" id="wing-span" value="1.5" step="0.1">
+                        <label for="unit-selector">اختر وحدة القياس</label>
+                        <select id="unit-selector">
+                            <option value="m" data-label="متر">متر (m)</option>
+                            <option value="cm" data-label="سم" selected>سنتيمتر (cm)</option>
+                            <option value="mm" data-label="مم">مليمتر (mm)</option>
+                            <option value="in" data-label="بوصة">بوصة (in)</option>
+                        </select>
+                    </div>
+                </fieldset>
+                <fieldset>
+                    <legend>تصميم الجناح</legend>
+                    <div class="input-group">
+                        <label for="wing-span">طول الجناح (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="wing-span" value="150" step="1">
                     </div>
                     <div class="input-group">
-                        <label for="wing-chord">عرض الجناح (متر)</label>
-                        <input type="number" id="wing-chord" value="0.2" step="0.01">
+                        <label for="wing-chord">عرض الجناح عند الجذع (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="wing-chord" value="25" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="wing-thickness">سماكة الجناح (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="wing-thickness" value="3" step="0.5">
+                    </div>
+                    <div class="input-group">
+                        <label for="wing-position">موضع الجناح</label>
+                        <select id="wing-position">
+                            <option value="high" selected>علوي (High)</option>
+                            <option value="mid">متوسط (Mid)</option>
+                            <option value="low">سفلي (Low)</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="airfoil-type">شكل المقطع (Airfoil)</label>
+                        <select id="airfoil-type">
+                            <option value="semi-symmetrical" selected>شبه متماثل</option>
+                            <option value="flat-bottom">مسطح</option>
+                            <option value="symmetrical">متماثل</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="sweep-angle">زاوية الميلان (Sweep): <span id="sweep-value">0</span>°</label>
+                        <input type="range" id="sweep-angle" min="-20" max="45" value="0" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="taper-ratio">نسبة الاستدقاق (Taper): <span id="taper-value">1.00</span></label>
+                        <input type="range" id="taper-ratio" min="0.2" max="1.0" value="1.0" step="0.05">
+                    </div>
+                </fieldset>
+
+                <fieldset>
+                    <legend>المواد</legend>
+                    <div class="input-group">
+                        <label for="wing-material">مادة صنع الجناح</label>
+                        <select id="wing-material">
+                            <option value="foam" selected>فوم (Foam - EPO/EPP)</option>
+                            <option value="balsa">خشب البلسا (Balsa)</option>
+                            <option value="plastic">بلاستيك (Plastic - ABS)</option>
+                        </select>
                     </div>
                 </fieldset>
 
                 <fieldset>
                     <legend>أبعاد الذيل</legend>
                     <div class="input-group">
-                        <label for="tail-span">طول الذيل (متر)</label>
-                        <input type="number" id="tail-span" value="0.5" step="0.1">
+                        <label for="tail-span">طول الذيل (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="tail-span" value="50" step="1">
                     </div>
                     <div class="input-group">
-                        <label for="tail-chord">عرض الذيل (متر)</label>
-                        <input type="number" id="tail-chord" value="0.15" step="0.01">
+                        <label for="tail-chord">عرض الذيل (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="tail-chord" value="15" step="1">
                     </div>
                 </fieldset>
 
                 <fieldset>
                     <legend>جسم الطائرة</legend>
                     <div class="input-group">
-                        <label for="fuselage-length">طول الجسم (متر)</label>
-                        <input type="number" id="fuselage-length" value="1.0" step="0.1">
+                        <label for="fuselage-length">طول الجسم (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="fuselage-length" value="100" step="1">
                     </div>
                 </fieldset>
 
@@ -179,8 +261,8 @@
                         <input type="number" id="pressure" value="101325" step="100">
                     </div>
                     <div class="input-group">
-                        <label for="plane-weight">وزن الطائرة (جرام)</label>
-                        <input type="number" id="plane-weight" value="1500" step="50">
+                        <label for="plane-weight">وزن الجسم والمكونات (جرام)</label>
+                        <input type="number" id="plane-weight" value="800" step="50">
                     </div>
                 </fieldset>
 
@@ -217,6 +299,18 @@
                     <span id="thrust-result">0.00</span>
                 </div>
                 <div class="result-item">
+                    <p>مساحة الجناح (م²):</p>
+                    <span id="wing-area-result">0.00</span>
+                </div>
+                <div class="result-item">
+                    <p>وزن الجناح التقديري (جرام):</p>
+                    <span id="wing-weight-result">0</span>
+                </div>
+                <div class="result-item">
+                    <p>الوزن الكلي التقديري (جرام):</p>
+                    <span id="total-weight-result">0</span>
+                </div>
+                <div class="result-item">
                     <p>نسبة الدفع إلى الوزن:</p>
                     <span id="twr-result">0.00</span>
                 </div>
@@ -224,6 +318,17 @@
         </div>
         <div class="viewer">
             <canvas id="viewer-canvas"></canvas>
+        </div>
+    </div>
+
+    <div class="charts-container">
+        <div class="chart-card">
+            <h3>الرفع مقابل سرعة الهواء</h3>
+            <canvas id="lift-chart"></canvas>
+        </div>
+        <div class="chart-card">
+            <h3>السحب مقابل سرعة الهواء</h3>
+            <canvas id="drag-chart"></canvas>
         </div>
     </div>
 
