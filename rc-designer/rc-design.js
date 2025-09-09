@@ -11,9 +11,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const wingSpanInput = document.getElementById('wing-span');
     const wingChordInput = document.getElementById('wing-chord');
     const airfoilTypeInput = document.getElementById('airfoil-type');
+    const wingPositionInput = document.getElementById('wing-position');
     const hStabSpanInput = document.getElementById('h-stab-span');
     const hStabChordInput = document.getElementById('h-stab-chord');
     const vStabHeightInput = document.getElementById('v-stab-height');
+    const tailTypeInput = document.getElementById('tail-type');
     const propDiameterInput = document.getElementById('prop-diameter');
     const propPitchInput = document.getElementById('prop-pitch');
     const motorRpmInput = document.getElementById('motor-rpm');
@@ -34,6 +36,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const taperRatioGroup = document.getElementById('taper-ratio-group');
     const togglePropAnimInput = document.getElementById('toggle-prop-anim');
     const wingletTypeInput = document.getElementById('winglet-type');
+    const landingGearTypeInput = document.getElementById('landing-gear-type');
+    const canopyTypeInput = document.getElementById('canopy-type');
     const wingletGroup = document.getElementById('winglet-group');
     const toggleAirflowInput = document.getElementById('toggle-airflow');
 
@@ -210,6 +214,85 @@ document.addEventListener('DOMContentLoaded', () => {
         return propGroup;
     }
 
+    /**
+     * Creates the landing gear model based on user selection.
+     * @param {string} gearType - 'tricycle' or 'taildragger'.
+     * @param {number} fuselageLength - The length of the fuselage.
+     * @param {number} fuselageDiameter - The diameter of the fuselage.
+     * @param {number} wingYOffset - The vertical offset of the wing.
+     * @returns {THREE.Group|null}
+     */
+    function createLandingGear(gearType, fuselageLength, fuselageDiameter, wingYOffset) {
+        if (gearType === 'none') {
+            return null;
+        }
+
+        const gearGroup = new THREE.Group();
+        gearGroup.name = "landingGear";
+
+        const wheelMaterial = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.8 });
+        const strutMaterial = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, metalness: 0.5, roughness: 0.5 });
+
+        const mainWheelRadius = fuselageDiameter * 0.35;
+        const mainWheelThickness = mainWheelRadius * 0.4;
+        const smallWheelRadius = mainWheelRadius * 0.6;
+        const smallWheelThickness = smallWheelRadius * 0.5;
+        const strutRadius = mainWheelRadius * 0.15;
+
+        // Using Torus for a better wheel look
+        const mainWheelGeom = new THREE.TorusGeometry(mainWheelRadius, mainWheelThickness, 16, 32).rotateX(Math.PI / 2);
+        const smallWheelGeom = new THREE.TorusGeometry(smallWheelRadius, smallWheelThickness, 12, 24).rotateX(Math.PI / 2);
+
+        const fuselageBottomY = -fuselageDiameter / 2;
+
+        if (gearType === 'tricycle') {
+            // 1. Nose Gear
+            const noseStrutHeight = fuselageDiameter * 0.6;
+            const noseStrut = new THREE.Mesh(new THREE.CylinderGeometry(strutRadius, strutRadius, noseStrutHeight, 8), strutMaterial);
+            noseStrut.position.set(fuselageLength * 0.4, fuselageBottomY - noseStrutHeight / 2, 0);
+            const noseWheel = new THREE.Mesh(smallWheelGeom, wheelMaterial);
+            noseWheel.position.set(fuselageLength * 0.4, fuselageBottomY - noseStrutHeight, 0);
+            gearGroup.add(noseStrut, noseWheel);
+
+            // 2. Main Gears (under the wing)
+            const mainStrutHeight = fuselageDiameter * 0.5;
+            const mainGearX = 0; // Positioned near CG
+            const mainGearZ = fuselageDiameter * 0.8;
+            const strutStartPoint = wingYOffset !== 0 ? wingYOffset - mainWheelRadius : fuselageBottomY;
+
+            const rightStrut = new THREE.Mesh(new THREE.CylinderGeometry(strutRadius, strutRadius, mainStrutHeight, 8), strutMaterial);
+            rightStrut.position.set(mainGearX, strutStartPoint - mainStrutHeight / 2, mainGearZ);
+            const rightWheel = new THREE.Mesh(mainWheelGeom, wheelMaterial);
+            rightWheel.position.set(mainGearX, strutStartPoint - mainStrutHeight, mainGearZ);
+            gearGroup.add(rightStrut, rightWheel);
+
+            const leftStrut = rightStrut.clone();
+            leftStrut.position.z *= -1;
+            const leftWheel = rightWheel.clone();
+            leftWheel.position.z *= -1;
+            gearGroup.add(leftStrut, leftWheel);
+
+        } else if (gearType === 'taildragger') {
+            // 1. Main Gears (forward of CG)
+            const mainStrutHeight = fuselageDiameter * 0.6;
+            const mainGearX = fuselageLength * 0.15;
+            const mainGearZ = fuselageDiameter * 0.9;
+            const rightStrut = new THREE.Mesh(new THREE.CylinderGeometry(strutRadius, strutRadius, mainStrutHeight, 8), strutMaterial);
+            rightStrut.position.set(mainGearX, fuselageBottomY - mainStrutHeight / 2, mainGearZ);
+            const rightWheel = new THREE.Mesh(mainWheelGeom, wheelMaterial);
+            rightWheel.position.set(mainGearX, fuselageBottomY - mainStrutHeight, mainGearZ);
+            gearGroup.add(rightStrut, rightWheel);
+            gearGroup.add(rightStrut.clone().translateX(-mainGearZ * 2), rightWheel.clone().translateX(-mainGearZ * 2)); // Simplified cloning
+
+            // 2. Tail Wheel
+            const tailWheel = new THREE.Mesh(smallWheelGeom, wheelMaterial);
+            tailWheel.position.set(-fuselageLength * 0.48, fuselageBottomY - smallWheelRadius, 0);
+            gearGroup.add(tailWheel);
+        }
+
+        return gearGroup;
+    }
+
     function init() {
         // إنشاء المشهد
         scene = new THREE.Scene();
@@ -268,6 +351,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // إنشاء مجموعة لتضم كل أجزاء الطائرة
         airplaneGroup = new THREE.Group();
 
+        // إنشاء مجموعة خاصة بالجناح ومكوناته (لتسهيل تحريكه كوحدة واحدة)
+        const wingGroup = new THREE.Group();
+        wingGroup.name = "wingGroup";
+
         // المواد المستخدمة في النموذج
         wingMaterial = new THREE.MeshStandardMaterial({ color: wingColorInput.value, side: THREE.DoubleSide });
         tailMaterial = new THREE.MeshStandardMaterial({ color: tailColorInput.value, side: THREE.DoubleSide });
@@ -316,7 +403,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 wingGeometry.computeVertexNormals();
             }
         }
-        airplaneGroup.add(wingMesh);
+        wingGroup.add(wingMesh);
 
         // --- إنشاء أطراف الجناح (Winglets) ---
         const wingletType = wingletTypeInput.value;
@@ -330,14 +417,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const rightWinglet = new THREE.Mesh(wingletGeo, wingMaterial);
             rightWinglet.rotation.set(Math.PI / 2, -Math.PI / 2, THREE.MathUtils.degToRad(-15));
             rightWinglet.position.set(span / 2, 0, -chord / 2);
-            airplaneGroup.add(rightWinglet);
+            wingGroup.add(rightWinglet);
 
             // Left Winglet (clone geometry and material)
             const leftWinglet = new THREE.Mesh(wingletGeo.clone(), wingMaterial);
             leftWinglet.rotation.copy(rightWinglet.rotation);
             leftWinglet.rotation.z *= -1; // Invert cant angle for the other side
             leftWinglet.position.set(-span / 2, 0, -chord / 2);
-            airplaneGroup.add(leftWinglet);
+            wingGroup.add(leftWinglet);
         }
 
         // --- إنشاء جسم الطائرة (Fuselage) ---
@@ -345,43 +432,158 @@ document.addEventListener('DOMContentLoaded', () => {
         const fuselageLength = parseFloat(fuselageLengthInput.value) / 100;
         const fuselageDiameter = parseFloat(fuselageDiameterInput.value) / 100; // cm to m
         const radiusTop = fuselageDiameter / 2;
-        const radiusBottom = radiusTop * 0.75; // للحفاظ على شكل مدبب قليلاً
-        const fuselageGeometry = new THREE.CylinderGeometry(radiusTop, radiusBottom, fuselageLength, 32);
+
+        // --- استخدام LatheGeometry لشكل انسيابي (شكل قطرة الماء) ---
+        // 1. تحديد نقاط المقطع العرضي لجسم الطائرة من الذيل إلى المقدمة
+        const fuselageProfile = new THREE.SplineCurve([
+            new THREE.Vector2(0.01, -fuselageLength * 0.5),      // طرف الذيل (أكبر من صفر بقليل لتجنب المشاكل الهندسية)
+            new THREE.Vector2(radiusTop * 0.8, -fuselageLength * 0.4), // بداية استدقاق الذيل
+            new THREE.Vector2(radiusTop, fuselageLength * 0.1),  // أعرض نقطة، متقدمة عن المنتصف
+            new THREE.Vector2(radiusTop * 0.85, fuselageLength * 0.4), // بداية منحنى المقدمة
+            new THREE.Vector2(0.01, fuselageLength * 0.5)       // طرف المقدمة
+        ]);
+
+        // 2. الحصول على مجموعة من النقاط السلسة من المنحنى
+        const points = fuselageProfile.getPoints(50);
+
+        // 3. إنشاء الشكل ثلاثي الأبعاد عن طريق تدوير المقطع العرضي حول المحور
+        const fuselageGeometry = new THREE.LatheGeometry(points, 32).rotateZ(-Math.PI / 2);
+
         const fuselageMesh = new THREE.Mesh(fuselageGeometry, fuselageMaterial);
-        fuselageMesh.rotation.z = Math.PI / 2; // تدوير الجسم ليكون أفقيًا
-        fuselageMesh.position.y = 0; // وضعه في المنتصف ليتقاطع مع الجناح
         airplaneGroup.add(fuselageMesh);
 
+        // --- إنشاء قمرة القيادة (Canopy) ---
+        const canopyType = canopyTypeInput.value;
+        if (canopyType !== 'none') {
+            // استخدام مادة فيزيائية لإعطاء تأثير زجاجي واقعي
+            const canopyMaterial = new THREE.MeshPhysicalMaterial({
+                color: 0xadd8e6, // لون أزرق فاتح شفاف
+                transmission: 0.9, // شفافية بنسبة 90%
+                roughness: 0.1,
+                metalness: 0.1,
+                thickness: 0.05, // مطلوب لتأثير الانكسار
+                ior: 1.5, // معامل الانكسار (مثل الزجاج)
+                transparent: true,
+                opacity: 0.5 // شفافية احتياطية للمتصفحات التي لا تدعم Transmission
+            });
+
+            let canopyMesh;
+
+            switch (canopyType) {
+                case 'bubble': {
+                    // إنشاء نصف كرة وتغيير أبعادها لتبدو بيضاوية
+                    const bubbleGeo = new THREE.SphereGeometry(radiusTop * 0.9, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+                    bubbleGeo.scale(0.8, 0.7, 1.2); // تغيير الأبعاد: أقل عرضًا، أقل ارتفاعًا، وأكثر طولًا
+                    canopyMesh = new THREE.Mesh(bubbleGeo, canopyMaterial);
+                    canopyMesh.position.set(fuselageLength * 0.2, radiusTop * 0.95, 0);
+                    break;
+                }
+                case 'tandem': {
+                    // استخدام شكل الكبسولة للحصول على شكل طويل ومستدير
+                    const tandemGeo = new THREE.CapsuleGeometry(radiusTop * 0.5, fuselageLength * 0.3, 16, 32);
+                    tandemGeo.rotateZ(Math.PI / 2); // محاذاتها مع جسم الطائرة
+                    canopyMesh = new THREE.Mesh(tandemGeo, canopyMaterial);
+                    canopyMesh.position.set(fuselageLength * 0.1, radiusTop, 0);
+                    break;
+                }
+            }
+            if (canopyMesh) airplaneGroup.add(canopyMesh);
+        }
+
+        // --- تحديد موضع الجناح بناءً على اختيار المستخدم ---
+        const wingPosition = wingPositionInput.value;
+        let wingYOffset = 0;
+        if (wingPosition === 'high') {
+            // ليكون الجناح علويًا، نرفعه بمقدار نصف قطر جسم الطائرة
+            wingYOffset = fuselageDiameter / 2;
+        } else if (wingPosition === 'low') {
+            // ليكون الجناح سفليًا، نخفضه بمقدار نصف قطر جسم الطائرة
+            wingYOffset = -fuselageDiameter / 2;
+        }
+        // (إذا كان متوسطًا، سيبقى عند الصفر)
+        wingGroup.position.y = wingYOffset;
+        airplaneGroup.add(wingGroup);
+
         // --- إنشاء الذيل (Empennage) ---
+        const tailType = tailTypeInput.value;
         const hStabSpan = parseFloat(hStabSpanInput.value) / 100;
         const hStabChord = parseFloat(hStabChordInput.value) / 100;
         const vStabHeight = parseFloat(vStabHeightInput.value) / 100;
-        
-        // المثبت الأفقي (Horizontal Stabilizer)
-        const hStabGeometry = createRectangularWingGeometry(hStabSpan, hStabChord, 'symmetrical', 0.08);
-        const hStabMesh = new THREE.Mesh(hStabGeometry, tailMaterial);
-        hStabMesh.rotation.y = -Math.PI / 2;
-        hStabMesh.position.x = -(fuselageLength / 2) * 0.95; // في مؤخرة جسم الطائرة
-        airplaneGroup.add(hStabMesh);
 
-        // المثبت العمودي (Vertical Stabilizer)
-        // نستخدم نفس الدالة ولكن مع أبعاد ودوران مختلف
-        // هنا، "span" يمثل ارتفاع المثبت العمودي
-        const vStabGeometry = createRectangularWingGeometry(vStabHeight, hStabChord, 'symmetrical', 0.08); // نستخدم نفس عرض الذيل الأفقي كعرض للعمودي
-        const vStabMesh = new THREE.Mesh(vStabGeometry, tailMaterial);
-        // تدويره ليصبح عمودياً
-        vStabMesh.rotation.y = -Math.PI / 2;
-        vStabMesh.rotation.x = Math.PI / 2;
-        vStabMesh.position.x = -(fuselageLength / 2) * 0.95;
-        vStabMesh.position.y = vStabHeight / 2; // رفعه فوق المحور
-        airplaneGroup.add(vStabMesh);
+        // مجموعة لتجميع أجزاء الذيل
+        const empennageGroup = new THREE.Group();
+        empennageGroup.position.x = -(fuselageLength / 2) * 0.95;
+
+        switch (tailType) {
+            case 't-tail': {
+                // 1. المثبت العمودي (Vertical Stabilizer)
+                const vStabGeo = createRectangularWingGeometry(vStabHeight, hStabChord, 'symmetrical', 0, 0.08);
+                const vStabMesh = new THREE.Mesh(vStabGeo, tailMaterial);
+                vStabMesh.rotation.x = Math.PI / 2;
+                vStabMesh.position.y = vStabHeight / 2; // رفعه من القاعدة
+                empennageGroup.add(vStabMesh);
+
+                // 2. المثبت الأفقي (Horizontal Stabilizer) - فوق العمودي
+                const hStabGeo = createRectangularWingGeometry(hStabSpan, hStabChord, 'symmetrical', 0.08);
+                const hStabMesh = new THREE.Mesh(hStabGeo, tailMaterial);
+                hStabMesh.rotation.y = -Math.PI / 2;
+                hStabMesh.position.y = vStabHeight; // وضعه فوق المثبت العمودي
+                empennageGroup.add(hStabMesh);
+                break;
+            }
+            case 'v-tail': {
+                const vTailAngle = THREE.MathUtils.degToRad(40); // زاوية 40 درجة من الأفقي
+                const panelSpan = hStabSpan / (2 * Math.cos(vTailAngle)); // حساب طول اللوح المائل
+
+                // إنشاء هندسة لوح واحد
+                const vTailPanelGeo = createRectangularWingGeometry(panelSpan, hStabChord, 'symmetrical', 0, 0.08);
+
+                // اللوح الأيمن
+                const rightPanel = new THREE.Mesh(vTailPanelGeo, tailMaterial);
+                rightPanel.rotation.y = -Math.PI / 2;
+                rightPanel.rotation.z = -vTailAngle; // تدوير للأعلى
+                rightPanel.position.x = (panelSpan / 2) * Math.sin(vTailAngle);
+                empennageGroup.add(rightPanel);
+
+                // اللوح الأيسر
+                const leftPanel = new THREE.Mesh(vTailPanelGeo.clone(), tailMaterial);
+                leftPanel.rotation.y = -Math.PI / 2;
+                leftPanel.rotation.z = vTailAngle; // تدوير للأعلى في الاتجاه المعاكس
+                leftPanel.position.x = -(panelSpan / 2) * Math.sin(vTailAngle);
+                empennageGroup.add(leftPanel);
+                break;
+            }
+            case 'conventional':
+            default: {
+                // 1. المثبت الأفقي (Horizontal Stabilizer)
+                const hStabGeo = createRectangularWingGeometry(hStabSpan, hStabChord, 'symmetrical', 0.08);
+                const hStabMesh = new THREE.Mesh(hStabGeo, tailMaterial);
+                hStabMesh.rotation.y = -Math.PI / 2;
+                hStabMesh.position.y = 0; // في منتصف جسم الطائرة
+                empennageGroup.add(hStabMesh);
+
+                // 2. المثبت العمودي (Vertical Stabilizer)
+                const vStabGeo = createRectangularWingGeometry(vStabHeight, hStabChord, 'symmetrical', 0, 0.08);
+                const vStabMesh = new THREE.Mesh(vStabGeo, tailMaterial);
+                vStabMesh.rotation.x = Math.PI / 2;
+                vStabMesh.position.y = vStabHeight / 2; // رفعه فوق المحور
+                empennageGroup.add(vStabMesh);
+                break;
+            }
+        }
+        airplaneGroup.add(empennageGroup);
 
         // --- إنشاء المروحة (Propeller) ---
         const propellerGroup = createPropellerModel();
         // Position at the front of the fuselage
         propellerGroup.position.x = fuselageLength / 2; // Position at the nose
-        propellerGroup.position.y = 0; // Align with fuselage center
+        propellerGroup.position.y = 0; // يبقى في المنتصف
         airplaneGroup.add(propellerGroup);
+
+        // --- إنشاء معدات الهبوط (Landing Gear) ---
+        const gearType = landingGearTypeInput.value;
+        const landingGearGroup = createLandingGear(gearType, fuselageLength, fuselageDiameter, wingYOffset);
+        if (landingGearGroup) airplaneGroup.add(landingGearGroup);
 
         // إضافة المجموعة الكاملة إلى المشهد
         scene.add(airplaneGroup);
@@ -424,6 +626,27 @@ document.addEventListener('DOMContentLoaded', () => {
         updateMarkers(); // تحديث مواضع العلامات عند تغيير أبعاد النموذج
     }
 
+    function updateTailControls() {
+        const tailType = tailTypeInput.value;
+        const hStabSpanGroup = document.getElementById('h-stab-span-group');
+        const hStabChordGroup = document.getElementById('h-stab-chord-group');
+        const vStabHeightGroup = document.getElementById('v-stab-height-group');
+
+        // إظهار جميع الحقول بشكل افتراضي
+        hStabSpanGroup.style.display = 'block';
+        hStabChordGroup.style.display = 'block';
+        vStabHeightGroup.style.display = 'block';
+
+        if (tailType === 'v-tail') {
+            // في حالة الذيل V، نخفي حقل ارتفاع المثبت العمودي
+            vStabHeightGroup.style.display = 'none';
+            // يمكن تغيير تسمية الحقول الأخرى لتكون أوضح
+            hStabSpanGroup.querySelector('label').textContent = 'طول الذيل V (من الحافة للحافة)';
+        } else {
+            hStabSpanGroup.querySelector('label').textContent = 'طول الذيل الأفقي (سم)';
+        }
+    }
+
     function updateAngleOfAttack() {
         if (!airplaneGroup) return;
         const aoa_deg = parseFloat(angleOfAttackInput.value);
@@ -452,18 +675,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const chord = parseFloat(wingChordInput.value) / 100; // متر
         const cgPercent = parseFloat(cgPositionInput.value) / 100;
 
+        // نحصل على الموضع الرأسي لمجموعة الجناح
+        const wingGroup = airplaneGroup.getObjectByName("wingGroup");
+        const wingYOffset = wingGroup ? wingGroup.position.y : 0;
+
         // بعد تدوير الجناح، الحافة الأمامية تكون عند z=0 والحافة الخلفية عند z=-chord
-        
         // مركز الرفع (CL) يكون عادة عند 25% من عرض الجناح من الحافة الأمامية
         const cl_z = -chord * 0.25;
-        
         // مركز الثقل (CG) يتم تحديده من قبل المستخدم كنسبة مئوية من الحافة الأمامية
         const cg_z = -chord * cgPercent;
 
         // تحديث مواضع العلامات. يتم إزاحة المحور Y قليلاً لتكون مرئية بوضوح
         // مركز الرفع يظهر فوق الجناح، ومركز الثقل يظهر أسفل جسم الطائرة
-        clMarker.position.set(0, 0.05, cl_z);
-        cgMarker.position.set(0, -0.05, cg_z);
+        clMarker.position.set(0, wingYOffset + 0.05, cl_z);
+        cgMarker.position.set(0, wingYOffset - 0.05, cg_z);
 
         // --- التحقق من الاستقرار ---
         const stabilityWarning = document.getElementById('stability-warning');
@@ -812,6 +1037,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function setupEventListeners() {
         // Initial UI setup
         updateWingControls();
+        updateTailControls();
 
         // عند تغيير أي من المدخلات، قم بتحديث النموذج والحسابات
         const fullUpdateControls = document.querySelectorAll(
@@ -820,6 +1046,7 @@ document.addEventListener('DOMContentLoaded', () => {
         fullUpdateControls.forEach(input => {
             input.addEventListener('input', () => {
                 if (input.id === 'airfoil-type') updateWingControls();
+                if (input.id === 'tail-type') updateTailControls();
                 updateAirplaneModel();
                 updateCalculations();
                 updatePerformanceCharts();

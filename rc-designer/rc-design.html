@@ -13,23 +13,34 @@
     <link rel="stylesheet" href="../style.css">
     <style>
         .designer-layout {
-            display: flex;
-            flex-wrap: wrap;
+            display: grid;
+            /* في الوضع العربي (RTL)، العمود الأول (viewer-column) سيكون على اليمين */
+            grid-template-columns: 1fr 350px; 
             gap: 2rem;
+            align-items: flex-start;
         }
         .controls-panel {
-            flex: 1;
-            min-width: 300px;
+            /* جعل لوحة التحكم ثابتة وقابلة للتمرير */
+            position: sticky;
+            top: 80px; /* مسافة من الأعلى لتجنب الهيدر */
+            height: calc(100vh - 100px); /* ارتفاع الشاشة تقريباً */
+            overflow-y: auto; /* تفعيل التمرير العمودي */
+            
             background-color: var(--card-bg-color);
             padding: 1.5rem;
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
+        .viewer-column {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
         .viewer-panel {
-            flex: 2;
-            min-width: 400px;
-            min-height: 500px;
-            position: relative;
+            /* واجهة العرض الآن ثابتة في مكانها أثناء التمرير */
+            position: sticky;
+            top: 80px; /* نفس المسافة من الأعلى */
+            min-height: 65vh; /* الحفاظ على ارتفاع جيد */
             background-color: var(--card-bg-color);
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
@@ -71,9 +82,11 @@
             cursor: pointer;
         }
         .results-panel {
-            margin-top: 1.5rem;
-            padding-top: 1.5rem;
-            border-top: 1px solid var(--border-color);
+            /* هذا اللوح أصبح الآن بطاقة مستقلة في عمود العرض */
+            background-color: var(--card-bg-color);
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
         .results-panel p {
             display: flex;
@@ -118,10 +131,6 @@
         main {
             max-width: 95%; /* استخدام نسبة مئوية لإعطاء شعور بالعرض الكامل */
         }
-        .viewer-panel {
-            flex: 3; /* إعطاء مساحة أكبر لنافذة العرض ثلاثي الأبعاد */
-            min-height: 65vh; /* زيادة ارتفاع نافذة العرض */
-        }
     </style>
 </head>
 <body>
@@ -156,6 +165,42 @@
         </div>
 
         <div class="designer-layout" data-aos="fade-up" data-aos-delay="100">
+            <!-- العمود الرئيسي للمحتوى (واجهة العرض، النتائج، المخططات) -->
+            <!-- في الوضع العربي، سيظهر هذا العمود على اليمين لأنه العنصر الأول -->
+            <div class="viewer-column">
+                <div class="viewer-panel">
+                    <div id="viewer-container"></div>
+                </div>
+                <div class="results-panel">
+                    <h3><i class="fas fa-calculator"></i> النتائج التقديرية</h3>
+                    <div id="stability-warning" class="stability-warning hidden">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>تحذير: الطائرة غير مستقرة! مركز الثقل خلف مركز الرفع.</span>
+                    </div>
+                    <p><span>كثافة الهواء:</span> <span id="result-density">N/A</span></p>
+                    <p><span>معامل الرفع (Cl):</span> <span id="result-cl">N/A</span></p>
+                    <p><span>معامل السحب (Cd):</span> <span id="result-cd">N/A</span></p>
+                    <p><span>مساحة الجناح:</span> <span id="result-area">0.24 م²</span></p>
+                    <p><span>الرفع التقديري:</span> <span id="result-lift">N/A</span></p>
+                    <p><span>السحب التقديري:</span> <span id="result-drag">N/A</span></p>
+                    <p><span>الدفع التقديري:</span> <span id="result-thrust">N/A</span></p>
+                    <p><span>نسبة الدفع إلى الوزن:</span> <span id="result-twr">N/A</span></p>
+                </div>
+                <div class="charts-container">
+                    <div class="content-card" data-aos="fade-up">
+                        <h3 style="text-align: right; margin-bottom: 1.5rem;"><i class="fas fa-chart-line"></i> تحليل الأداء: الرفع مقابل زاوية الهجوم</h3>
+                        <div style="position: relative; height:300px; width:100%;">
+                            <canvas id="lift-chart"></canvas>
+                        </div>
+                    </div>
+                    <div class="content-card" data-aos="fade-up" data-aos-delay="100">
+                        <h3 style="text-align: right; margin-bottom: 1.5rem;"><i class="fas fa-wind"></i> تحليل الأداء: السحب مقابل زاوية الهجوم</h3>
+                        <div style="position: relative; height:300px; width:100%;">
+                            <canvas id="drag-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <div class="controls-panel">
                 <h3><i class="fas fa-sliders-h"></i> مدخلات التصميم</h3>
                 
@@ -175,6 +220,14 @@
                         <option value="flat-bottom">مسطح من الأسفل (للتدريب)</option>
                         <option value="symmetrical">متماثل (للاستعراض الجوي)</option>
                         <option value="delta">جناح دلتا (للسرعة العالية)</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label for="wing-position">موضع الجناح</label>
+                    <select id="wing-position">
+                        <option value="high" selected>علوي (High-wing)</option>
+                        <option value="mid">متوسط (Mid-wing)</option>
+                        <option value="low">سفلي (Low-wing)</option>
                     </select>
                 </div>
                 <div class="input-group" id="sweep-angle-group">
@@ -205,16 +258,43 @@
                     <input type="number" id="fuselage-diameter" value="16">
                 </div>
 
+                <div class="input-group">
+                    <label for="canopy-type">شكل قمرة القيادة (Canopy)</label>
+                    <select id="canopy-type">
+                        <option value="none" selected>بدون</option>
+                        <option value="bubble">فقاعية (Bubble)</option>
+                        <option value="tandem">مزدوجة (Tandem)</option>
+                    </select>
+                </div>
+
+                <h4><i class="fas fa-cogs"></i> معدات الهبوط (Landing Gear)</h4>
+                <div class="input-group">
+                    <label for="landing-gear-type">نوع معدات الهبوط</label>
+                    <select id="landing-gear-type">
+                        <option value="none" selected>بدون</option>
+                        <option value="tricycle">ثلاثية العجلات (Tricycle)</option>
+                        <option value="taildragger">تقليدية (Taildragger)</option>
+                    </select>
+                </div>
+
                 <h4><i class="fas fa-ruler-combined"></i> الذيل (Empennage)</h4>
                 <div class="input-group">
+                    <label for="tail-type">شكل الذيل</label>
+                    <select id="tail-type">
+                        <option value="conventional" selected>تقليدي (Conventional)</option>
+                        <option value="t-tail">على شكل T (T-tail)</option>
+                        <option value="v-tail">على شكل V (V-tail)</option>
+                    </select>
+                </div>
+                <div class="input-group" id="h-stab-span-group">
                     <label for="h-stab-span">طول الذيل الأفقي (سم)</label>
                     <input type="number" id="h-stab-span" value="40">
                 </div>
-                <div class="input-group">
+                <div class="input-group" id="h-stab-chord-group">
                     <label for="h-stab-chord">عرض الذيل الأفقي (سم)</label>
                     <input type="number" id="h-stab-chord" value="12">
                 </div>
-                <div class="input-group">
+                <div class="input-group" id="v-stab-height-group">
                     <label for="v-stab-height">ارتفاع الذيل العمودي (سم)</label>
                     <input type="number" id="v-stab-height" value="15">
                 </div>
@@ -291,40 +371,6 @@
                 <div class="input-group" style="flex-direction: row; align-items: center; gap: 10px;">
                     <input type="checkbox" id="toggle-prop-anim" style="width: auto; height: auto;" checked>
                     <label for="toggle-prop-anim" style="margin-bottom: 0;">تشغيل دوران المروحة</label>
-                </div>
-
-                <div class="results-panel">
-                    <h3><i class="fas fa-calculator"></i> النتائج التقديرية</h3>
-                    <div id="stability-warning" class="stability-warning hidden">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <span>تحذير: الطائرة غير مستقرة! مركز الثقل خلف مركز الرفع.</span>
-                    </div>
-                    <p><span>كثافة الهواء:</span> <span id="result-density">N/A</span></p>
-                    <p><span>معامل الرفع (Cl):</span> <span id="result-cl">N/A</span></p>
-                    <p><span>معامل السحب (Cd):</span> <span id="result-cd">N/A</span></p>
-                    <p><span>مساحة الجناح:</span> <span id="result-area">0.24 م²</span></p>
-                    <p><span>الرفع التقديري:</span> <span id="result-lift">N/A</span></p>
-                    <p><span>السحب التقديري:</span> <span id="result-drag">N/A</span></p>
-                    <p><span>الدفع التقديري:</span> <span id="result-thrust">N/A</span></p>
-                    <p><span>نسبة الدفع إلى الوزن:</span> <span id="result-twr">N/A</span></p>
-                </div>
-            </div>
-            <div class="viewer-panel">
-                <div id="viewer-container"></div>
-            </div>
-        </div>
-
-        <div class="charts-container">
-            <div class="content-card" data-aos="fade-up">
-                <h3 style="text-align: right; margin-bottom: 1.5rem;"><i class="fas fa-chart-line"></i> تحليل الأداء: الرفع مقابل زاوية الهجوم</h3>
-                <div style="position: relative; height:300px; width:100%;">
-                    <canvas id="lift-chart"></canvas>
-                </div>
-            </div>
-            <div class="content-card" data-aos="fade-up" data-aos-delay="100">
-                <h3 style="text-align: right; margin-bottom: 1.5rem;"><i class="fas fa-wind"></i> تحليل الأداء: السحب مقابل زاوية الهجوم</h3>
-                <div style="position: relative; height:300px; width:100%;">
-                    <canvas id="drag-chart"></canvas>
                 </div>
             </div>
         </div>
