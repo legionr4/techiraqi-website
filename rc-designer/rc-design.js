@@ -142,8 +142,8 @@ document.addEventListener('DOMContentLoaded', () => {
         positions.needsUpdate = true;
         wingGeometry.computeVertexNormals(); // Recalculate normals after vertex manipulation
 
-        // 5. Center the wing on its span
-        wingGeometry.translate(0, 0, -span / 2);
+        // 5. Center the wing on its origin (chord-wise and span-wise)
+        wingGeometry.translate(-chord / 2, 0, -span / 2);
 
         return wingGeometry;
     }
@@ -156,23 +156,25 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function createDeltaWingGeometry(span, chord) {
         const thickness = chord * 0.06; // Delta wings are relatively thin
+        // Corrected vertices for standard orientation (X=chord, Z=span)
         const vertices = new Float32Array([
             // Top face
-            0, thickness / 2, 0, // v0 (nose)
-            -span / 2, thickness / 2, -chord, // v1 (left corner)
-            span / 2, thickness / 2, -chord, // v2 (right corner)
+            chord / 2, thickness / 2, 0,          // v0 (nose)
+            -chord / 2, thickness / 2, -span / 2,      // v1 (left corner)
+            -chord / 2, thickness / 2, span / 2,       // v2 (right corner)
             // Bottom face
-            0, -thickness / 2, 0, // v3 (nose)
-            span / 2, -thickness / 2, -chord, // v4 (right corner)
-            -span / 2, -thickness / 2, -chord, // v5 (left corner)
+            chord / 2, -thickness / 2, 0,         // v3 (nose)
+            -chord / 2, -thickness / 2, span / 2,       // v4 (right corner)
+            -chord / 2, -thickness / 2, -span / 2,      // v5 (left corner)
         ]);
 
+        // Corrected indices for the new vertex order
         const indices = [
             0, 1, 2, // Top face
             3, 5, 4, // Bottom face
             0, 2, 4, 0, 4, 3, // Right edge
             0, 3, 5, 0, 5, 1, // Left edge
-            1, 5, 4, 1, 4, 2  // Trailing edge
+            1, 5, 4, 1, 4, 2  // Trailing edge (forms a quad)
         ];
 
         const geometry = new THREE.BufferGeometry();
@@ -313,12 +315,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (airfoilType === 'delta') {
             wingGeometry = createDeltaWingGeometry(span, chord);
             wingMesh = new THREE.Mesh(wingGeometry, wingMaterial);
-            // No rotation needed for delta wing as it's created in the correct orientation
         } else {
             wingGeometry = createRectangularWingGeometry(span, chord, airfoilType, sweep_deg);
             wingMesh = new THREE.Mesh(wingGeometry, wingMaterial);
-            // Rotate the rectangular wing to align it correctly
-            wingMesh.rotation.y = -Math.PI / 2;
         }
 
         // Apply Taper Ratio for non-delta wings
@@ -329,10 +328,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const span_half = span / 2;
 
                 for (let i = 0; i < positions.count; i++) {
-                    // The extruded geometry has: x -> along the chord, y -> thickness, z -> along the span
+                    // Geometry is centered, so Z is from -span_half to +span_half
                     const z = positions.getZ(i); // Span-wise position
 
-                    // It's linear from 1.0 at the root (z=0) to taperRatio at the tip (z = +/- span_half)
+                    // Scale is linear from 1.0 at the root (z=0) to taperRatio at the tip
                     const scale = 1.0 - (1.0 - taperRatio) * (Math.abs(z) / span_half);
 
                     // Scale the chord (x) and thickness (y)
@@ -354,16 +353,18 @@ document.addEventListener('DOMContentLoaded', () => {
             const wingletGeo = createRectangularWingGeometry(wingletHeight, wingletChord, 'symmetrical', 10, 0.06);
 
             // Right Winglet
+            // Position at the right wingtip. The wing is centered, so tip is at span/2.
             const rightWinglet = new THREE.Mesh(wingletGeo, wingMaterial);
-            rightWinglet.rotation.set(Math.PI / 2, -Math.PI / 2, THREE.MathUtils.degToRad(-15));
-            rightWinglet.position.set(span / 2, 0, -chord / 2);
+            rightWinglet.position.set(0, 0, span / 2); 
+            // Rotate to be vertical with cant and toe-out angles
+            rightWinglet.rotation.set(THREE.MathUtils.degToRad(15), THREE.MathUtils.degToRad(-10), -Math.PI / 2);
             wingGroup.add(rightWinglet);
 
-            // Left Winglet (clone geometry and material)
+            // Left Winglet
             const leftWinglet = new THREE.Mesh(wingletGeo.clone(), wingMaterial);
-            leftWinglet.rotation.copy(rightWinglet.rotation);
-            leftWinglet.rotation.z *= -1; // Invert cant angle for the other side
-            leftWinglet.position.set(-span / 2, 0, -chord / 2);
+            leftWinglet.position.set(0, 0, -span / 2);
+            // Mirror the rotation for the left side
+            leftWinglet.rotation.set(THREE.MathUtils.degToRad(15), THREE.MathUtils.degToRad(10), Math.PI / 2);
             wingGroup.add(leftWinglet);
         }
 
@@ -435,7 +436,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 2. المثبت الأفقي (Horizontal Stabilizer) - فوق العمودي
                 const hStabGeo = createRectangularWingGeometry(hStabSpan, hStabChord, 'symmetrical', 0.08);
                 const hStabMesh = new THREE.Mesh(hStabGeo, tailMaterial);
-                hStabMesh.rotation.y = -Math.PI / 2;
                 hStabMesh.position.y = vStabHeight; // وضعه فوق المثبت العمودي
                 empennageGroup.add(hStabMesh);
                 break;
@@ -449,14 +449,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // اللوح الأيمن
                 const rightPanel = new THREE.Mesh(vTailPanelGeo, tailMaterial);
-                rightPanel.rotation.y = -Math.PI / 2;
                 rightPanel.rotation.z = -vTailAngle; // تدوير للأعلى
                 rightPanel.position.x = (panelSpan / 2) * Math.sin(vTailAngle);
                 empennageGroup.add(rightPanel);
 
                 // اللوح الأيسر
                 const leftPanel = new THREE.Mesh(vTailPanelGeo.clone(), tailMaterial);
-                leftPanel.rotation.y = -Math.PI / 2;
                 leftPanel.rotation.z = vTailAngle; // تدوير للأعلى في الاتجاه المعاكس
                 leftPanel.position.x = -(panelSpan / 2) * Math.sin(vTailAngle);
                 empennageGroup.add(leftPanel);
@@ -467,7 +465,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 1. المثبت الأفقي (Horizontal Stabilizer)
                 const hStabGeo = createRectangularWingGeometry(hStabSpan, hStabChord, 'symmetrical', 0.08);
                 const hStabMesh = new THREE.Mesh(hStabGeo, tailMaterial);
-                hStabMesh.rotation.y = -Math.PI / 2;
                 hStabMesh.position.y = 0; // في منتصف جسم الطائرة
                 empennageGroup.add(hStabMesh);
 
@@ -543,26 +540,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const chord = parseFloat(wingChordInput.value) / 100; // متر
         const cgPercent = parseFloat(cgPositionInput.value) / 100;
 
-        // --- مركز الثقل المرغوب (من إدخال المستخدم) للعرض المرئي للعلامة ---
-        // The wing's local Z-axis corresponds to the aircraft's X-axis (length).
-        // The wing's local X-axis corresponds to the aircraft's Z-axis (span).
-        // So, cg_z and cl_z are actually X-coordinates on the aircraft.
-        // بعد تدوير الجناح، الحافة الأمامية تكون عند z=0 والحافة الخلفية عند z=-chord
+        // The wing is now centered at the origin. Chord is along the X-axis.
+        // Leading edge is at x = -chord/2, trailing edge is at x = +chord/2.
+
         // مركز الرفع (CL) يكون عادة عند 25% من عرض الجناح من الحافة الأمامية
-        const cl_z = -chord * 0.25;
+        const cl_x = -chord / 2 + (chord * 0.25); // -0.25 * chord
         // مركز الثقل (CG) يتم تحديده من قبل المستخدم كنسبة مئوية من الحافة الأمامية
-        const cg_z = -chord * cgPercent;
+        const cg_x = -chord / 2 + (chord * cgPercent);
 
         // Update marker positions based on the DESIRED CG (from user input)
         // Y-offset is for visual separation from the fuselage/wing
-        clMarker.position.set(0, 0.05, cl_z); // CL marker is above the wing
-        cgMarker.position.set(0, -0.05, cg_z); // CG marker is below the wing
+        clMarker.position.set(cl_x, 0.05, 0); // CL marker is above the wing
+        cgMarker.position.set(cg_x, -0.05, 0); // CG marker is below the wing
 
         // --- التحقق من الاستقرار ---
         if (stabilityWarning) {
-            // إذا كان مركز الثقل (cg_z) خلف مركز الرفع (cl_z)
-            // (قيم z سالبة، لذا القيمة الأصغر تعني أبعد للخلف).
-            if (cg_z < cl_z) { // CG is behind CL
+            // CG is unstable if it's behind the CL.
+            // On the X-axis, a larger value means further back.
+            if (cg_x > cl_x) { // CG is behind CL
                 stabilityWarning.classList.remove('hidden');
             } else {
                 stabilityWarning.classList.add('hidden');
