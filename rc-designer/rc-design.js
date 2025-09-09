@@ -596,8 +596,8 @@ function updatePlaneModel() {
         const elevator = new THREE.Mesh(elevatorGeom, aileronMaterial);
         elevator.name = 'elevator';
         const elevatorPivot = new THREE.Group();
-        elevatorPivot.add(elevator);
-        elevatorPivot.position.set(hStab.position.x + hStabChordEffective, hStab.position.y, 0);
+        elevatorPivot.add(elevator); // The pivot point is the leading edge of the main stab surface
+        elevatorPivot.position.set(hStab.position.x + hStabChordEffective, hStab.position.y, 0); // Corrected position
         tailControlsGroup.add(elevatorPivot);
     }
 
@@ -607,8 +607,8 @@ function updatePlaneModel() {
         const rudder = new THREE.Mesh(rudderGeom, aileronMaterial);
         rudder.name = 'rudder';
         const rudderPivot = new THREE.Group();
-        rudderPivot.add(rudder);
-        rudderPivot.position.set(vStab.position.x + vStabChordEffective, vStab.position.y, 0);
+        rudderPivot.add(rudder); // The pivot point is the trailing edge of the vertical stab
+        rudderPivot.position.set(vStab.position.x + vStabChordEffective, vStab.position.y, 0); // Corrected position
         rudderPivot.rotation.y = Math.PI / 2;
         tailControlsGroup.add(rudderPivot);
     } else if (hasRudderInput.checked && tailType === 'v-tail') {
@@ -920,8 +920,10 @@ function onMouseClick(event) {
 
         // تحريك الجنيحات بشكل معاكس عند النقر
         if (rightAileron && leftAileron) {
-            rightAileron.parent.rotation.z += 0.2; // Rotate the PIVOT, not the aileron itself
-            leftAileron.parent.rotation.z -= 0.2;
+            if (clickedObject.name === 'rightAileron' || clickedObject.name === 'leftAileron') {
+                rightAileron.parent.rotation.z += 0.2; // Rotate the PIVOT, not the aileron itself
+                leftAileron.parent.rotation.z -= 0.2;
+            }
         }
     }
 }
