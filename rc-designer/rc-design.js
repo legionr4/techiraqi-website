@@ -30,6 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const taperRatioValueSpan = document.getElementById('taper-ratio-value');
     const taperRatioGroup = document.getElementById('taper-ratio-group');
     const togglePropAnimInput = document.getElementById('toggle-prop-anim');
+    const wingletTypeInput = document.getElementById('winglet-type');
 
     // عناصر التحكم في الألوان
     const wingColorInput = document.getElementById('wing-color');
@@ -55,13 +56,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const motorRpmInput = document.getElementById('motor-rpm');
     const toggleAirflowInput = document.getElementById('toggle-airflow');
 
-    // These elements are not in the new HTML, so we should handle them gracefully
-    // by checking if they exist before using them. Or, if they are essential,
-    // they need to be added back to the HTML. For now, we'll assume they are not essential
-    // for the 3D view to render.
-    const saveDesignBtn = document.getElementById('save-design-btn');
-    const loadDesignBtn = document.getElementById('load-design-btn');
-    const loadDesignInput = document.getElementById('load-design-input');
     const stabilityWarning = document.getElementById('stability-warning');
 
 
@@ -802,18 +796,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const Cd0_wing = 0.008;      // سحب احتكاك وشكل الجناح
         const Cd0_fuselage = 0.005;  // سحب جسم الطائرة
         const Cd0_tail = 0.003;      // سحب مجموعة الذيل
-        let Cd0_landingGear = 0;     // سحب معدات الهبوط (يبدأ من الصفر)
-        const Cd0_canopy = 0;          // سحب قمرة القيادة (يبدأ من الصفر)
-
-
-        const Cd0_total = Cd0_wing + Cd0_fuselage + Cd0_tail + Cd0_landingGear + Cd0_canopy;
-
-        // --- 2. السحب المستحث (Induced Drag) ---
-        // حساب نسبة الأبعاد (Aspect Ratio)
-        const span = parseFloat(wingSpanInput.value) / 100;
-        const AR = (wingArea > 0) ? (span * span) / wingArea : 6; // قيمة افتراضية 6 لتجنب القسمة على صفر
-
-        // عامل كفاءة أوزوالد (e). يتراوح بين 0.7 و 0.95. الجنيحات تحسنه.
+        const Cd0_total = Cd0_wing + Cd0_fuselage + Cd0_tail; // Simplified parasitic drag
+        const span = parseFloat(wingSpanInput.value) / 100; // m
+        const AR = (wingArea > 0) ? (span * span) / wingArea : 6; // Aspect Ratio, default to 6 to avoid division by zero
         let oswaldEfficiency = 0.8;
         const wingletType = wingletTypeInput ? wingletTypeInput.value : 'none';
         if (wingletType === 'standard' && airfoilType !== 'delta') {
@@ -821,12 +806,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const k = 1 / (Math.PI * AR * oswaldEfficiency);
-        const Cd_induced = k * Math.pow(Cl, 2);
-
-        // --- 3. السحب الكلي ---
-        const Cd_total = Cd0_total + Cd_induced;
-
-        return Cd_total;
+        const Cd_induced = k * Math.pow(Cl, 2); // Induced drag
+        return Cd0_total + Cd_induced; // Total drag
     }
 
     /**
@@ -888,8 +869,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const motorRpm = parseFloat(document.getElementById('motor-rpm').value);
 
         const totalWeightG = parseFloat(planeWeightInput.value);
-
-        // --- حسابات أساسية ---
         const area = calculateWingArea();
         const speedMps = speedKmh * (1000 / 3600); // تحويل إلى متر/ثانية
 
@@ -914,8 +893,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const thrustConstant = 0.1; // ثابت تجريبي تقديري
 
         const staticThrust = thrustConstant * propPitchM * airDensity * Math.pow(revsPerSec, 2) * Math.pow(propDiameterM, 3);
-
-
 
         // --- حساب نسبة الدفع إلى الوزن (TWR) ---
         const planeMassKg = totalWeightG / 1000; // تحويل جرام إلى كجم
@@ -1111,37 +1088,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // Initial update for calculated CG display
         updateMarkers();
 
-        // Update wing controls visibility when airfoil type changes
-        airfoilTypeInput.addEventListener('input', updateWingControls);
-
-        // Listener for the airflow toggle
-        toggleAirflowInput.addEventListener('change', () => {
-            airflowVisible = toggleAirflowInput.checked;
-            if (airflowParticles) {
-                airflowParticles.visible = airflowVisible;
-            }
-        });
-
-        togglePropAnimInput.addEventListener('change', () => {
-            isPropellerSpinning = togglePropAnimInput.checked;
-        });
-
-        // ربط أحداث تغيير اللون
-        wingColorInput.addEventListener('input', (event) => {
-            if (wingMaterial) wingMaterial.color.set(event.target.value);
-        });
-
-        fuselageColorInput.addEventListener('input', (event) => {
-            if (airplaneGroup) {
-                const fuselage = airplaneGroup.getObjectByName('fuselage');
-                if (fuselage) fuselage.material.color.set(event.target.value);
-            }
-        });
-
-        tailColorInput.addEventListener('input', (event) => {
-            if (tailMaterial) tailMaterial.color.set(event.target.value);
-        });
-
         // Simplified event listeners for all inputs
         const allInputs = document.querySelectorAll('.controls-panel input, .controls-panel select');
         allInputs.forEach(input => {
@@ -1159,12 +1105,34 @@ document.addEventListener('DOMContentLoaded', () => {
                     aoaValueSpan.textContent = parseFloat(input.value).toFixed(1);
                 }
 
+                // Handle UI visibility changes
+                if (input.id === 'airfoil-type') {
+                    updateWingControls();
+                }
+
+                // Handle visual updates
+                if (input.id === 'toggle-airflow') {
+                    airflowVisible = input.checked;
+                    if (airflowParticles) airflowParticles.visible = airflowVisible;
+                }
+                if (input.id === 'toggle-prop-anim') {
+                    isPropellerSpinning = input.checked;
+                }
+                if (input.id === 'wing-color' && wingMaterial) {
+                    wingMaterial.color.set(input.value);
+                }
+                if (input.id === 'fuselage-color' && fuselageMaterial) {
+                    fuselageMaterial.color.set(input.value);
+                }
+                if (input.id === 'tail-color' && tailMaterial) {
+                    tailMaterial.color.set(input.value);
+                }
+
                 updateAirplaneModel(); // This also calls updateAngleOfAttack and updateMarkers
                 updateCalculations();
                 updatePerformanceCharts();
             });
         });
-
 
         // مراقبة تغيير الوضع الليلي لتحديث ألوان الرسم البياني
         const themeObserver = new MutationObserver((mutationsList) => {
