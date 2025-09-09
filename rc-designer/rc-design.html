@@ -133,13 +133,35 @@
         .charts-container {
             margin-top: 0; /* إزالة الهامش العلوي لأنه الآن جزء من عمود */
         }
+
+        /* ============================================ */
+        /*  تجاوز الأنماط لعرض الواجهة بملء الشاشة (للتحقق من الأخطاء) */
+        /* ============================================ */
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            overflow: hidden;
+        }
+        main {
+            padding: 0 !important;
+            margin: 0 !important;
+            max-width: 100% !important;
+            height: 100%;
+        }
+        .designer-layout, .viewer-column, .viewer-panel {
+            display: block !important; /* Override grid/flex */
+            height: 100%;
+            width: 100%;
+            padding: 0; margin: 0; gap: 0;
+        }
     </style>
 </head>
 <body>
     <!-- تم تعطيل شاشة التحميل مؤقتاً لتصحيح الأخطاء -->
     <!-- <div id="preloader"><div class="spinner"></div></div> -->
 
-    <header>
+    <!-- <header>
         <div class="site-title"><a href="../index.html">Tech_Iraqi</a></div>
         <button class="hamburger-menu" id="hamburger-button" aria-label="فتح أو إغلاق القائمة" aria-expanded="false">
             <span class="fas fa-bars" aria-hidden="true"></span>
@@ -159,228 +181,17 @@
             <img src="../assets/iraqFlog.gif" alt="علم العراق" class="header-flag">
             <div class="login-container-desktop" data-netlify-identity-button></div>
         </div>
-    </header>
+    </header> -->
 
     <main>
-        <div class="content-card hero-section" data-aos="fade-up">
-            <h1>أداة تصميم طائرة RC</h1>
-            <p class="tagline">أدخل أبعاد طائرتك وشاهدها تتشكل في عرض ثلاثي الأبعاد مع حسابات تقديرية للأداء.</p>
-        </div>
-
         <div class="designer-layout" data-aos="fade-up" data-aos-delay="100">
-            <!-- العمود الرئيسي للمحتوى (واجهة العرض، النتائج، المخططات) -->
-            <!-- في الوضع العربي، سيظهر هذا العمود على اليمين لأنه العنصر الأول -->
             <div class="viewer-column">
                 <div class="viewer-panel">
                     <div id="viewer-container"></div>
                 </div>
-                <div class="results-panel">
-                    <h3><i class="fas fa-calculator"></i> النتائج التقديرية</h3>
-                    <div id="stability-warning" class="stability-warning hidden">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <span>تحذير: الطائرة غير مستقرة! مركز الثقل خلف مركز الرفع.</span>
-                    </div>
-                    <p><span>كثافة الهواء:</span> <span id="result-density">N/A</span></p>
-                    <p><span>معامل الرفع (Cl):</span> <span id="result-cl">N/A</span></p>
-                    <p><span>معامل السحب (Cd):</span> <span id="result-cd">N/A</span></p>
-                    <p><span>مساحة الجناح:</span> <span id="result-area">0.24 م²</span></p>
-                    <p><span>الرفع التقديري:</span> <span id="result-lift">N/A</span></p>
-                    <p><span>السحب التقديري:</span> <span id="result-drag">N/A</span></p>
-                    <p><span>الدفع التقديري:</span> <span id="result-thrust">N/A</span></p>
-                    <p><span>نسبة الدفع إلى الوزن:</span> <span id="result-twr">N/A</span></p>
-                </div>
-                <div class="charts-container">
-                    <div class="content-card" data-aos="fade-up">
-                        <h3 style="text-align: right; margin-bottom: 1.5rem;"><i class="fas fa-chart-line"></i> تحليل الأداء: الرفع مقابل زاوية الهجوم</h3>
-                        <div style="position: relative; height:300px; width:100%;">
-                            <canvas id="lift-chart"></canvas>
-                        </div>
-                    </div>
-                    <div class="content-card" data-aos="fade-up" data-aos-delay="100">
-                        <h3 style="text-align: right; margin-bottom: 1.5rem;"><i class="fas fa-wind"></i> تحليل الأداء: السحب مقابل زاوية الهجوم</h3>
-                        <div style="position: relative; height:300px; width:100%;">
-                            <canvas id="drag-chart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="controls-panel">
-                <h3><i class="fas fa-sliders-h"></i> مدخلات التصميم</h3>
-                
-                <h4><i class="fas fa-plane-departure"></i> الجناح (Wing)</h4>
-                <div class="input-group">
-                    <label for="wing-span">طول الجناح (سم)</label>
-                    <input type="number" id="wing-span" value="120">
-                </div>
-                <div class="input-group">
-                    <label for="wing-chord">عرض الجناح / الوتر (سم)</label>
-                    <input type="number" id="wing-chord" value="20">
-                </div>
-                <div class="input-group">
-                    <label for="airfoil-type">شكل الجناح (Airfoil)</label>
-                    <select id="airfoil-type">
-                        <option value="semi-symmetrical" selected>شبه متماثل (متعدد الأغراض)</option>
-                        <option value="flat-bottom">مسطح من الأسفل (للتدريب)</option>
-                        <option value="symmetrical">متماثل (للاستعراض الجوي)</option>
-                        <option value="delta">جناح دلتا (للسرعة العالية)</option>
-                    </select>
-                </div>
-                <div class="input-group">
-                    <label for="wing-position">موضع الجناح</label>
-                    <select id="wing-position">
-                        <option value="high" selected>علوي (High-wing)</option>
-                        <option value="mid">متوسط (Mid-wing)</option>
-                        <option value="low">سفلي (Low-wing)</option>
-                    </select>
-                </div>
-                <div class="input-group" id="sweep-angle-group">
-                    <label for="sweep-angle">ميلان الجناح (للأمام/للخلف): <span id="sweep-angle-value" style="font-weight:bold; color: var(--primary-color);">0</span>°</label>
-                    <input type="range" id="sweep-angle" min="-30" max="45" value="0" step="1" style="padding: 0;">
-                </div>
-
-                <div class="input-group" id="taper-ratio-group">
-                    <label for="taper-ratio">نسبة استدقاق الجناح (Taper): <span id="taper-ratio-value" style="font-weight:bold; color: var(--primary-color);">1.00</span></label>
-                    <input type="range" id="taper-ratio" min="0.1" max="1.0" value="1.0" step="0.05" style="padding: 0;">
-                </div>
-
-                <div class="input-group" id="winglet-group">
-                    <label for="winglet-type">شكل طرف الجناح (Winglet)</label>
-                    <select id="winglet-type">
-                        <option value="none" selected>بدون</option>
-                        <option value="standard">قياسي (Standard)</option>
-                    </select>
-                </div>
-
-                <h4><i class="fas fa-ruler-horizontal"></i> جسم الطائرة (Fuselage)</h4>
-                <div class="input-group">
-                    <label for="fuselage-length">طول جسم الطائرة (سم)</label>
-                    <input type="number" id="fuselage-length" value="100">
-                </div>
-                <div class="input-group">
-                    <label for="fuselage-diameter">قطر جسم الطائرة (سم)</label>
-                    <input type="number" id="fuselage-diameter" value="16">
-                </div>
-                <div class="input-group">
-                    <label for="fuselage-shape">شكل جسم الطائرة</label>
-                    <select id="fuselage-shape">
-                        <option value="round" selected>دائري (انسيابي)</option>
-                        <option value="square">مربع (صندوقي)</option>
-                    </select>
-                </div>
-
-                <h4><i class="fas fa-ruler-combined"></i> الذيل (Empennage)</h4>
-                <div class="input-group">
-                    <label for="tail-type">شكل الذيل</label>
-                    <select id="tail-type">
-                        <option value="conventional" selected>تقليدي (Conventional)</option>
-                        <option value="t-tail">على شكل T (T-tail)</option>
-                        <option value="v-tail">على شكل V (V-tail)</option>
-                    </select>
-                </div>
-                <div class="input-group" id="h-stab-span-group">
-                    <label for="h-stab-span">طول الذيل الأفقي (سم)</label>
-                    <input type="number" id="h-stab-span" value="40">
-                </div>
-                <div class="input-group" id="h-stab-chord-group">
-                    <label for="h-stab-chord">عرض الذيل الأفقي (سم)</label>
-                    <input type="number" id="h-stab-chord" value="12">
-                </div>
-                <div class="input-group" id="v-stab-height-group">
-                    <label for="v-stab-height">ارتفاع الذيل العمودي (سم)</label>
-                    <input type="number" id="v-stab-height" value="15">
-                </div>
-
-                <h4><i class="fas fa-fan"></i> المروحة (Propeller)</h4>
-                <div class="input-group">
-                    <label for="prop-diameter">قطر المروحة (بوصة)</label>
-                    <input type="number" id="prop-diameter" value="10">
-                </div>
-                <div class="input-group">
-                    <label for="prop-pitch">خطوة المروحة (بوصة)</label>
-                    <input type="number" id="prop-pitch" value="4.5">
-                </div>
-                <div class="input-group">
-                    <label for="motor-rpm">سرعة دوران المحرك (RPM)</label>
-                    <input type="number" id="motor-rpm" value="10000">
-                </div>
-                <div class="input-group">
-                    <label for="prop-blades">عدد ريش المروحة</label>
-                    <select id="prop-blades">
-                        <option value="2" selected>2</option>
-                        <option value="3">3</option>
-                        <option value="4">4</option>
-                    </select>
-                </div>
-
-                <h4><i class="fas fa-balance-scale"></i> معلمات إضافية</h4>
-                <div class="input-group">
-                    <label for="plane-weight">وزن الطائرة الإجمالي (جرام)</label>
-                    <input type="number" id="plane-weight" value="1500">
-                </div>
-                <div class="input-group">
-                    <label for="cg-position">مركز الجاذبية (% من عرض الجناح)</label>
-                    <input type="number" id="cg-position" value="30">
-                </div>
-
-                <h4><i class="fas fa-feather-alt"></i> الظروف الهوائية</h4>
-                <div class="input-group">
-                    <label for="angle-of-attack">زاوية الهجوم: <span id="aoa-value" style="font-weight:bold; color: var(--primary-color);">0</span>°</label>
-                    <input type="range" id="angle-of-attack" min="-10" max="20" value="0" step="0.5" style="padding: 0;">
-                </div>
-                <div class="input-group">
-                    <label for="air-speed">سرعة الهواء (كم/ساعة)</label>
-                    <input type="number" id="air-speed" value="50">
-                </div>
-                <div class="input-group">
-                    <label for="air-temp">درجة حرارة الهواء (°C)</label>
-                    <input type="number" id="air-temp" value="15">
-                </div>
-                <div class="input-group">
-                    <label for="altitude">الارتفاع عن سطح البحر (متر)</label>
-                    <input type="number" id="altitude" value="0">
-                </div>
-
-                <h4><i class="fas fa-palette"></i> الألوان</h4>
-                <div class="input-group">
-                    <label for="wing-color">لون الجناح</label>
-                    <input type="color" id="wing-color" value="#007bff">
-                </div>
-                <div class="input-group">
-                    <label for="fuselage-color">لون جسم الطائرة</label>
-                    <input type="color" id="fuselage-color" value="#cccccc">
-                </div>
-                <div class="input-group">
-                    <label for="tail-color">لون الذيل</label>
-                    <input type="color" id="tail-color" value="#0d6efd">
-                </div>
-
-                <h4><i class="fas fa-wind"></i> العرض المرئي</h4>
-                <div class="input-group" style="flex-direction: row; align-items: center; gap: 10px;">
-                    <input type="checkbox" id="toggle-airflow" style="width: auto; height: auto;">
-                    <label for="toggle-airflow" style="margin-bottom: 0;">إظهار تدفق الهواء</label>
-                </div>
-                <div class="input-group" style="flex-direction: row; align-items: center; gap: 10px;">
-                    <input type="checkbox" id="toggle-prop-anim" style="width: auto; height: auto;" checked>
-                    <label for="toggle-prop-anim" style="margin-bottom: 0;">تشغيل دوران المروحة</label>
-                </div>
             </div>
         </div>
     </main>
-
-    <button class="back-to-top" title="العودة إلى الأعلى" aria-label="العودة إلى الأعلى"><i class="fas fa-arrow-up" aria-hidden="true"></i></button>
-
-    <footer>
-        <div class="social-icons">
-            <a href="#" title="تابعنا على تويتر" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-x-twitter"></i></a>
-            <a href="#" title="تابعنا على لينكد إن" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-linkedin-in"></i></a>
-            <a href="https://github.com/legionr4" title="شاهد مشاريعنا على جيت هاب" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-github"></i></a>
-        </div>
-        <div class="footer-links">
-            <a href="../privacy-policy.html">سياسة الخصوصية</a>
-            <a href="../terms-of-use.html">شروط الاستخدام</a>
-        </div>
-        <p class="copyright">جميع الحقوق محفوظة &copy; <span id="copyright-year"></span></p>
-    </footer>
 
     <script src="https://unpkg.com/aos@next/dist/aos.js" defer></script>
     <script src="../script.js" defer></script>
