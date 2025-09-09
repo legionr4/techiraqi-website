@@ -173,29 +173,58 @@ const totalWeightResultEl = document.getElementById('total-weight-result');
 let liftChart, dragChart;
 
 /**
- * Generates points for a simple symmetrical airfoil shape.
+ * Generates points for various airfoil shapes.
  * @param {number} chord The chord length.
  * @param {number} thickness The maximum thickness.
+ * @param {string} airfoilType The type of airfoil ('symmetrical', 'flat-bottom', etc.).
  * @param {number} numPoints The number of points to generate for the top surface.
  * @returns {THREE.Vector2[]} An array of Vector2 points defining the airfoil outline.
  */
-function generateAirfoil(chord, thickness, numPoints = 15) {
+function generateAirfoil(chord, thickness, airfoilType, numPoints = 15) {
     const points = [];
     const halfThickness = thickness / 2;
-    // A simple parabola function to create a curved airfoil shape
-    const airfoilShape = (x) => 4 * x * (1 - x); 
+    const airfoilCurve = (x) => 4 * x * (1 - x); // Simple parabola for curvature
 
-    // Generate top surface points
-    for (let i = 0; i <= numPoints; i++) {
-        const x_norm = i / numPoints;
-        points.push(new THREE.Vector2(x_norm * chord, halfThickness * airfoilShape(x_norm)));
+    if (airfoilType === 'rectangular') {
+        // Top side
+        for (let i = 0; i <= numPoints; i++) {
+            const x_norm = i / numPoints;
+            points.push(new THREE.Vector2(x_norm * chord, halfThickness));
+        }
+        // Bottom side
+        for (let i = numPoints - 1; i >= 1; i--) {
+            const x_norm = i / numPoints;
+            points.push(new THREE.Vector2(x_norm * chord, -halfThickness));
+        }
+    } else if (airfoilType === 'flat-bottom') {
+        // Top surface
+        for (let i = 0; i <= numPoints; i++) {
+            const x_norm = i / numPoints;
+            points.push(new THREE.Vector2(x_norm * chord, thickness * airfoilCurve(x_norm)));
+        }
+        // Bottom surface (flat)
+        for (let i = numPoints - 1; i >= 1; i--) {
+            const x_norm = i / numPoints;
+            points.push(new THREE.Vector2(x_norm * chord, 0));
+        }
+        // Center vertically
+        points.forEach(p => p.y -= thickness / 2);
+    } else { // Symmetrical and Semi-symmetrical
+        let bottomFactor = (airfoilType === 'semi-symmetrical') ? 0.6 : 1.0;
+        // Top surface
+        for (let i = 0; i <= numPoints; i++) {
+            const x_norm = i / numPoints;
+            points.push(new THREE.Vector2(x_norm * chord, halfThickness * airfoilCurve(x_norm)));
+        }
+        // Bottom surface
+        for (let i = numPoints - 1; i >= 1; i--) {
+            const x_norm = i / numPoints;
+            points.push(new THREE.Vector2(x_norm * chord, -bottomFactor * halfThickness * airfoilCurve(x_norm)));
+        }
     }
-    // Generate bottom surface points
-    for (let i = numPoints - 1; i >= 1; i--) {
-        const x_norm = i / numPoints;
-        points.push(new THREE.Vector2(x_norm * chord, -halfThickness * airfoilShape(x_norm)));
-    }
-    points.forEach(p => p.x -= chord / 2); // Center the airfoil around its midpoint
+
+    // Center all profiles horizontally
+    points.forEach(p => p.x -= chord / 2);
     return points;
 }
 
@@ -207,6 +236,7 @@ function updatePlaneModel() {
     const wingChord = getValidNumber(wingChordInput) * conversionFactor;
     const wingThickness = getValidNumber(wingThicknessInput) * conversionFactor;
     const wingPosition = wingPositionInput.value;
+    const airfoilType = airfoilTypeInput.value;
     const sweepAngle = getValidNumber(sweepAngleInput);
     const taperRatio = getValidNumber(taperRatioInput);
 
@@ -249,7 +279,7 @@ function updatePlaneModel() {
         const currentZ = spanProgress * halfSpan;
         const currentChord = rootChord + (rootChord * taperRatio - rootChord) * spanProgress;
         const currentSweep = currentZ * Math.tan(sweepRad);
-        const airfoilPoints = generateAirfoil(currentChord, wingThickness, 15);
+        const airfoilPoints = generateAirfoil(currentChord, wingThickness, airfoilType, 15);
 
         airfoilPoints.forEach(p => {
             vertices.push(p.x + currentSweep, p.y, currentZ);
@@ -265,6 +295,13 @@ function updatePlaneModel() {
             const p4 = (i + 1) * pointsPerSection + ((j + 1) % pointsPerSection);
             indices.push(p1, p3, p4, p1, p4, p2);
         }
+    }
+
+    // إضافة غطاء لنهاية الجناح (wing tip) لسد الفتحة
+    const tipStartIndex = segments * pointsPerSection;
+    for (let j = 1; j < pointsPerSection - 1; j++) {
+        // The vertices should be wound counter-clockwise to face outwards
+        indices.push(tipStartIndex, tipStartIndex + j + 1, tipStartIndex + j);
     }
 
     wingGeometry.setIndex(indices);
@@ -332,10 +369,12 @@ function calculateAerodynamics() {
     // L = 0.5 * Cl * rho * V^2 * A
     // Cl (معامل الرفع) ≈ 2 * PI * alpha (تقريب لنظرية الجنيح الرقيق)
     let airfoilLiftFactor = 1.0;
-    if (airfoilType === 'flat-bottom') {
+    if (airfoilType === 'flat-bottom') { // عامل رفع أعلى قليلاً
         airfoilLiftFactor = 1.1; // عامل رفع أعلى قليلاً
-    } else if (airfoilType === 'symmetrical') {
+    } else if (airfoilType === 'symmetrical') { // عامل رفع أقل قليلاً عند زوايا الهجوم الصغيرة
         airfoilLiftFactor = 0.95; // عامل رفع أقل قليلاً عند زوايا الهجوم الصغيرة
+    } else if (airfoilType === 'rectangular') {
+        airfoilLiftFactor = 0.85; // أقل كفاءة
     }
     const cl = airfoilLiftFactor * 2 * Math.PI * alphaRad;
     const lift = 0.5 * cl * airDensity * Math.pow(airSpeed, 2) * wingArea;
