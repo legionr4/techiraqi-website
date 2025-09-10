@@ -362,8 +362,39 @@
                 <fieldset>
                     <legend>جسم الطائرة</legend>
                     <div class="input-group">
+                        <label for="fuselage-shape">شكل الجسم</label>
+                        <select id="fuselage-shape">
+                            <option value="rectangular" selected>مستطيل (Rectangular)</option>
+                            <option value="cylindrical">أسطواني (Cylindrical)</option>
+                            <option value="teardrop">قطرة (Teardrop)</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
                         <label for="fuselage-length">طول الجسم (<span class="unit-label">سم</span>)</label>
                         <input type="number" id="fuselage-length" value="100" step="1">
+                    </div>
+                    <!-- Rectangular specific inputs -->
+                    <div class="input-group fuselage-shape-input" id="fuselage-rectangular-width-group">
+                        <label for="fuselage-width">عرض الجسم (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="fuselage-width" value="15" step="0.5">
+                    </div>
+                    <div class="input-group fuselage-shape-input" id="fuselage-rectangular-height-group">
+                        <label for="fuselage-height">ارتفاع الجسم (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="fuselage-height" value="15" step="0.5">
+                    </div>
+                    <!-- Cylindrical specific inputs -->
+                    <div class="input-group fuselage-shape-input" id="fuselage-cylindrical-diameter-group" style="display:none;">
+                        <label for="fuselage-diameter">قطر الجسم (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="fuselage-diameter" value="15" step="0.5">
+                    </div>
+                    <!-- Teardrop specific inputs -->
+                    <div class="input-group fuselage-shape-input" id="fuselage-teardrop-front-diameter-group" style="display:none;">
+                        <label for="fuselage-front-diameter">قطر المقدمة (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="fuselage-front-diameter" value="20" step="0.5">
+                    </div>
+                    <div class="input-group fuselage-shape-input" id="fuselage-teardrop-rear-diameter-group" style="display:none;">
+                        <label for="fuselage-rear-diameter">قطر المؤخرة (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="fuselage-rear-diameter" value="5" step="0.5">
                     </div>
                 </fieldset>
 
@@ -506,6 +537,10 @@
                 <div class="result-item">
                     <p>وزن الذيل التقديري (جرام):</p>
                     <span id="tail-weight-result">0</span>
+                </div>
+                <div class="result-item">
+                    <p>وزن الجسم التقديري (جرام):</p>
+                    <span id="fuselage-weight-result">0</span>
                 </div>
                 <div class="result-item">
                     <p>وزن المروحة التقديري (جرام):</p>
