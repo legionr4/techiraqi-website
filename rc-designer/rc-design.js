@@ -310,8 +310,7 @@ const icEngineTypeInput = document.getElementById('ic-engine-type');
 // Electric Engine Inputs
 const enginePlacementInput = document.getElementById('engine-placement');
 const wingEnginePlacementOptions = document.getElementById('wing-engine-placement-options');
-const engineWingPositionInput = document.getElementById('engine-wing-position');
-const engineWingPosValueEl = document.getElementById('engine-wing-pos-value');
+const engineWingDistanceInput = document.getElementById('engine-wing-distance');
 const engineWingVerticalPosInput = document.getElementById('engine-wing-vertical-pos');
 const engineWingForeAftInput = document.getElementById('engine-wing-fore-aft');
 const enginePylonLengthInput = document.getElementById('engine-pylon-length');
@@ -614,6 +613,8 @@ function updateEngineUI() {
         selectedEngineSpec = ENGINE_SPECS.ic[motorType];
         updateEngineInputs(selectedEngineSpec, 'ic');
     }
+    // بعد تحديث حقول الإدخال من القائمة المنسدلة، قم بتحديث النموذج والحسابات
+    updateAll();
 }
 
 function updatePlaneModel() {
@@ -731,9 +732,6 @@ function updatePlaneModel() {
         fuselageTearFrontDiaGroup.style.display = 'flex';
         fuselageTearRearDiaGroup.style.display = 'flex';
     }
-
-    // Update engine UI elements
-    updateEngineUI();
 
     // إظهار/إخفاء خيارات موضع محرك الجناح
     const enginePlacement = enginePlacementInput.value;
@@ -1230,13 +1228,13 @@ function updatePlaneModel() {
     } else if (enginePlacement === 'wing') {
         if (engineProto) {
             // قراءة جميع خيارات تركيب الجناح
-            const wingEnginePosPercent = getValidNumber(engineWingPositionInput) / 100;
+            const wingEngineDistMeters = getValidNumber(engineWingDistanceInput) * conversionFactor;
             const wingEngineVerticalPos = engineWingVerticalPosInput.value;
             const wingEngineForeAft = engineWingForeAftInput.value;
             const pylonLengthMeters = getValidNumber(enginePylonLengthInput) * conversionFactor;
 
             // حساب الموضع على امتداد الجناح
-            const posOnWingZ = (halfSpan * wingEnginePosPercent) + (currentFuselageWidth / 2);
+            const posOnWingZ = wingEngineDistMeters + (currentFuselageWidth / 2);
             const spanProgress = (posOnWingZ - currentFuselageWidth / 2) / halfSpan;
 
             // حساب خصائص الجناح عند هذا الموضع
@@ -1268,6 +1266,33 @@ function updatePlaneModel() {
                 propModel.rotation.y = Math.PI; // مروحة دفع (Pusher)
             }
 
+            // --- إنشاء حامل المحرك (Pylon) ---
+            const pylonHeight = Math.abs(engineYOffset - wingCenterY) - (wingThickness / 2) - (engineDiameterMeters / 2);
+            if (pylonHeight > 0.001 && pylonLengthMeters > 0.001) {
+                const pylonWidth = engineDiameterMeters * 0.4; // عرض الحامل أنحف قليلاً من المحرك
+                const pylonGeom = new THREE.BoxGeometry(pylonLengthMeters, pylonHeight, pylonWidth);
+                
+                // حساب موضع الحامل
+                let pylonX, pylonY;
+                
+                if (wingEngineForeAft === 'leading') {
+                    pylonX = leadingEdgeX + pylonLengthMeters / 2;
+                } else { // trailing
+                    pylonX = trailingEdgeX - pylonLengthMeters / 2;
+                }
+
+                if (wingEngineVerticalPos === 'above') {
+                    pylonY = wingCenterY + (wingThickness / 2) + (pylonHeight / 2);
+                } else { // below
+                    pylonY = wingCenterY - (wingThickness / 2) - (pylonHeight / 2);
+                }
+
+                const rightPylon = new THREE.Mesh(pylonGeom, engineMaterial); // استخدام نفس مادة المحرك
+                rightPylon.position.set(pylonX, pylonY, posOnWingZ);
+                const leftPylon = rightPylon.clone();
+                leftPylon.position.z = -posOnWingZ;
+                wingEnginesGroup.add(rightPylon, leftPylon);
+            }
             // إنشاء ووضع المحركات والمراوح
             const rightEngine = engineProto.clone();
             const leftEngine = engineProto.clone();
@@ -1789,12 +1814,13 @@ hasRetractableGearInput.addEventListener('change', updateAll);
 hasLandingGearInput.addEventListener('change', updateAll);
 fuselageShapeInput.addEventListener('change', updateAll);
 hasRudderInput.addEventListener('change', updateAll);
-engineTypeInput.addEventListener('change', updateAll);
-electricMotorTypeInput.addEventListener('change', updateAll);
-icEngineTypeInput.addEventListener('change', updateAll);
+engineTypeInput.addEventListener('change', updateEngineUI);
+electricMotorTypeInput.addEventListener('change', updateEngineUI);
+icEngineTypeInput.addEventListener('change', updateEngineUI);
 enginePlacementInput.addEventListener('change', updateAll);
 engineWingVerticalPosInput.addEventListener('change', updateAll);
 engineWingForeAftInput.addEventListener('change', updateAll);
+engineWingDistanceInput.addEventListener('input', debouncedUpdate);
 enginePylonLengthInput.addEventListener('input', debouncedUpdate);
 
 
@@ -1810,7 +1836,6 @@ airflowTransparencyInput.addEventListener('input', () => airflowTransparencyValu
 particleSizeInput.addEventListener('input', () => particleSizeValueEl.textContent = Math.round(particleSizeInput.value * 100));
 vibrationIntensityInput.addEventListener('input', () => vibrationValueEl.textContent = Math.round(vibrationIntensityInput.value * 100));
 unitSelector.addEventListener('change', updateUnitLabels);
-engineWingPositionInput.addEventListener('input', () => engineWingPosValueEl.textContent = engineWingPositionInput.value);
 
 showAxesCheckbox.addEventListener('change', () => {
     axesHelper.visible = showAxesCheckbox.checked;
