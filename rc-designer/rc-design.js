@@ -641,6 +641,17 @@ function updatePlaneModel() {
 
     // قراءة قيم الجناح
     const wingSpan = getValidNumber(wingSpanInput) * conversionFactor;
+    // **إصلاح الشاشة السوداء**: منع الحسابات إذا كان طول الجناح صفراً أو أقل.
+    // هذا يمنع أخطاء القسمة على صفر التي تؤدي إلى قيم NaN وتعطل العرض.
+    if (wingSpan <= 0) {
+        // مسح الأجزاء القديمة لمنع عرضها بشكل خاطئ
+        while(wingGroup.children.length > 0) wingGroup.remove(wingGroup.children[0]);
+        while(tailGroup.children.length > 0) tailGroup.remove(tailGroup.children[0]);
+        while(tailControlsGroup.children.length > 0) tailControlsGroup.remove(tailControlsGroup.children[0]);
+        // الخروج من الدالة لمنع حدوث أي عطل
+        return;
+    }
+
     const wingChord = getValidNumber(wingChordInput) * conversionFactor;
     const wingThickness = getValidNumber(wingThicknessInput) * conversionFactor;
     const wingPosition = wingPositionInput.value;
@@ -1528,6 +1539,27 @@ function calculateAerodynamics() {
     // --- حسابات محدثة ---
     const tipChord = wingChord * taperRatio;
     const wingArea = wingSpan * (wingChord + tipChord) / 2; // Area of a trapezoid
+
+    // **إصلاح الشاشة السوداء**: منع الحسابات إذا كانت مساحة الجناح صفراً أو أقل.
+    // هذا يمنع أخطاء القسمة على صفر (مثل حساب نسبة العرض إلى الارتفاع) التي تؤدي إلى قيم NaN.
+    if (wingArea <= 0) {
+        liftResultEl.textContent = '0.00';
+        dragResultEl.textContent = '0.00';
+        thrustResultEl.textContent = '0.00';
+        wingAreaResultEl.textContent = '0.00';
+        wingWeightResultEl.textContent = '0';
+        tailAreaResultEl.textContent = '0.00';
+        tailWeightResultEl.textContent = '0';
+        fuselageWeightResultEl.textContent = '0';
+        fuselageAreaResultEl.textContent = '0.00';
+        propWeightResultEl.textContent = '0';
+        engineWeightResultEl.textContent = '0';
+        landingGearWeightResultEl.textContent = '0';
+        totalWeightResultEl.textContent = '0';
+        twrResultEl.textContent = '0.00';
+        return;
+    }
+
     const alphaRad = angleOfAttack * (Math.PI / 180);
 
     // نستخدم مساحة الجناح الكلية للحسابات. أسطح التحكم هي جزء من الجناح وتساهم في الرفع والوزن.
