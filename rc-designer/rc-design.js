@@ -177,23 +177,23 @@ const ENGINE_SPECS = {
     electric: {
         'dc_180': {
             weight: 50, torque: 0.02, kv: 2000, voltage: 6,
-            length: 3, diameter: 2,
+            length: 3.2, diameter: 2.8,
             modelSize: { type: 'box', x: 0.03, y: 0.02, z: 0.015 }
         },
         'brushless_1000kv': {
             weight: 70, torque: 0.08, kv: 1000, voltage: 11.1,
-            length: 2.6, diameter: 2.8,
+            length: 3.5, diameter: 2.8,
             modelSize: { type: 'cylinder', length: 0.026, diameter: 0.028 }
         }
     },
     ic: {
         'glow_15': {
-            weight: 200, displacement: 2.5, torque: 0.3,
+            weight: 200, displacement: 2.5, torque: 0.3, rpm: 15000,
             length: 6, diameter: 5,
             modelSize: { type: 'cylinder', length: 0.06, diameter: 0.05 }
         },
         'glow_46': {
-            weight: 450, displacement: 7.5, torque: 1.2,
+            weight: 450, displacement: 7.5, torque: 1.2, rpm: 11000,
             length: 8, diameter: 7,
             modelSize: { type: 'cylinder', length: 0.08, diameter: 0.07 }
         }
@@ -693,20 +693,28 @@ function updateEngineUI() {
     icEngineOptions.style.display = engineType === 'ic' ? 'block' : 'none';
     batteryOptions.style.display = engineType === 'electric' ? 'block' : 'none';
     fuelTankOptions.style.display = engineType === 'ic' ? 'block' : 'none';
-
+    
     let selectedEngineSpec;
+    let calculatedRpm = 0;
 
     if (engineType === 'electric') {
         const motorType = electricMotorTypeInput.value;
         selectedEngineSpec = ENGINE_SPECS.electric[motorType];
-        // Set default battery voltage based on engine if not already set by user
-        batteryVoltageInput.value = batteryVoltageInput.value || selectedEngineSpec.voltage;
         updateEngineInputs(selectedEngineSpec, 'electric');
+
+        // حساب RPM للمحرك الكهربائي
+        const kv = getValidNumber(electricMotorKvInput);
+        const voltage = getValidNumber(batteryVoltageInput);
+        const efficiencyFactor = 0.85; // معامل تقديري للكفاءة والحمل
+        calculatedRpm = kv * voltage * efficiencyFactor;
+
     } else { // ic
         const motorType = icEngineTypeInput.value;
         selectedEngineSpec = ENGINE_SPECS.ic[motorType];
         updateEngineInputs(selectedEngineSpec, 'ic');
+        calculatedRpm = selectedEngineSpec.rpm || 8000; // استخدام RPM من المواصفات
     }
+    propRpmInput.value = Math.round(calculatedRpm);
     // بعد تحديث حقول الإدخال من القائمة المنسدلة، قم بتحديث النموذج والحسابات
     updateAll();
 }
@@ -2080,6 +2088,7 @@ fuselageShapeInput.addEventListener('change', updateAll);
 hasRudderInput.addEventListener('change', updateAll);
 engineTypeInput.addEventListener('change', updateEngineUI);
 fuselageNoseShapeInput.addEventListener('change', updateAll);
+batteryVoltageInput.addEventListener('input', debouncedUpdate); // إعادة الحساب عند تغيير الفولتية
 fuselageTailShapeInput.addEventListener('change', updateAll);
 hasCockpitInput.addEventListener('change', updateAll);
 fuelTankMaterialInput.addEventListener('change', updateAll);
