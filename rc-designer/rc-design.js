@@ -1536,6 +1536,50 @@ function updatePlaneModel() {
         cockpitGroup.add(cockpitMesh);
     }
 
+    // --- مصدر الطاقة (بطارية/خزان وقود) - تم نقل هذا الجزء إلى هنا لضمان عمله ---
+    energySourceGroup.visible = false; // إخفاؤه افتراضيًا
+    const engineType = engineTypeInput.value; // قراءة نوع المحرك
+
+    if (engineType === 'electric') {
+        energySourceGroup.visible = true;
+
+        // حساب الحجم بناءً على الوزن (تقديري ومعدل ليكون أصغر)
+        const batteryWeightGrams = getValidNumber(batteryWeightInput);
+        const scalingFactor = 0.0005; // معامل تصغير لجعل الحجم مناسبًا
+        const baseDim = Math.cbrt(batteryWeightGrams) * scalingFactor;
+
+        // الأبعاد النسبية (L:W:H = 4:2:1)
+        const height = baseDim * 1;
+        const width = baseDim * 2;
+        const length = baseDim * 4;
+
+        // تحديث حجم الصندوق
+        energySourceMesh.scale.set(length, height, width);
+
+        // تحديث الموضع
+        const batteryPosition = getValidNumber(batteryPositionInput) * conversionFactor;
+        energySourceGroup.position.x = batteryPosition;
+
+    } else if (engineType === 'ic') {
+        energySourceGroup.visible = true;
+
+        // حساب الحجم بناءً على السعة (تقديري ومعدل)
+        const tankCapacity_ml = getValidNumber(fuelTankCapacityInput);
+        const scalingFactor = 0.001; // معامل تصغير
+        const baseDim = Math.cbrt(tankCapacity_ml) * scalingFactor;
+
+        // الأبعاد النسبية (L:W:H = 4:2:1)
+        const height = baseDim * 1;
+        const width = baseDim * 2;
+        const length = baseDim * 4;
+
+        // تحديث حجم الصندوق
+        energySourceMesh.scale.set(length, height, width);
+
+        // تحديث الموضع
+        const tankPosition = getValidNumber(fuelTankPositionInput) * conversionFactor;
+        energySourceGroup.position.x = tankPosition;
+    }
 }
 
 function calculateAerodynamics() {
@@ -1746,55 +1790,6 @@ function calculateAerodynamics() {
     } else { // ic
         energySourceWeightKg = getValidNumber(fuelTankWeightInput) / 1000;
     }
-
-    // --- مصدر الطاقة (بطارية/خزان وقود) - تم نقل هذا الجزء إلى هنا لضمان عمله ---
-    energySourceGroup.visible = false; // إخفاؤه افتراضيًا
-
-    if (engineType === 'electric') {
-        energySourceGroup.visible = true;
-
-        // حساب الحجم بناءً على الوزن (تقديري)
-        const batteryWeightGrams = getValidNumber(batteryWeightInput);
-        const batteryDensityG_cm3 = 1.5; // كثافة تقديرية للبطارية مع الغلاف (جرام/سم^3)
-        const volume_cm3 = batteryWeightGrams / batteryDensityG_cm3;
-        const volume_m3 = volume_cm3 / 1e6;
-
-        // حساب الأبعاد من الحجم مع الحفاظ على نسبة العرض إلى الارتفاع (L:W:H = 4:2:1)
-        const x_dim = Math.cbrt(volume_m3 / (4 * 2 * 1));
-        const height = x_dim * 1;
-        const width = x_dim * 2;
-        const length = x_dim * 4;
-
-        // تحديث حجم الصندوق
-        energySourceMesh.scale.set(length, height, width);
-
-        // تحديث الموضع
-        const batteryPosition = getValidNumber(batteryPositionInput) * conversionFactor;
-        energySourceGroup.position.x = batteryPosition;
-
-    } else if (engineType === 'ic') {
-        energySourceGroup.visible = true;
-
-        // حساب الحجم بناءً على السعة
-        const tankCapacity_ml = getValidNumber(fuelTankCapacityInput);
-        const volume_cm3 = tankCapacity_ml; // 1 مل = 1 سم^3
-        const volume_m3 = volume_cm3 / 1e6;
-
-        // حساب الأبعاد من الحجم (L:W:H = 4:2:1)
-        const x_dim = Math.cbrt(volume_m3 / (4 * 2 * 1));
-        const height = x_dim * 1;
-        const width = x_dim * 2;
-        const length = x_dim * 4;
-
-        // تحديث حجم الصندوق
-        energySourceMesh.scale.set(length, height, width);
-
-        // تحديث الموضع
-        const tankPosition = getValidNumber(fuelTankPositionInput) * conversionFactor;
-        energySourceGroup.position.x = tankPosition;
-    }
-
-
 
     const planeComponentsWeightKg = planeComponentsWeightGrams / 1000;
     const totalWeightKg = wingWeightKg + tailWeightKg + fuselageWeightKg + propWeightKg + landingGearWeightKg + engineWeightKg + energySourceWeightKg + planeComponentsWeightKg;
