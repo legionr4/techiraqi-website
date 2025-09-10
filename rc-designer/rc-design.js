@@ -254,6 +254,8 @@ const fuselageAreaResultEl = document.getElementById('fuselage-area-result');
 const totalWeightResultEl = document.getElementById('total-weight-result');
 const propWeightResultEl = document.getElementById('prop-weight-result');
 
+const planeParams = {}; // Object to hold cached plane parameters for the animation loop
+
 let liftChart, dragChart;
 let isPropSpinning = false; // متغير لتتبع حالة دوران المروحة
 let propParticleSystem, propParticleCount = 400; // لتدفق هواء المروحة (تم تقليل العدد)
@@ -429,6 +431,57 @@ const createPropellerBladeGeom = (radius, rootChord, tipChord, thickness, pitch,
     geom.computeVertexNormals();
     return geom;
 };
+
+/**
+ * Reads all DOM input values, calculates derived properties, 
+ * and caches them in the global `planeParams` object for use in the animation loop.
+ * This prevents slow DOM access during the render cycle.
+ */
+function updatePlaneParameters() {
+    const conversionFactor = UNIT_CONVERSIONS[unitSelector.value];
+    
+    // Cache all necessary values
+    planeParams.conversionFactor = conversionFactor;
+    planeParams.wingSpan = getValidNumber(wingSpanInput) * conversionFactor;
+    planeParams.wingChord = getValidNumber(wingChordInput) * conversionFactor;
+    planeParams.taperRatio = getValidNumber(taperRatioInput);
+    planeParams.angleOfAttack = getValidNumber(angleOfAttackInput);
+    planeParams.propRpm = getValidNumber(propRpmInput);
+    planeParams.propPitch = getValidNumber(propPitchInput) * 0.0254; // to meters
+    planeParams.propDiameter = getValidNumber(propDiameterInput) * 0.0254; // to meters
+    planeParams.fuselageLength = getValidNumber(fuselageLengthInput) * conversionFactor;
+    planeParams.aileronLength = getValidNumber(aileronLengthInput) * conversionFactor;
+    planeParams.aileronPosition = getValidNumber(aileronPositionInput) * conversionFactor;
+    planeParams.elevatorLength = getValidNumber(elevatorLengthInput) * conversionFactor;
+    planeParams.rudderLength = getValidNumber(rudderLengthInput) * conversionFactor;
+    planeParams.vStabHeight = getValidNumber(vStabHeightInput) * conversionFactor;
+    planeParams.userParticleDensity = getValidNumber(particleDensityInput);
+    planeParams.userParticleSize = getValidNumber(particleSizeInput);
+    planeParams.userVibrationIntensity = getValidNumber(vibrationIntensityInput);
+
+    // Cache fuselage dimensions
+    const fuselageShape = fuselageShapeInput.value;
+    if (fuselageShape === 'rectangular') {
+        planeParams.fuselageWidth = getValidNumber(fuselageWidthInput) * conversionFactor;
+        planeParams.fuselageHeight = getValidNumber(fuselageHeightInput) * conversionFactor;
+    } else if (fuselageShape === 'cylindrical') {
+        const fuselageDiameter = getValidNumber(fuselageDiameterInput) * conversionFactor;
+        planeParams.fuselageWidth = fuselageDiameter;
+        planeParams.fuselageHeight = fuselageDiameter;
+    } else if (fuselageShape === 'teardrop') {
+        const frontDiameter = getValidNumber(fuselageFrontDiameterInput) * conversionFactor;
+        const rearDiameter = getValidNumber(fuselageRearDiameterInput) * conversionFactor;
+        planeParams.fuselageWidth = Math.max(frontDiameter, rearDiameter);
+        planeParams.fuselageHeight = Math.max(frontDiameter, rearDiameter);
+    }
+
+    // Calculate and cache aerodynamic coefficients
+    const tipChord = planeParams.wingChord * planeParams.taperRatio;
+    const wingArea = planeParams.wingSpan * (planeParams.wingChord + tipChord) / 2;
+    const alphaRad = planeParams.angleOfAttack * (Math.PI / 180);
+    const cl = 1.0 * 2 * Math.PI * alphaRad; // Simplified Cl
+    planeParams.cl = cl;
+}
 
 function updatePlaneModel() {
     const conversionFactor = UNIT_CONVERSIONS[unitSelector.value];
@@ -1341,6 +1394,7 @@ function setAirflowVisibility(isSpinning) {
 
 function updateAll() {
     updatePlaneModel();
+    updatePlaneParameters(); // Cache the latest parameters
     if (liftChart && dragChart) {
         updateCharts();
     }
@@ -1388,6 +1442,7 @@ unitSelector.addEventListener('change', updateUnitLabels);
 togglePropSpinBtn.addEventListener('click', () => {
     isPropSpinning = !isPropSpinning;
     if (isPropSpinning) {
+        updatePlaneParameters(); // Cache the parameters right before starting the animation
         togglePropSpinBtn.textContent = 'إيقاف';
         togglePropSpinBtn.style.backgroundColor = '#ffc107'; // لون مميز للإشارة إلى التشغيل
         togglePropSpinBtn.style.color = '#000';
@@ -1490,16 +1545,17 @@ function animate() {
     planeGroup.rotation.set(0, 0, 0);
 
     if (isPropSpinning) {
-        const propRpm = getValidNumber(propRpmInput);
-        const propPitch = getValidNumber(propPitchInput) * 0.0254; // to meters
+        // All parameters are now read from the cached planeParams object for performance
+        const {
+            propRpm, propPitch, userParticleDensity, userParticleSize, userVibrationIntensity,
+            propDiameter, fuselageLength, cl, wingSpan, fuselageWidth, fuselageHeight, aileronLength,
+            aileronPosition, elevatorLength, rudderLength, vStabHeight
+        } = planeParams;
         
         // سرعة الهواء الرئيسية يتم حسابها الآن ديناميكيًا من المروحة
-        // هذه السرعة ستحرك جميع جزيئات الهواء (العامة، الدوامات)
         const mainAirSpeed = (propRpm / 60) * propPitch;
 
         // --- قراءة قيم التحكم في الجسيمات ---
-        const userParticleDensity = getValidNumber(particleDensityInput);
-        const userParticleSize = getValidNumber(particleSizeInput);
         const densityFactor = userParticleDensity * 2; // مضاعفة لجعل 50% هو الافتراضي
         const sizeFactor = userParticleSize * 2;       // مضاعفة لجعل 50% هو الافتراضي
 
@@ -1508,8 +1564,8 @@ function animate() {
         propellerGroup.rotation.x += rotationPerSecond * deltaTime;
 
         // --- تأثير اهتزاز الطائرة ---
-        const minVibrationRpm = 4000; // RPM التي يبدأ عندها الاهتزاز
-        const maxVibrationRpm = 8000; // RPM التي يكون عندها الاهتزاز في أقصى شدته
+        const minVibrationRpm = 4000;
+        const maxVibrationRpm = 8000;
 
         let vibrationMagnitude = 0;
         if (propRpm > minVibrationRpm) {
@@ -1518,11 +1574,10 @@ function animate() {
         }
 
         // تطبيق شدة الاهتزاز التي يحددها المستخدم
-        const userVibrationIntensity = getValidNumber(vibrationIntensityInput);
         vibrationMagnitude *= userVibrationIntensity;
 
-        const maxPosOffset = 0.002; // أقصى إزاحة للموضع بالمتر (مثلاً 2 ملم)
-        const maxRotOffset = 0.005; // أقصى إزاحة للدوران بالراديان (مثلاً حوالي 0.3 درجة)
+        const maxPosOffset = 0.002;
+        const maxRotOffset = 0.005;
 
         planeGroup.position.x += (Math.random() * 2 - 1) * maxPosOffset * vibrationMagnitude;
         planeGroup.position.y += (Math.random() * 2 - 1) * maxPosOffset * vibrationMagnitude;
@@ -1554,10 +1609,6 @@ function animate() {
         // --- كل تحديثات الجزيئات تحدث فقط عند تشغيل المروحة ---
         // --- تحديث جزيئات تدفق هواء المروحة ---
         if (propParticleSystem && propParticleSystem.visible) {
-            const propDiameter = getValidNumber(propDiameterInput) * 0.0254;
-            const fuselageLength = getValidNumber(fuselageLengthInput) * UNIT_CONVERSIONS[unitSelector.value];
-            const propRpm = getValidNumber(propRpmInput);
-
             // السرعة المحورية (للخلف) تعتمد على الخطوة والسرعة الدورانية
             const axialSpeed = mainAirSpeed * 1.5; // أسرع قليلاً للتأثير البصري
             // السرعة الدورانية (الحلزونية) تعتمد على السرعة الدورانية للمروحة
@@ -1605,29 +1656,16 @@ function animate() {
 
         // --- تحديث تدفق الهواء العام وتأثير أسطح التحكم ---
         if (wingAirflowParticleSystem && wingAirflowParticleSystem.visible) {
-            const conversionFactor = UNIT_CONVERSIONS[unitSelector.value];
             const positions = wingAirflowParticleSystem.geometry.attributes.position.array;
             const velocities = wingAirflowParticleSystem.geometry.attributes.velocity.array;
             const opacities = wingAirflowParticleSystem.geometry.attributes.customOpacity.array;
             const scales = wingAirflowParticleSystem.geometry.attributes.scale.array;
-
-            const { cl } = calculateCoefficients(); // Get current lift coefficient
 
             // Get control surface rotations
             const rightAileronRot = scene.getObjectByName('rightAileron')?.parent.rotation.z || 0;
             const leftAileronRot = scene.getObjectByName('leftAileron')?.parent.rotation.z || 0;
             const elevatorRot = scene.getObjectByName('rightElevator')?.parent.rotation.z || 0;
             const rudderRot = scene.getObjectByName('rudder')?.parent.rotation.y || 0;
-
-            // Get dimensions for influence checks
-            const wingSpan = getValidNumber(wingSpanInput) * conversionFactor;
-            const fuselageLength = getValidNumber(fuselageLengthInput) * conversionFactor;
-            const fuselageWidth = currentFuselageWidth; // Use the consistent width
-            const aileronLength = getValidNumber(aileronLengthInput) * conversionFactor;
-            const aileronPosition = getValidNumber(aileronPositionInput) * conversionFactor;
-            const elevatorLength = getValidNumber(elevatorLengthInput) * conversionFactor;
-            const rudderLength = getValidNumber(rudderLengthInput) * conversionFactor;
-            const vStabHeight = getValidNumber(vStabHeightInput) * conversionFactor;
 
             const deflectionFactor = 8.0; // How strongly the surface deflects air
             
@@ -1672,7 +1710,7 @@ function animate() {
 
                 // --- Rudder Influence ---
                 const rudderZoneX = -fuselageLength / 2;
-                const rudderYStart = currentFuselageHeight / 2; // Use the consistent height
+                const rudderYStart = fuselageHeight / 2;
                 const rudderYEnd = rudderYStart + rudderLength;
                 if (Math.abs(px - rudderZoneX) < 0.2 && Math.abs(pz) < 0.2) {
                      if (py > rudderYStart && py < rudderYEnd) {
@@ -1709,15 +1747,10 @@ function animate() {
 
         // --- تحديث دوامات أطراف الجناح ---
         if (vortexParticleSystem && vortexParticleSystem.visible) {
-            const conversionFactor = UNIT_CONVERSIONS[unitSelector.value];
             const positions = vortexParticleSystem.geometry.attributes.position.array;
             const opacities = vortexParticleSystem.geometry.attributes.customOpacity.array;
             const scales = vortexParticleSystem.geometry.attributes.scale.array;
             const spiralData = vortexParticleSystem.geometry.attributes.spiralData.array;
-            
-            const wingSpan = getValidNumber(wingSpanInput) * conversionFactor;
-            const fuselageWidth = currentFuselageWidth; // Use the consistent width
-            const { cl } = calculateCoefficients(); // Get current lift coefficient
 
             // Vortex strength is proportional to the lift coefficient
             const vortexStrength = Math.max(0, cl) * 0.2; // Adjust multiplier for visual effect
@@ -1882,23 +1915,3 @@ window.addEventListener('resize', () => {
         renderer.setSize(viewerDiv.clientWidth, viewerDiv.clientHeight);
     }
 });
-
-/**
- * A helper function to calculate aerodynamic coefficients without updating the UI.
- * @returns {{cl: number, cd: number}} An object containing the lift and drag coefficients.
- */
-function calculateCoefficients() {
-    const conversionFactor = UNIT_CONVERSIONS[unitSelector.value];
-    const wingSpan = getValidNumber(wingSpanInput) * conversionFactor;
-    const wingChord = getValidNumber(wingChordInput) * conversionFactor;
-    const taperRatio = getValidNumber(taperRatioInput);
-    const angleOfAttack = getValidNumber(angleOfAttackInput);
-    const tipChord = wingChord * taperRatio;
-    const wingArea = wingSpan * (wingChord + tipChord) / 2;
-    const alphaRad = angleOfAttack * (Math.PI / 180);
-    const cl = 1.0 * 2 * Math.PI * alphaRad; // Simplified Cl
-    const aspectRatio = wingArea > 0 ? Math.pow(wingSpan, 2) / wingArea : 0;
-    const cdi = aspectRatio > 0 ? Math.pow(cl, 2) / (Math.PI * aspectRatio * 0.8) : 0;
-    const cd = 0.025 + cdi;
-    return { cl, cd };
-}
