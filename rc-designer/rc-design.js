@@ -1014,12 +1014,12 @@ function updatePlaneModel() {
         hStabGeom.translate(0, 0, currentFuselageWidth / 2);
         const rightHStab = new THREE.Mesh(hStabGeom, tailMaterial); // Define rightHStab
         rightHStab.position.x = tailPositionX - hStabChordEffective / 2; // Corrected position
-        // Clone and mirror for the left half
+        // استنساخ وعكس للنصف الأيسر
         const leftHStab = rightHStab.clone();
         leftHStab.scale.z = -1;
 
-        const vStabGeom = createSurface(vStabHeight, vStabChordEffective, tailTaperRatio, tailSweepAngle, tailThickness, tailAirfoilType, true);
-        const vStab = new THREE.Mesh(vStabGeom, fuselageMaterial);
+        const vStabGeom = createSurface(vStabHeight, vStabChordEffective, tailTaperRatio, tailSweepAngle, tailThickness, tailAirfoilType, true, true); // Add root cap
+        const vStab = new THREE.Mesh(vStabGeom, tailMaterial); // Bug Fix: Use tailMaterial instead of fuselageMaterial
         vStab.position.x = tailPositionX - vStabChordEffective / 2; // Corrected incomplete line
         vStab.position.y = currentFuselageHeight / 2;
 
@@ -1031,15 +1031,15 @@ function updatePlaneModel() {
         // Create right half of the horizontal stabilizer
         const hStabGeom = createSurface(tailSpan, hStabChordEffective, tailTaperRatio, tailSweepAngle, tailThickness, tailAirfoilType, false);
         const rightHStab = new THREE.Mesh(hStabGeom, tailMaterial);
-        // رفع المثبت الأفقي ليجلس فوق المثبت العمودي
+        // Position the horizontal stabilizer to sit on top of the vertical one
         rightHStab.position.set(tailPositionX - hStabChordEffective / 2, vStabHeight + currentFuselageHeight / 2, 0);
 
-        // Clone and mirror for the left half
+        // استنساخ وعكس للنصف الأيسر
         const leftHStab = rightHStab.clone(); // Corrected: leftHStab was not defined
         leftHStab.scale.z = -1;
 
-        const vStabGeom = createSurface(vStabHeight, vStabChordEffective, tailTaperRatio, tailSweepAngle, tailThickness, tailAirfoilType, true);
-        const vStab = new THREE.Mesh(vStabGeom, fuselageMaterial);
+        const vStabGeom = createSurface(vStabHeight, vStabChordEffective, tailTaperRatio, tailSweepAngle, tailThickness, tailAirfoilType, true, true); // Add root cap
+        const vStab = new THREE.Mesh(vStabGeom, tailMaterial); // Bug Fix: Use tailMaterial instead of fuselageMaterial
         vStab.position.x = tailPositionX - vStabChordEffective / 2;
         // رفع المثبت العمودي ليجلس فوق جسم الطائرة
         vStab.position.y = currentFuselageHeight / 2;
