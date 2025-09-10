@@ -1068,7 +1068,6 @@ function updatePlaneModel() {
         blade.rotation.x = angle; // تدوير الشفرة حول محور الطائرة
         propellerGroup.add(blade);
     }
-}
     // --- Landing Gear ---
     while(landingGearGroup.children.length > 0) {
         landingGearGroup.remove(landingGearGroup.children[0]);
@@ -1132,6 +1131,7 @@ function updatePlaneModel() {
             landingGearGroup.add(tailWheel);
         }
     }
+}
 
 function calculateAerodynamics() {
     // قراءة القيم
