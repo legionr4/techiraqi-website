@@ -464,6 +464,13 @@
                             <label for="engine-pylon-length">مسافة الحامل عن الجناح (<span class="unit-label">سم</span>)</label>
                             <input type="number" id="engine-pylon-length" value="2" step="0.5">
                         </div>
+                        <div class="input-group">
+                            <label for="wing-prop-rotation">اتجاه دوران المراوح</label>
+                            <select id="wing-prop-rotation">
+                                <option value="counter" selected>متعاكس (Counter-rotating)</option>
+                                <option value="same">نفس الاتجاه (Same Direction)</option>
+                            </select>
+                        </div>
                     </div>
 
                     <!-- Electric Engine Options -->
@@ -692,6 +699,10 @@
                     <div class="input-group">
                         <label for="prop-color">لون المروحة</label>
                         <input type="color" id="prop-color" value="#333333">
+                    </div>
+                    <div class="input-group">
+                        <label for="engine-color">لون المحرك</label>
+                        <input type="color" id="engine-color" value="#666666">
                     </div>
                     <div class="input-group">
                         <label for="strut-color">لون دعامات الهبوط</label>

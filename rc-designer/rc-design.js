@@ -274,6 +274,7 @@ const wingColorInput = document.getElementById('wing-color');
 const tailColorInput = document.getElementById('tail-color');
 const aileronColorInput = document.getElementById('aileron-color');
 const propColorInput = document.getElementById('prop-color');
+const engineColorInput = document.getElementById('engine-color');
 const strutColorInput = document.getElementById('strut-color');
 const wheelColorInput = document.getElementById('wheel-color');
 const backgroundColorInput = document.getElementById('background-color');
@@ -314,6 +315,7 @@ const engineWingDistanceInput = document.getElementById('engine-wing-distance');
 const engineWingVerticalPosInput = document.getElementById('engine-wing-vertical-pos');
 const engineWingForeAftInput = document.getElementById('engine-wing-fore-aft');
 const enginePylonLengthInput = document.getElementById('engine-pylon-length');
+const wingPropRotationInput = document.getElementById('wing-prop-rotation');
 
 const electricMotorWeightInput = document.getElementById('electric-motor-weight-input');
 const electricMotorTorqueInput = document.getElementById('electric-motor-torque-input');
@@ -697,6 +699,7 @@ function updatePlaneModel() {
     wingMaterial.color.set(wingColor);
     tailMaterial.color.set(tailColor);
     aileronMaterial.color.set(aileronColorInput.value);
+    engineMaterial.color.set(engineColorInput.value);
     propMaterial.color.set(propColorInput.value);
     strutMaterial.color.set(strutColorInput.value);
     wheelMaterial.color.set(wheelColorInput.value);
@@ -1820,6 +1823,7 @@ icEngineTypeInput.addEventListener('change', updateEngineUI);
 enginePlacementInput.addEventListener('change', updateAll);
 engineWingVerticalPosInput.addEventListener('change', updateAll);
 engineWingForeAftInput.addEventListener('change', updateAll);
+wingPropRotationInput.addEventListener('change', updateAll); // لا يؤثر على النموذج ولكنه جزء من الحالة
 engineWingDistanceInput.addEventListener('input', debouncedUpdate);
 enginePylonLengthInput.addEventListener('input', debouncedUpdate);
 
@@ -1961,9 +1965,30 @@ function animate() {
         const densityFactor = userParticleDensity * 2; // مضاعفة لجعل 50% هو الافتراضي
         const sizeFactor = userParticleSize * 2;       // مضاعفة لجعل 50% هو الافتراضي
 
-        // --- دوران المروحة ---
+        const enginePlacement = enginePlacementInput.value;
         const rotationPerSecond = (propRpm / 60) * Math.PI * 2;
-        propellerGroup.rotation.x += rotationPerSecond * deltaTime;
+
+        // --- دوران المروحة ---
+        if (enginePlacement === 'wing') {
+            const wingPropRotation = wingPropRotationInput.value;
+            const props = wingEnginesGroup.children.filter(c => c.type === 'Group');
+
+            props.forEach(prop => {
+                if (wingPropRotation === 'counter') {
+                    // المروحة اليمنى (z > 0) تدور في اتجاه، واليسرى (z < 0) في الاتجاه المعاكس
+                    if (prop.position.z > 0) {
+                        prop.rotation.x += rotationPerSecond * deltaTime;
+                    } else {
+                        prop.rotation.x -= rotationPerSecond * deltaTime;
+                    }
+                } else { // 'same'
+                    child.rotation.x += rotationPerSecond * deltaTime;
+                }
+            });
+
+        } else { // أمامي أو خلفي
+            propellerGroup.rotation.x += rotationPerSecond * deltaTime;
+        }
 
         // --- تأثير اهتزاز الطائرة ---
         const minVibrationRpm = 4000;
@@ -2011,9 +2036,7 @@ function animate() {
         // --- كل تحديثات الجزيئات تحدث فقط عند تشغيل المروحة ---
         // --- تحديث جزيئات تدفق هواء المروحة ---
         if (propParticleSystem && propParticleSystem.visible) {
-            // السرعة المحورية (للخلف) تعتمد على الخطوة والسرعة الدورانية
             const axialSpeed = mainAirSpeed * 1.5; // أسرع قليلاً للتأثير البصري
-            // السرعة الدورانية (الحلزونية) تعتمد على السرعة الدورانية للمروحة
             const rotationalSpeed = (propRpm / 60) * Math.PI * 2 * 0.5; // عامل 0.5 لتقليل سرعة الدوران البصري
 
             const positions = propParticleSystem.geometry.attributes.position.array;
@@ -2021,34 +2044,81 @@ function animate() {
             const scales = propParticleSystem.geometry.attributes.scale.array;
             const spiralData = propParticleSystem.geometry.attributes.spiralData.array;
             const emissionRadius = propDiameter / 2;
-            const startX = propellerGroup.position.x - 0.1; // البدء خلف المروحة مباشرة
-            const endX = -fuselageLength / 2 - 0.5; // الانتهاء بعد الذيل
-            const travelDistance = startX - endX;
+            const travelDistance = 5.0; // مسافة ثابتة لرحلة الجسيمات
 
-            for (let i = 0; i < propParticleCount; i++) {
-                const i2 = i * 2;
-                const i3 = i * 3;
+            if (enginePlacement === 'wing') {
+                const wingPropRotation = wingPropRotationInput.value;
+                const props = wingEnginesGroup.children.filter(c => c.type === 'Group');
+                if (props.length === 2) {
+                    const rightPropPos = props[0].position;
+                    const leftPropPos = props[1].position;
 
-                // إذا كان الجسيم خارج الحدود، أعد تعيينه
-                if (positions[i3] < endX || positions[i3] === 0) { // الشرط === 0 للتهيئة الأولية
-                    positions[i3] = startX;
-                    spiralData[i2] = emissionRadius * Math.sqrt(Math.random()); // نصف قطر عشوائي جديد
-                    spiralData[i2 + 1] = Math.random() * 2 * Math.PI; // زاوية عشوائية جديدة
+                    for (let i = 0; i < propParticleCount; i++) {
+                        const i2 = i * 2;
+                        const i3 = i * 3;
+                        
+                        const isRightSide = i < propParticleCount / 2;
+                        const propPos = isRightSide ? rightPropPos : leftPropPos;
+                        
+                        const startX = propPos.x - 0.1;
+                        const endX = startX - travelDistance;
+
+                        if (positions[i3] < endX || positions[i3] === 0) {
+                            positions[i3] = startX;
+                            spiralData[i2] = emissionRadius * Math.sqrt(Math.random());
+                            spiralData[i2 + 1] = Math.random() * 2 * Math.PI;
+                        }
+
+                        positions[i3] -= axialSpeed * deltaTime;
+                        // تحديث زاوية الدوران بناءً على اختيار المستخدم
+                        if (wingPropRotation === 'counter') {
+                            if (isRightSide) {
+                                spiralData[i2 + 1] += rotationalSpeed * deltaTime;
+                            } else {
+                                spiralData[i2 + 1] -= rotationalSpeed * deltaTime;
+                            }
+                        } else { // 'same'
+                            spiralData[i2 + 1] += rotationalSpeed * deltaTime;
+                        }
+                        positions[i3 + 1] = propPos.y + spiralData[i2] * Math.cos(spiralData[i2 + 1]);
+                        positions[i3 + 2] = propPos.z + spiralData[i2] * Math.sin(spiralData[i2 + 1]);
+
+                        const currentTravel = startX - positions[i3];
+                        const ageRatio = Math.max(0, Math.min(1, currentTravel / travelDistance));
+                        const effectStrength = Math.sin(ageRatio * Math.PI);
+
+                        opacities[i] = effectStrength * 0.25 * densityFactor * planeParams.airflowTransparency;
+                        scales[i] = effectStrength * 0.5 * sizeFactor;
+                    }
                 }
+            } else { // أمامي أو خلفي
+                const startX = propellerGroup.position.x - 0.1;
+                const endX = startX - travelDistance;
+                const startY = propellerGroup.position.y;
+                const startZ = propellerGroup.position.z;
 
-                // تحديث الحركة المحورية واللولبية
-                positions[i3] -= axialSpeed * deltaTime;
-                spiralData[i2 + 1] += rotationalSpeed * deltaTime; // تحديث الزاوية
-                positions[i3 + 1] = spiralData[i2] * Math.cos(spiralData[i2 + 1]); // y
-                positions[i3 + 2] = spiralData[i2] * Math.sin(spiralData[i2 + 1]); // z
+                for (let i = 0; i < propParticleCount; i++) {
+                    const i2 = i * 2;
+                    const i3 = i * 3;
 
-                // Calculate age based on position for fade effect
-                const currentTravel = startX - positions[i3];
-                const ageRatio = Math.max(0, Math.min(1, currentTravel / travelDistance));
-                const effectStrength = Math.sin(ageRatio * Math.PI); // Smooth fade-in and fade-out
+                    if (positions[i3] < endX || positions[i3] === 0) {
+                        positions[i3] = startX;
+                        spiralData[i2] = emissionRadius * Math.sqrt(Math.random());
+                        spiralData[i2 + 1] = Math.random() * 2 * Math.PI;
+                    }
 
-                opacities[i] = effectStrength * 0.25 * densityFactor * planeParams.airflowTransparency; // تقليل الشفافية بشكل كبير
-                scales[i] = effectStrength * 0.5 * sizeFactor;   // تقليل الحجم بشكل كبير
+                    positions[i3] -= axialSpeed * deltaTime;
+                    spiralData[i2 + 1] += rotationalSpeed * deltaTime;
+                    positions[i3 + 1] = startY + spiralData[i2] * Math.cos(spiralData[i2 + 1]);
+                    positions[i3 + 2] = startZ + spiralData[i2] * Math.sin(spiralData[i2 + 1]);
+
+                    const currentTravel = startX - positions[i3];
+                    const ageRatio = Math.max(0, Math.min(1, currentTravel / travelDistance));
+                    const effectStrength = Math.sin(ageRatio * Math.PI);
+
+                    opacities[i] = effectStrength * 0.25 * densityFactor * planeParams.airflowTransparency;
+                    scales[i] = effectStrength * 0.5 * sizeFactor;
+                }
             }
             propParticleSystem.geometry.attributes.position.needsUpdate = true;
             propParticleSystem.geometry.attributes.customOpacity.needsUpdate = true;
@@ -2304,7 +2374,9 @@ initWingAirflowParticles();
 initVortexParticles();
 initCharts();
 updateUnitLabels();
-updateAll();
+// استدعاء updateEngineUI أولاً لملء حقول المحرك بالقيم الافتراضية.
+// هذه الدالة ستقوم بدورها باستدعاء updateAll() لضمان تحديث كل شيء.
+updateEngineUI();
 animate();
 
 // --- التعامل مع تغيير حجم النافذة ---
