@@ -266,18 +266,6 @@
                 </fieldset>
 
                 <fieldset>
-                    <legend>المواد</legend>
-                    <div class="input-group">
-                        <label for="structure-material">مادة صنع الجناح والذيل</label>
-                        <select id="structure-material">
-                            <option value="foam" selected>فوم (Foam - EPO/EPP)</option>
-                            <option value="balsa">خشب البلسا (Balsa)</option>
-                            <option value="plastic">بلاستيك (Plastic - ABS)</option>
-                        </select>
-                    </div>
-                </fieldset>
-
-                <fieldset>
                     <legend>تصميم الذيل</legend>
                     <div class="input-group">
                         <label for="tail-type">نوع الذيل</label>
@@ -395,6 +383,31 @@
                     <div class="input-group fuselage-shape-input" id="fuselage-teardrop-rear-diameter-group" style="display:none;">
                         <label for="fuselage-rear-diameter">قطر المؤخرة (<span class="unit-label">سم</span>)</label>
                         <input type="number" id="fuselage-rear-diameter" value="5" step="0.5">
+                    </div>
+                    <!-- New Fuselage Taper Ratio input -->
+                    <div class="input-group fuselage-shape-input" id="fuselage-taper-group" style="display:none;">
+                        <label for="fuselage-taper-ratio">نسبة الاستدقاق (Taper): <span id="fuselage-taper-value">1.00</span></label>
+                        <input type="range" id="fuselage-taper-ratio" min="0.2" max="1.0" value="1.0" step="0.05">
+                    </div>
+                </fieldset>
+
+                <fieldset>
+                    <legend>المواد</legend>
+                    <div class="input-group">
+                        <label for="structure-material">مادة صنع الجناح والذيل</label>
+                        <select id="structure-material">
+                            <option value="foam" selected>فوم (Foam - EPO/EPP)</option>
+                            <option value="balsa">خشب البلسا (Balsa)</option>
+                            <option value="plastic">بلاستيك (Plastic - ABS)</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="fuselage-material">مادة صنع الجسم</label>
+                        <select id="fuselage-material">
+                            <option value="foam" selected>فوم (Foam - EPO/EPP)</option>
+                            <option value="balsa">خشب البلسا (Balsa)</option>
+                            <option value="plastic">بلاستيك (Plastic - ABS)</option>
+                        </select>
                     </div>
                 </fieldset>
 
@@ -537,6 +550,14 @@
                 <div class="result-item">
                     <p>وزن الذيل التقديري (جرام):</p>
                     <span id="tail-weight-result">0</span>
+                </div>
+                <div class="result-item">
+                    <p>وزن الجسم التقديري (جرام):</p>
+                    <span id="fuselage-weight-result">0</span>
+                </div>
+                <div class="result-item">
+                    <p>مساحة سطح الجسم (م²):</p>
+                    <span id="fuselage-area-result">0.00</span>
                 </div>
                 <div class="result-item">
                     <p>وزن المروحة التقديري (جرام):</p>
