@@ -204,6 +204,8 @@ const angleOfAttackInput = document.getElementById('angle-of-attack');
 const airSpeedInput = document.getElementById('air-speed');
 const airDensityInput = document.getElementById('air-density');
 const planeWeightInput = document.getElementById('plane-weight');
+const particleDensityInput = document.getElementById('particle-density');
+const particleSizeInput = document.getElementById('particle-size');
 const showAmbientWindInput = document.getElementById('show-ambient-wind');
 const fuselageColorInput = document.getElementById('fuselage-color');
 const wingColorInput = document.getElementById('wing-color');
@@ -215,6 +217,8 @@ const sweepValueEl = document.getElementById('sweep-value');
 const taperValueEl = document.getElementById('taper-value');
 const tailSweepValueEl = document.getElementById('tail-sweep-value');
 const tailTaperValueEl = document.getElementById('tail-taper-value');
+const particleDensityValueEl = document.getElementById('particle-density-value');
+const particleSizeValueEl = document.getElementById('particle-size-value');
 const vibrationValueEl = document.getElementById('vibration-value');
 const unitLabels = document.querySelectorAll('.unit-label');
 
@@ -1153,6 +1157,8 @@ sweepAngleInput.addEventListener('input', () => sweepValueEl.textContent = sweep
 taperRatioInput.addEventListener('input', () => taperValueEl.textContent = parseFloat(taperRatioInput.value).toFixed(2));
 tailSweepAngleInput.addEventListener('input', () => tailSweepValueEl.textContent = tailSweepAngleInput.value);
 tailTaperRatioInput.addEventListener('input', () => tailTaperValueEl.textContent = parseFloat(tailTaperRatioInput.value).toFixed(2));
+particleDensityInput.addEventListener('input', () => particleDensityValueEl.textContent = Math.round(particleDensityInput.value * 100));
+particleSizeInput.addEventListener('input', () => particleSizeValueEl.textContent = Math.round(particleSizeInput.value * 100));
 vibrationIntensityInput.addEventListener('input', () => vibrationValueEl.textContent = Math.round(vibrationIntensityInput.value * 100));
 unitSelector.addEventListener('change', updateUnitLabels);
 
@@ -1268,6 +1274,12 @@ function animate() {
         // هذه السرعة ستحرك جميع جزيئات الهواء (العامة، الدوامات)
         const mainAirSpeed = (propRpm / 60) * propPitch;
 
+        // --- قراءة قيم التحكم في الجسيمات ---
+        const userParticleDensity = getValidNumber(particleDensityInput);
+        const userParticleSize = getValidNumber(particleSizeInput);
+        const densityFactor = userParticleDensity * 2; // مضاعفة لجعل 50% هو الافتراضي
+        const sizeFactor = userParticleSize * 2;       // مضاعفة لجعل 50% هو الافتراضي
+
         // --- دوران المروحة ---
         const rotationPerSecond = (propRpm / 60) * Math.PI * 2;
         propellerGroup.rotation.x += rotationPerSecond * deltaTime;
@@ -1359,8 +1371,8 @@ function animate() {
                 const ageRatio = Math.max(0, Math.min(1, currentTravel / travelDistance));
                 const effectStrength = Math.sin(ageRatio * Math.PI); // Smooth fade-in and fade-out
 
-                opacities[i] = effectStrength * 0.25; // تقليل الشفافية بشكل كبير
-                scales[i] = effectStrength * 0.5;   // تقليل الحجم بشكل كبير
+                opacities[i] = effectStrength * 0.25 * densityFactor; // تقليل الشفافية بشكل كبير
+                scales[i] = effectStrength * 0.5 * sizeFactor;   // تقليل الحجم بشكل كبير
             }
             propParticleSystem.geometry.attributes.position.needsUpdate = true;
             propParticleSystem.geometry.attributes.customOpacity.needsUpdate = true;
@@ -1455,8 +1467,8 @@ function animate() {
                 const ageRatio = Math.max(0, Math.min(1, currentTravel / travelDistance));
                 const effectStrength = Math.sin(ageRatio * Math.PI); // Smooth fade-in and fade-out
 
-                opacities[i] = effectStrength * 0.15; // جعلها شفافة جداً
-                scales[i] = effectStrength * 0.4;    // جعلها دقيقة جداً
+                opacities[i] = effectStrength * 0.15 * densityFactor; // جعلها شفافة جداً
+                scales[i] = effectStrength * 0.4 * sizeFactor;    // جعلها دقيقة جداً
 
                 // Reset particle if it goes too far behind
                 if (positions[i3] < endX) {
@@ -1518,12 +1530,11 @@ function animate() {
                 const ageRatio = Math.min(1, age / travelLength);
                 const effectStrength = Math.sin(ageRatio * Math.PI);
 
-                opacities[i] = effectStrength * Math.min(1, vortexStrength * 2.5); // تقليل الشفافية
-                scales[i] = effectStrength * 0.8;                                // تقليل الحجم
+                opacities[i] = effectStrength * Math.min(1, vortexStrength * 2.5) * densityFactor; // تقليل الشفافية
+                scales[i] = effectStrength * 0.8 * sizeFactor;                                // تقليل الحجم
 
                 // Reset particle
                 if (age > travelLength || age < 0) {
-                    positions[i3] = 0; // Reset x position
                     spiralData[i2] = Math.random() * Math.PI * 2; // New random start angle
                 }
             }
