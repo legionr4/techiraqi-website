@@ -230,6 +230,8 @@ const propWeightResultEl = document.getElementById('prop-weight-result');
 
 let liftChart, dragChart;
 let isPropSpinning = false; // متغير لتتبع حالة دوران المروحة
+let propWashSystem = null; // نظام جزيئات الهواء
+const PARTICLE_COUNT = 500; // عدد الجزيئات
 
 /**
  * Generates points for various airfoil shapes.
@@ -1192,6 +1194,39 @@ function animate() {
         const rps = rpm / 60; // الدورات في الثانية
         const rotationPerSecond = rps * Math.PI * 2; // الزاوية بالراديان في الثانية
         propellerGroup.rotation.x += rotationPerSecond * deltaTime;
+
+        // تحريك جزيئات الهواء
+        if (propWashSystem) {
+            propWashSystem.visible = true;
+            const positions = propWashSystem.geometry.attributes.position.array;
+            const fuselageLength = getValidNumber(fuselageLengthInput) * UNIT_CONVERSIONS[unitSelector.value];
+            const propDiameter = getValidNumber(propDiameterInput) * 0.0254;
+            
+            // يجب أن تكون السرعة متناسبة مع سرعة الدوران/الدفع. لنستخدم سرعة الدوران للتبسيط.
+            const particleSpeed = (rpm / 1000) * 3; // اضبط هذا المعامل للتأثير البصري
+
+            for (let i = 0; i < PARTICLE_COUNT; i++) {
+                const i3 = i * 3;
+                
+                // حرك الجزيء للخلف
+                positions[i3] -= particleSpeed * deltaTime;
+
+                // إذا تجاوز الجزيء الذيل، أعد تعيينه
+                if (positions[i3] < -fuselageLength / 2) {
+                    positions[i3] = fuselageLength / 2; // إعادة التعيين إلى الأمام
+                    // إعطاؤه موضع y/z عشوائي جديد داخل قرص المروحة
+                    const radius = (propDiameter / 2) * Math.random();
+                    const angle = Math.random() * Math.PI * 2;
+                    positions[i3 + 1] = radius * Math.sin(angle);
+                    positions[i3 + 2] = radius * Math.cos(angle);
+                }
+            }
+            propWashSystem.geometry.attributes.position.needsUpdate = true;
+        }
+    } else {
+        if (propWashSystem) {
+            propWashSystem.visible = false;
+        }
     }
 
     controls.update(); // ضروري إذا تم تفعيل enableDamping
