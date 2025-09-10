@@ -1338,8 +1338,7 @@ function updatePlaneModel() {
         if (noseShape !== 'flat') {
             // طول المقدمة يعتمد على قطرها، يمكن تعديل النسبة للحصول على أشكال مختلفة
             const noseLength = (noseShape === 'ogival') ? radiusFront * 2.0 : radiusFront;
-            bodyLength -= noseLength;
-            bodyOffset = -noseLength / 2; // إزاحة الجسم الرئيسي للخلف
+            bodyLength -= noseLength; // تقصير الجسم الرئيسي لإفساح المجال للمقدمة
 
             let noseGeom;
             if (noseShape === 'rounded') {
@@ -1350,7 +1349,7 @@ function updatePlaneModel() {
                 noseGeom.rotateZ(-Math.PI / 2); // تصحيح: توجيه الجزء المدبب للأمام
             }
             const noseCone = new THREE.Mesh(noseGeom, fuselageMaterial);
-            noseCone.position.x = (fuselageLength / 2) - (noseLength / 2); // تصحيح: وضع مركز المقدمة عند مقدمة الجسم
+            noseCone.position.x = (fuselageLength / 2) - (noseLength / 2); // وضع مركز المقدمة عند مقدمة الجسم
             fuselageGroup.add(noseCone);
         }
 
@@ -1358,8 +1357,7 @@ function updatePlaneModel() {
         if (tailShape !== 'flat') {
             const tailLength = radiusRear; // طول المؤخرة يساوي قطرها
             bodyLength -= tailLength;
-            bodyOffset += tailLength / 2; // تعديل إزاحة الجسم الرئيسي للأمام
-
+            
             const tailGeom = new THREE.SphereGeometry(radiusRear, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
             tailGeom.rotateZ(Math.PI / 2);
             const tailCone = new THREE.Mesh(tailGeom, fuselageMaterial); // وضع قاعدة المؤخرة عند نهاية الجسم
@@ -1370,6 +1368,10 @@ function updatePlaneModel() {
         // --- Main Body ---
         if (bodyLength > 0) {
             const bodyGeom = new THREE.CylinderGeometry(radiusRear, radiusFront, bodyLength, 32);
+            // حساب الإزاحة اللازمة للجسم الرئيسي بناءً على وجود المقدمة والمؤخرة
+            const noseOffset = (fuselageNoseShapeInput.value !== 'flat') ? (radiusFront * (fuselageNoseShapeInput.value === 'ogival' ? 1.0 : 0.5)) : 0;
+            const tailOffset = (fuselageTailShapeInput.value !== 'flat') ? (radiusRear / 2) : 0;
+            const bodyOffset = (tailOffset - noseOffset);
             bodyGeom.rotateZ(Math.PI / 2);
             const mainBody = new THREE.Mesh(bodyGeom, fuselageMaterial);
             mainBody.position.x = bodyOffset;
