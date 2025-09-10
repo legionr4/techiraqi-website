@@ -31,6 +31,12 @@ const fuselageMaterial = new THREE.MeshStandardMaterial({ color: 0x0056b3, side:
 const wingMaterial = new THREE.MeshStandardMaterial({ color: 0xcccccc, side: THREE.DoubleSide });
 const tailMaterial = new THREE.MeshStandardMaterial({ color: 0xdddddd, side: THREE.DoubleSide });
 const aileronMaterial = new THREE.MeshStandardMaterial({ color: 0xffc107, side: THREE.DoubleSide });
+const cockpitMaterial = new THREE.MeshStandardMaterial({
+    color: 0x6ab0de,
+    transparent: true,
+    opacity: 0.7,
+    side: THREE.DoubleSide
+});
 
 // مجموعة المحرك
 const engineGroup = new THREE.Group();
@@ -63,6 +69,10 @@ planeGroup.add(tailGroup);
 // مجموعة أسطح التحكم في الذيل
 const tailControlsGroup = new THREE.Group();
 planeGroup.add(tailControlsGroup);
+
+// مجموعة قمرة القيادة
+const cockpitGroup = new THREE.Group();
+planeGroup.add(cockpitGroup);
 
 
 // المروحة
@@ -250,6 +260,16 @@ const wingTailDistanceInput = document.getElementById('wing-tail-distance');
 const fuselageMaterialInput = document.getElementById('fuselage-material');
 
 const structureMaterialInput = document.getElementById('structure-material');
+
+// Cockpit Inputs
+const hasCockpitInput = document.getElementById('has-cockpit');
+const cockpitControls = document.getElementById('cockpit-controls');
+const cockpitShapeInput = document.getElementById('cockpit-shape');
+const cockpitLengthInput = document.getElementById('cockpit-length');
+const cockpitWidthInput = document.getElementById('cockpit-width');
+const cockpitHeightInput = document.getElementById('cockpit-height');
+const cockpitPositionInput = document.getElementById('cockpit-position');
+const cockpitOpacityInput = document.getElementById('cockpit-opacity');
 const propDiameterInput = document.getElementById('prop-diameter');
 const propBladesInput = document.getElementById('prop-blades');
 const propPitchInput = document.getElementById('prop-pitch');
@@ -274,6 +294,7 @@ const wingColorInput = document.getElementById('wing-color');
 const tailColorInput = document.getElementById('tail-color');
 const aileronColorInput = document.getElementById('aileron-color');
 const propColorInput = document.getElementById('prop-color');
+const cockpitColorInput = document.getElementById('cockpit-color');
 const engineColorInput = document.getElementById('engine-color');
 const strutColorInput = document.getElementById('strut-color');
 const wheelColorInput = document.getElementById('wheel-color');
@@ -287,6 +308,7 @@ const tailTaperValueEl = document.getElementById('tail-taper-value');
 const particleDensityValueEl = document.getElementById('particle-density-value');
 const particleSizeValueEl = document.getElementById('particle-size-value');
 const vibrationValueEl = document.getElementById('vibration-value');
+const cockpitOpacityValueEl = document.getElementById('cockpit-opacity-value');
 const unitLabels = document.querySelectorAll('.unit-label');
 
 // Landing Gear Inputs
@@ -700,6 +722,7 @@ function updatePlaneModel() {
     tailMaterial.color.set(tailColor);
     aileronMaterial.color.set(aileronColorInput.value);
     engineMaterial.color.set(engineColorInput.value);
+    cockpitMaterial.color.set(cockpitColorInput.value);
     propMaterial.color.set(propColorInput.value);
     strutMaterial.color.set(strutColorInput.value);
     wheelMaterial.color.set(wheelColorInput.value);
@@ -717,6 +740,13 @@ function updatePlaneModel() {
         aileronControls.style.display = 'block';
     } else {
         aileronControls.style.display = 'none';
+    }
+
+    // Cockpit Controls visibility
+    if (hasCockpitInput.checked) {
+        cockpitControls.style.display = 'block';
+    } else {
+        cockpitControls.style.display = 'none';
     }
 
     // إظهار/إخفاء حقول أبعاد الجسم بناءً على الشكل
@@ -1384,6 +1414,43 @@ function updatePlaneModel() {
             landingGearGroup.add(tailWheel);
         }
     }
+
+    // --- Cockpit ---
+    while(cockpitGroup.children.length > 0) {
+        cockpitGroup.remove(cockpitGroup.children[0]);
+    }
+
+    if (hasCockpitInput.checked) {
+        const cockpitLength = getValidNumber(cockpitLengthInput) * conversionFactor;
+        const cockpitWidth = getValidNumber(cockpitWidthInput) * conversionFactor;
+        const cockpitHeight = getValidNumber(cockpitHeightInput) * conversionFactor;
+        const cockpitPosition = getValidNumber(cockpitPositionInput) * conversionFactor;
+        const cockpitShape = cockpitShapeInput.value;
+        const cockpitOpacity = getValidNumber(cockpitOpacityInput);
+
+        cockpitMaterial.opacity = cockpitOpacity;
+
+        let cockpitGeom;
+        // Using a hemisphere for both bubble and streamlined for now.
+        // More complex shapes can be added later.
+        // A sphere with radius 1 is created, then scaled.
+        cockpitGeom = new THREE.SphereGeometry(1, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+
+        const cockpitMesh = new THREE.Mesh(cockpitGeom, cockpitMaterial);
+
+        // Scale the sphere to match the desired dimensions
+        cockpitMesh.scale.set(cockpitLength / 2, cockpitHeight, cockpitWidth / 2);
+
+        // Position the cockpit
+        // X: From the front of the fuselage, moving backwards.
+        // Y: On top of the fuselage.
+        // Z: Centered.
+        const cockpitX = (fuselageLength / 2) - cockpitPosition - (cockpitLength / 2);
+        const cockpitY = currentFuselageHeight / 2;
+        cockpitMesh.position.set(cockpitX, cockpitY, 0);
+
+        cockpitGroup.add(cockpitMesh);
+    }
 }
 
 function calculateAerodynamics() {
@@ -1818,6 +1885,7 @@ hasLandingGearInput.addEventListener('change', updateAll);
 fuselageShapeInput.addEventListener('change', updateAll);
 hasRudderInput.addEventListener('change', updateAll);
 engineTypeInput.addEventListener('change', updateEngineUI);
+hasCockpitInput.addEventListener('change', updateAll);
 electricMotorTypeInput.addEventListener('change', updateEngineUI);
 icEngineTypeInput.addEventListener('change', updateEngineUI);
 enginePlacementInput.addEventListener('change', updateAll);
@@ -1839,6 +1907,7 @@ fuselageTaperRatioInput.addEventListener('input', () => fuselageTaperValueEl.tex
 airflowTransparencyInput.addEventListener('input', () => airflowTransparencyValueEl.textContent = Math.round(airflowTransparencyInput.value * 100));
 particleSizeInput.addEventListener('input', () => particleSizeValueEl.textContent = Math.round(particleSizeInput.value * 100));
 vibrationIntensityInput.addEventListener('input', () => vibrationValueEl.textContent = Math.round(vibrationIntensityInput.value * 100));
+cockpitOpacityInput.addEventListener('input', () => cockpitOpacityValueEl.textContent = Math.round(cockpitOpacityInput.value * 100));
 unitSelector.addEventListener('change', updateUnitLabels);
 
 showAxesCheckbox.addEventListener('change', () => {
