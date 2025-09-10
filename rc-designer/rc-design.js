@@ -1520,11 +1520,9 @@ function updatePlaneModel() {
         if (cockpitShape === 'streamlined') {
             // الشكل الانسيابي يمكن أن يكون بيضاويًا (ellipsoid)
             cockpitMesh.scale.set(cockpitLength / 2, cockpitHeight, cockpitWidth / 2);
-        } else { // 'bubble'
-            // الشكل المحدب هو نصف كرة مثالي، لذا الطول والعرض متساويان.
-            // سنستخدم قيمة "الطول" كقطر أساسي.
-            const bubbleDiameter = cockpitLength;
-            cockpitMesh.scale.set(bubbleDiameter / 2, cockpitHeight, bubbleDiameter / 2);
+        } else { // 'bubble' - الشكل المحدب (Bubble) هو نصف شكل بيضاوي (ellipsoid)
+            // يستخدم الطول والعرض والارتفاع المحددة.
+            cockpitMesh.scale.set(cockpitLength / 2, cockpitHeight, cockpitWidth / 2);
         }
 
         // Position the cockpit
@@ -1538,53 +1536,6 @@ function updatePlaneModel() {
         cockpitGroup.add(cockpitMesh);
     }
 
-    // --- مصدر الطاقة (بطارية/خزان وقود) ---
-    energySourceGroup.visible = false; // إخفاؤه افتراضيًا
-
-    if (engineType === 'electric') {
-        energySourceGroup.visible = true;
-
-        // حساب الحجم بناءً على الوزن (تقديري)
-        const batteryWeightGrams = getValidNumber(batteryWeightInput);
-        const batteryDensityG_cm3 = 1.5; // كثافة تقديرية للبطارية مع الغلاف (جرام/سم^3)
-        const volume_cm3 = batteryWeightGrams / batteryDensityG_cm3;
-        const volume_m3 = volume_cm3 / 1e6;
-
-        // حساب الأبعاد من الحجم مع الحفاظ على نسبة العرض إلى الارتفاع
-        // نفترض أن الأبعاد L:W:H هي 4:2:1
-        const x_dim = Math.cbrt(volume_m3 / 8);
-        const height = x_dim;
-        const width = 2 * x_dim;
-        const length = 4 * x_dim;
-
-        // تحديث حجم الصندوق
-        energySourceMesh.scale.set(length, height, width);
-
-        // تحديث الموضع
-        const batteryPosition = getValidNumber(batteryPositionInput) * conversionFactor;
-        energySourceGroup.position.x = batteryPosition;
-
-    } else if (engineType === 'ic') {
-        energySourceGroup.visible = true;
-
-        // حساب الحجم بناءً على السعة
-        const tankCapacity_ml = getValidNumber(fuelTankCapacityInput);
-        const volume_cm3 = tankCapacity_ml; // 1 مل = 1 سم^3
-        const volume_m3 = volume_cm3 / 1e6;
-
-        // حساب الأبعاد من الحجم
-        const x_dim = Math.cbrt(volume_m3 / 8);
-        const height = x_dim;
-        const width = 2 * x_dim;
-        const length = 4 * x_dim;
-
-        // تحديث حجم الصندوق
-        energySourceMesh.scale.set(length, height, width);
-
-        // تحديث الموضع
-        const tankPosition = getValidNumber(fuelTankPositionInput) * conversionFactor;
-        energySourceGroup.position.x = tankPosition;
-    }
 }
 
 function calculateAerodynamics() {
@@ -1795,6 +1746,54 @@ function calculateAerodynamics() {
     } else { // ic
         energySourceWeightKg = getValidNumber(fuelTankWeightInput) / 1000;
     }
+
+    // --- مصدر الطاقة (بطارية/خزان وقود) - تم نقل هذا الجزء إلى هنا لضمان عمله ---
+    energySourceGroup.visible = false; // إخفاؤه افتراضيًا
+
+    if (engineType === 'electric') {
+        energySourceGroup.visible = true;
+
+        // حساب الحجم بناءً على الوزن (تقديري)
+        const batteryWeightGrams = getValidNumber(batteryWeightInput);
+        const batteryDensityG_cm3 = 1.5; // كثافة تقديرية للبطارية مع الغلاف (جرام/سم^3)
+        const volume_cm3 = batteryWeightGrams / batteryDensityG_cm3;
+        const volume_m3 = volume_cm3 / 1e6;
+
+        // حساب الأبعاد من الحجم مع الحفاظ على نسبة العرض إلى الارتفاع (L:W:H = 4:2:1)
+        const x_dim = Math.cbrt(volume_m3 / (4 * 2 * 1));
+        const height = x_dim * 1;
+        const width = x_dim * 2;
+        const length = x_dim * 4;
+
+        // تحديث حجم الصندوق
+        energySourceMesh.scale.set(length, height, width);
+
+        // تحديث الموضع
+        const batteryPosition = getValidNumber(batteryPositionInput) * conversionFactor;
+        energySourceGroup.position.x = batteryPosition;
+
+    } else if (engineType === 'ic') {
+        energySourceGroup.visible = true;
+
+        // حساب الحجم بناءً على السعة
+        const tankCapacity_ml = getValidNumber(fuelTankCapacityInput);
+        const volume_cm3 = tankCapacity_ml; // 1 مل = 1 سم^3
+        const volume_m3 = volume_cm3 / 1e6;
+
+        // حساب الأبعاد من الحجم (L:W:H = 4:2:1)
+        const x_dim = Math.cbrt(volume_m3 / (4 * 2 * 1));
+        const height = x_dim * 1;
+        const width = x_dim * 2;
+        const length = x_dim * 4;
+
+        // تحديث حجم الصندوق
+        energySourceMesh.scale.set(length, height, width);
+
+        // تحديث الموضع
+        const tankPosition = getValidNumber(fuelTankPositionInput) * conversionFactor;
+        energySourceGroup.position.x = tankPosition;
+    }
+
 
 
     const planeComponentsWeightKg = planeComponentsWeightGrams / 1000;
