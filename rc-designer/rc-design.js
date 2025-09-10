@@ -198,6 +198,7 @@ const propThicknessInput = document.getElementById('prop-thickness');
 const propMaterialInput = document.getElementById('prop-material');
 const spinnerDiameterInput = document.getElementById('spinner-diameter');
 const propRpmInput = document.getElementById('prop-rpm');
+const vibrationIntensityInput = document.getElementById('vibration-intensity');
 const togglePropSpinBtn = document.getElementById('toggle-prop-spin');
 const angleOfAttackInput = document.getElementById('angle-of-attack');
 const airSpeedInput = document.getElementById('air-speed');
@@ -213,6 +214,7 @@ const sweepValueEl = document.getElementById('sweep-value');
 const taperValueEl = document.getElementById('taper-value');
 const tailSweepValueEl = document.getElementById('tail-sweep-value');
 const tailTaperValueEl = document.getElementById('tail-taper-value');
+const vibrationValueEl = document.getElementById('vibration-value');
 const unitLabels = document.querySelectorAll('.unit-label');
 
 
@@ -1072,7 +1074,7 @@ function createAirflowMaterial(color) {
                 vOpacity = customOpacity;
                 vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
                 // Make particles smaller farther away, and apply our custom scale
-                gl_PointSize = scale * (300.0 / -mvPosition.z);
+                gl_PointSize = scale * (150.0 / -mvPosition.z); // تم تقليل الحجم العام للجسيمات
                 gl_Position = projectionMatrix * mvPosition;
             }
         `,
@@ -1151,6 +1153,7 @@ sweepAngleInput.addEventListener('input', () => sweepValueEl.textContent = sweep
 taperRatioInput.addEventListener('input', () => taperValueEl.textContent = parseFloat(taperRatioInput.value).toFixed(2));
 tailSweepAngleInput.addEventListener('input', () => tailSweepValueEl.textContent = tailSweepAngleInput.value);
 tailTaperRatioInput.addEventListener('input', () => tailTaperValueEl.textContent = parseFloat(tailTaperRatioInput.value).toFixed(2));
+vibrationIntensityInput.addEventListener('input', () => vibrationValueEl.textContent = Math.round(vibrationIntensityInput.value * 100));
 unitSelector.addEventListener('change', updateUnitLabels);
 
 togglePropSpinBtn.addEventListener('click', () => {
@@ -1270,6 +1273,10 @@ function animate() {
             vibrationMagnitude = Math.min(1, Math.max(0, vibrationMagnitude)); // حصر القيمة بين 0 و 1
         }
 
+        // تطبيق شدة الاهتزاز التي يحددها المستخدم
+        const userVibrationIntensity = getValidNumber(vibrationIntensityInput);
+        vibrationMagnitude *= userVibrationIntensity;
+
         const maxPosOffset = 0.002; // أقصى إزاحة للموضع بالمتر (مثلاً 2 ملم)
         const maxRotOffset = 0.005; // أقصى إزاحة للدوران بالراديان (مثلاً حوالي 0.3 درجة)
 
@@ -1309,8 +1316,8 @@ function animate() {
                 const ageRatio = Math.max(0, Math.min(1, currentTravel / travelDistance));
                 const effectStrength = Math.sin(ageRatio * Math.PI); // Smooth fade-in and fade-out
 
-                opacities[i] = effectStrength * 0.6; // Prop particles are more dense
-                scales[i] = effectStrength * 1.8;   // and slightly larger
+                opacities[i] = effectStrength * 0.7; // Prop particles are more dense
+                scales[i] = effectStrength * 1.5;   // and slightly larger
 
                 if (positions[i3] < endX || positions[i3] > startX) {
                     const r = emissionRadius * Math.sqrt(Math.random()); // توزيع متساوٍ داخل الدائرة
@@ -1413,8 +1420,8 @@ function animate() {
                 const ageRatio = Math.max(0, Math.min(1, currentTravel / travelDistance));
                 const effectStrength = Math.sin(ageRatio * Math.PI); // Smooth fade-in and fade-out
 
-                opacities[i] = effectStrength * 0.35;
-                scales[i] = effectStrength * 1.0;
+                opacities[i] = effectStrength * 0.4;
+                scales[i] = effectStrength * 1.0; // حجم أصغر للتدفق العام
 
                 // Reset particle if it goes too far behind
                 if (positions[i3] < endX) {
@@ -1478,7 +1485,7 @@ function animate() {
                 const effectStrength = Math.sin(ageRatio * Math.PI);
 
                 opacities[i] = effectStrength * Math.min(1, vortexStrength * 4); // Opacity also depends on strength
-                scales[i] = effectStrength * 1.2;
+                scales[i] = effectStrength * 1.4; // الدوامات يمكن أن تكون أكبر قليلاً
 
                 // Reset particle
                 if (age > travelLength || age < 0) {
@@ -1509,7 +1516,7 @@ function initPropAirflowParticles() {
     particleGeometry.setAttribute('customOpacity', new THREE.BufferAttribute(opacities, 1));
     particleGeometry.setAttribute('scale', new THREE.BufferAttribute(scales, 1));
 
-    const particleMaterial = createAirflowMaterial(0x88aaff);
+    const particleMaterial = createAirflowMaterial(0x4488ff); // لون أزرق أكثر وضوحًا
 
     propParticleSystem = new THREE.Points(particleGeometry, particleMaterial);
     propParticleSystem.visible = false;
@@ -1545,7 +1552,7 @@ function initWingAirflowParticles() {
     particleGeometry.setAttribute('customOpacity', new THREE.BufferAttribute(opacities, 1));
     particleGeometry.setAttribute('scale', new THREE.BufferAttribute(scales, 1));
 
-    const particleMaterial = createAirflowMaterial(0xaaddff);
+    const particleMaterial = createAirflowMaterial(0x66ccff); // لون سماوي أكثر وضوحًا
 
     wingAirflowParticleSystem = new THREE.Points(particleGeometry, particleMaterial);
     wingAirflowParticleSystem.visible = false;
