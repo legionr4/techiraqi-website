@@ -510,13 +510,14 @@ const createSurface = (span, rootChord, taperRatio, sweepAngle, thickness, airfo
  */
 function createOgiveGeometry(radius, length, segments) {
     const points = [];
-    const numPoints = 16;
+    const numPoints = 32; // Increased for a smoother curve
     // Equation for a tangent ogive
     const rho = (radius * radius + length * length) / (2 * radius);
     for (let i = 0; i <= numPoints; i++) {
-        const x = (i / numPoints) * length;
-        const y = Math.sqrt(rho * rho - Math.pow(length - x, 2)) + radius - rho;
-        points.push(new THREE.Vector2(y, x));
+        // We build the profile from tip (y=length) to base (y=0)
+        const y = (i / numPoints) * length;
+        const x = Math.sqrt(rho * rho - Math.pow(length - y, 2)) + radius - rho;
+        points.push(new THREE.Vector2(x, y));
     }
 
     const geometry = new THREE.LatheGeometry(points, segments);
@@ -1213,32 +1214,34 @@ function updatePlaneModel() {
 
         // --- Nose Cone ---
         if (noseShape !== 'flat') {
-            const noseLength = radiusFront * 1.5; // طول المقدمة يعتمد على قطرها
+            // طول المقدمة يعتمد على قطرها، يمكن تعديل النسبة للحصول على أشكال مختلفة
+            const noseLength = (noseShape === 'ogival') ? radiusFront * 2.0 : radiusFront;
             bodyLength -= noseLength;
-            bodyOffset -= noseLength / 2;
+            bodyOffset = -noseLength / 2; // إزاحة الجسم الرئيسي للخلف
 
             let noseGeom;
             if (noseShape === 'rounded') {
                 noseGeom = new THREE.SphereGeometry(radiusFront, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+                noseGeom.rotateZ(-Math.PI / 2); // توجيه الجزء المسطح نحو الجسم
             } else { // ogival
                 noseGeom = createOgiveGeometry(radiusFront, noseLength, 32);
+                noseGeom.rotateZ(Math.PI / 2); // توجيه الجزء المدبب للأمام
             }
-            noseGeom.rotateZ(-Math.PI / 2);
             const noseCone = new THREE.Mesh(noseGeom, fuselageMaterial);
-            noseCone.position.x = (fuselageLength / 2) - (noseLength / 2);
+            noseCone.position.x = (fuselageLength / 2) - noseLength; // وضع قاعدة المقدمة عند بداية الجسم
             fuselageGroup.add(noseCone);
         }
 
         // --- Tail Cone ---
         if (tailShape !== 'flat') {
-            const tailLength = radiusRear * 1.5;
+            const tailLength = radiusRear; // طول المؤخرة يساوي قطرها
             bodyLength -= tailLength;
-            bodyOffset += tailLength / 2;
+            bodyOffset += tailLength / 2; // تعديل إزاحة الجسم الرئيسي للأمام
 
             const tailGeom = new THREE.SphereGeometry(radiusRear, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
             tailGeom.rotateZ(Math.PI / 2);
-            const tailCone = new THREE.Mesh(tailGeom, fuselageMaterial);
-            tailCone.position.x = (-fuselageLength / 2) + (tailLength / 2);
+            const tailCone = new THREE.Mesh(tailGeom, fuselageMaterial); // وضع قاعدة المؤخرة عند نهاية الجسم
+            tailCone.position.x = (-fuselageLength / 2) + tailLength;
             fuselageGroup.add(tailCone);
         }
 
@@ -1481,16 +1484,21 @@ function updatePlaneModel() {
 
         cockpitMaterial.opacity = cockpitOpacity;
 
-        let cockpitGeom;
-        // Using a hemisphere for both bubble and streamlined for now.
-        // More complex shapes can be added later.
-        // A sphere with radius 1 is created, then scaled.
-        cockpitGeom = new THREE.SphereGeometry(1, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+        // يتم استخدام نصف كرة كأساس لكلا الشكلين
+        const cockpitGeom = new THREE.SphereGeometry(1, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
 
         const cockpitMesh = new THREE.Mesh(cockpitGeom, cockpitMaterial);
 
-        // Scale the sphere to match the desired dimensions
-        cockpitMesh.scale.set(cockpitLength / 2, cockpitHeight, cockpitWidth / 2);
+        // تغيير حجم نصف الكرة بناءً على الشكل المختار
+        if (cockpitShape === 'streamlined') {
+            // الشكل الانسيابي يمكن أن يكون بيضاويًا (ellipsoid)
+            cockpitMesh.scale.set(cockpitLength / 2, cockpitHeight, cockpitWidth / 2);
+        } else { // 'bubble'
+            // الشكل المحدب هو نصف كرة مثالي، لذا الطول والعرض متساويان.
+            // سنستخدم قيمة "الطول" كقطر أساسي.
+            const bubbleDiameter = cockpitLength;
+            cockpitMesh.scale.set(bubbleDiameter / 2, cockpitHeight, bubbleDiameter / 2);
+        }
 
         // Position the cockpit
         // X: From the front of the fuselage, moving backwards.
