@@ -230,8 +230,9 @@ const propWeightResultEl = document.getElementById('prop-weight-result');
 
 let liftChart, dragChart;
 let isPropSpinning = false; // متغير لتتبع حالة دوران المروحة
-let propWashSystem = null; // نظام جزيئات الهواء
-const PARTICLE_COUNT = 500; // عدد الجزيئات
+let propParticleSystem, propParticleCount = 500; // لتدفق هواء المروحة
+let wingAirflowParticleSystem, wingAirflowParticleCount = 2500; // لتدفق الهواء العام
+let vortexParticleSystem, vortexParticleCount = 1000; // لدوامات أطراف الجناح
 
 /**
  * Generates points for various airfoil shapes.
@@ -1052,6 +1053,64 @@ function updateCharts() {
     dragChart.update();
 }
 
+/**
+ * Creates a custom ShaderMaterial for realistic particle rendering.
+ * This allows for per-particle size and opacity.
+ * @param {THREE.Color | number} color The base color of the particles.
+ * @returns {THREE.ShaderMaterial} The configured shader material.
+ */
+function createAirflowMaterial(color) {
+    return new THREE.ShaderMaterial({
+        uniforms: {
+            color: { value: new THREE.Color(color) },
+        },
+        vertexShader: `
+            attribute float scale;
+            attribute float customOpacity;
+            varying float vOpacity;
+            void main() {
+                vOpacity = customOpacity;
+                vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                // Make particles smaller farther away, and apply our custom scale
+                gl_PointSize = scale * (300.0 / -mvPosition.z);
+                gl_Position = projectionMatrix * mvPosition;
+            }
+        `,
+        fragmentShader: `
+            uniform vec3 color;
+            varying float vOpacity;
+            void main() {
+                // Create a circular point, not a square
+                if (length(gl_PointCoord - vec2(0.5, 0.5)) > 0.475) discard;
+                gl_FragColor = vec4(color, vOpacity);
+            }
+        `,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        transparent: true,
+    });
+}
+
+function setAirflowVisibility(isVisible) {
+    if (propParticleSystem) {
+        propParticleSystem.visible = isVisible;
+    }
+    if (wingAirflowParticleSystem) {
+        wingAirflowParticleSystem.visible = isVisible;
+        if (!isVisible) {
+            // Re-initializing is a robust way to reset all particle states
+            // First, dispose of old geometry to prevent memory leaks
+            wingAirflowParticleSystem.geometry.dispose();
+            // It's added to the scene, not the plane group
+            scene.remove(wingAirflowParticleSystem);
+            initWingAirflowParticles();
+        }
+    }
+    if (vortexParticleSystem) {
+        vortexParticleSystem.visible = isVisible;
+    }
+}
+
 function updateAll() {
     updatePlaneModel();
     calculateAerodynamics();
@@ -1100,11 +1159,12 @@ togglePropSpinBtn.addEventListener('click', () => {
         togglePropSpinBtn.textContent = 'إيقاف';
         togglePropSpinBtn.style.backgroundColor = '#ffc107'; // لون مميز للإشارة إلى التشغيل
         togglePropSpinBtn.style.color = '#000';
+        setAirflowVisibility(true); // إظهار تدفق الهواء
     } else {
         togglePropSpinBtn.textContent = 'تشغيل';
         togglePropSpinBtn.style.backgroundColor = '#e9ecef'; // اللون الافتراضي
         togglePropSpinBtn.style.color = '#333';
-        // propellerGroup.rotation.x = 0; // اختياري: إعادة تعيين زاوية المروحة عند الإيقاف
+        setAirflowVisibility(false); // إخفاء تدفق الهواء
     }
 });
 
@@ -1190,42 +1250,219 @@ function animate() {
     const deltaTime = clock.getDelta(); // الوقت المنقضي منذ الإطار الأخير
 
     if (isPropSpinning) {
-        const rpm = getValidNumber(propRpmInput);
-        const rps = rpm / 60; // الدورات في الثانية
-        const rotationPerSecond = rps * Math.PI * 2; // الزاوية بالراديان في الثانية
+        // --- دوران المروحة ---
+        const rotationPerSecond = (getValidNumber(propRpmInput) / 60) * Math.PI * 2;
         propellerGroup.rotation.x += rotationPerSecond * deltaTime;
 
-        // تحريك جزيئات الهواء
-        if (propWashSystem) {
-            propWashSystem.visible = true;
-            const positions = propWashSystem.geometry.attributes.position.array;
-            const fuselageLength = getValidNumber(fuselageLengthInput) * UNIT_CONVERSIONS[unitSelector.value];
+        // --- كل تحديثات الجزيئات تحدث فقط عند تشغيل المروحة ---
+        // --- تحديث جزيئات تدفق هواء المروحة ---
+        if (propParticleSystem && propParticleSystem.visible) {
             const propDiameter = getValidNumber(propDiameterInput) * 0.0254;
-            
-            // يجب أن تكون السرعة متناسبة مع سرعة الدوران/الدفع. لنستخدم سرعة الدوران للتبسيط.
-            const particleSpeed = (rpm / 1000) * 3; // اضبط هذا المعامل للتأثير البصري
+            const fuselageLength = getValidNumber(fuselageLengthInput) * UNIT_CONVERSIONS[unitSelector.value];
+            const propRpm = getValidNumber(propRpmInput);
+            const propPitch = getValidNumber(propPitchInput) * 0.0254; // to meters
 
-            for (let i = 0; i < PARTICLE_COUNT; i++) {
+            const airSpeed = (propRpm / 60) * propPitch; // m/s
+            const particleSpeed = airSpeed * 1.5; // أسرع قليلاً للتأثير البصري
+
+            const positions = propParticleSystem.geometry.attributes.position.array;
+            const opacities = propParticleSystem.geometry.attributes.customOpacity.array;
+            const scales = propParticleSystem.geometry.attributes.scale.array;
+            const emissionRadius = propDiameter / 2;
+            const startX = propellerGroup.position.x - 0.1; // البدء خلف المروحة مباشرة
+            const endX = -fuselageLength / 2 - 0.5; // الانتهاء بعد الذيل
+            const travelDistance = startX - endX;
+
+            for (let i = 0; i < propParticleCount; i++) {
                 const i3 = i * 3;
-                
-                // حرك الجزيء للخلف
                 positions[i3] -= particleSpeed * deltaTime;
 
-                // إذا تجاوز الجزيء الذيل، أعد تعيينه
-                if (positions[i3] < -fuselageLength / 2) {
-                    positions[i3] = fuselageLength / 2; // إعادة التعيين إلى الأمام
-                    // إعطاؤه موضع y/z عشوائي جديد داخل قرص المروحة
-                    const radius = (propDiameter / 2) * Math.random();
-                    const angle = Math.random() * Math.PI * 2;
-                    positions[i3 + 1] = radius * Math.sin(angle);
-                    positions[i3 + 2] = radius * Math.cos(angle);
+                // Calculate age based on position for fade effect
+                const currentTravel = startX - positions[i3];
+                const ageRatio = Math.max(0, Math.min(1, currentTravel / travelDistance));
+                const effectStrength = Math.sin(ageRatio * Math.PI); // Smooth fade-in and fade-out
+
+                opacities[i] = effectStrength * 0.7; // Prop particles are more dense
+                scales[i] = effectStrength * 4.0;   // and slightly larger
+
+                if (positions[i3] < endX || positions[i3] > startX) {
+                    const r = emissionRadius * Math.sqrt(Math.random()); // توزيع متساوٍ داخل الدائرة
+                    const theta = Math.random() * 2 * Math.PI;
+                    positions[i3] = startX;
+                    positions[i3 + 1] = r * Math.cos(theta); // y
+                    positions[i3 + 2] = r * Math.sin(theta); // z
                 }
             }
-            propWashSystem.geometry.attributes.position.needsUpdate = true;
+            propParticleSystem.geometry.attributes.position.needsUpdate = true;
+            propParticleSystem.geometry.attributes.customOpacity.needsUpdate = true;
+            propParticleSystem.geometry.attributes.scale.needsUpdate = true;
         }
-    } else {
-        if (propWashSystem) {
-            propWashSystem.visible = false;
+
+        // --- تحديث تدفق الهواء العام وتأثير أسطح التحكم ---
+        if (wingAirflowParticleSystem && wingAirflowParticleSystem.visible) {
+            const conversionFactor = UNIT_CONVERSIONS[unitSelector.value];
+            const positions = wingAirflowParticleSystem.geometry.attributes.position.array;
+            const velocities = wingAirflowParticleSystem.geometry.attributes.velocity.array;
+            const opacities = wingAirflowParticleSystem.geometry.attributes.customOpacity.array;
+            const scales = wingAirflowParticleSystem.geometry.attributes.scale.array;
+            const mainAirSpeed = getValidNumber(airSpeedInput);
+
+            const { cl } = calculateCoefficients(); // Get current lift coefficient
+
+            // Get control surface rotations
+            const rightAileronRot = scene.getObjectByName('rightAileron')?.parent.rotation.z || 0;
+            const leftAileronRot = scene.getObjectByName('leftAileron')?.parent.rotation.z || 0;
+            const elevatorRot = scene.getObjectByName('rightElevator')?.parent.rotation.z || 0;
+            const rudderRot = scene.getObjectByName('rudder')?.parent.rotation.y || 0;
+
+            // Get dimensions for influence checks
+            const wingSpan = getValidNumber(wingSpanInput) * conversionFactor;
+            const fuselageLength = getValidNumber(fuselageLengthInput) * conversionFactor;
+            const fuselageWidth = fuselage.geometry.parameters.depth;
+            const aileronLength = getValidNumber(aileronLengthInput) * conversionFactor;
+            const aileronPosition = getValidNumber(aileronPositionInput) * conversionFactor;
+            const elevatorLength = getValidNumber(elevatorLengthInput) * conversionFactor;
+            const rudderLength = getValidNumber(rudderLengthInput) * conversionFactor;
+            const vStabHeight = getValidNumber(vStabHeightInput) * conversionFactor;
+
+            const deflectionFactor = 8.0; // How strongly the surface deflects air
+            
+            const startX = 2.0; // Corresponds to emission point in init
+            const endX = -fuselageLength / 2 - 1.0;
+            const travelDistance = startX - endX;
+
+            for (let i = 0; i < wingAirflowParticleCount; i++) {
+                const i3 = i * 3;
+                let px = positions[i3];
+                let py = positions[i3 + 1];
+                let pz = positions[i3 + 2];
+
+                // Reset particle's vertical/lateral velocity each frame
+                velocities[i3 + 1] = 0;
+                velocities[i3 + 2] = 0;
+
+                // --- Aileron Influence ---
+                const aileronZoneX = -0.1; // Approx X position of ailerons
+                const aileronZStart = fuselageWidth / 2 + aileronPosition;
+                const aileronZEnd = aileronZStart + aileronLength;
+                if (Math.abs(px - aileronZoneX) < 0.2) {
+                    // Right Aileron
+                    if (pz > aileronZStart && pz < aileronZEnd) {
+                        velocities[i3 + 1] -= rightAileronRot * deflectionFactor;
+                    }
+                    // Left Aileron
+                    if (pz < -aileronZStart && pz > -aileronZEnd) {
+                        velocities[i3 + 1] -= leftAileronRot * deflectionFactor;
+                    }
+                }
+
+                // --- Elevator Influence ---
+                const elevatorZoneX = -fuselageLength / 2;
+                const elevatorZStart = fuselageWidth / 2;
+                const elevatorZEnd = elevatorZStart + elevatorLength;
+                if (Math.abs(px - elevatorZoneX) < 0.2) {
+                    if (Math.abs(pz) > elevatorZStart && Math.abs(pz) < elevatorZEnd) {
+                        velocities[i3 + 1] -= elevatorRot * deflectionFactor;
+                    }
+                }
+
+                // --- Rudder Influence ---
+                const rudderZoneX = -fuselageLength / 2;
+                const rudderYStart = fuselage.geometry.parameters.height / 2;
+                const rudderYEnd = rudderYStart + rudderLength;
+                if (Math.abs(px - rudderZoneX) < 0.2 && Math.abs(pz) < 0.2) {
+                     if (py > rudderYStart && py < rudderYEnd) {
+                        velocities[i3 + 2] -= rudderRot * deflectionFactor;
+                    }
+                }
+
+                // Update position based on velocity
+                positions[i3] -= mainAirSpeed * deltaTime; // Main forward/backward motion
+                positions[i3 + 1] += velocities[i3 + 1] * deltaTime;
+                positions[i3 + 2] += velocities[i3 + 2] * deltaTime;
+
+                // Update visual properties based on particle's "age" (position)
+                const currentTravel = startX - positions[i3];
+                const ageRatio = Math.max(0, Math.min(1, currentTravel / travelDistance));
+                const effectStrength = Math.sin(ageRatio * Math.PI); // Smooth fade-in and fade-out
+
+                opacities[i] = effectStrength * 0.4;
+                scales[i] = effectStrength * 2.5;
+
+                // Reset particle if it goes too far behind
+                if (positions[i3] < endX) {
+                    const emissionWidth = wingSpan * 1.2;
+                    const emissionHeight = 2;
+                    positions[i3] = startX; // Reset in front of the plane
+                    positions[i3 + 1] = (Math.random() - 0.5) * emissionHeight;
+                    positions[i3 + 2] = (Math.random() - 0.5) * emissionWidth;
+                }
+            }
+            wingAirflowParticleSystem.geometry.attributes.position.needsUpdate = true;
+            wingAirflowParticleSystem.geometry.attributes.customOpacity.needsUpdate = true;
+            wingAirflowParticleSystem.geometry.attributes.scale.needsUpdate = true;
+        }
+
+        // --- تحديث دوامات أطراف الجناح ---
+        if (vortexParticleSystem && vortexParticleSystem.visible) {
+            const conversionFactor = UNIT_CONVERSIONS[unitSelector.value];
+            const positions = vortexParticleSystem.geometry.attributes.position.array;
+            const opacities = vortexParticleSystem.geometry.attributes.customOpacity.array;
+            const scales = vortexParticleSystem.geometry.attributes.scale.array;
+            const spiralData = vortexParticleSystem.geometry.attributes.spiralData.array;
+
+            const mainAirSpeed = getValidNumber(airSpeedInput);
+            const wingSpan = getValidNumber(wingSpanInput) * conversionFactor;
+            const fuselageWidth = fuselage.geometry.parameters.depth;
+            const { cl } = calculateCoefficients(); // Get current lift coefficient
+
+            // Vortex strength is proportional to the lift coefficient
+            const vortexStrength = Math.max(0, cl) * 0.2; // Adjust multiplier for visual effect
+            const vortexRotationSpeed = 15; // How fast the particles spiral
+            const travelLength = 5.0; // How far back the vortices travel before resetting
+
+            const tipZ = (wingSpan / 2) + (fuselageWidth / 2);
+            const tipY = wingGroup.position.y;
+
+            for (let i = 0; i < vortexParticleCount; i++) {
+                const i2 = i * 2;
+                const i3 = i * 3;
+
+                // Move particle backward
+                positions[i3] -= mainAirSpeed * deltaTime;
+
+                // Update spiral angle
+                spiralData[i2] += vortexRotationSpeed * deltaTime;
+
+                // Calculate spiral position
+                const age = -positions[i3]; // Age is distance travelled from x=0
+                const radius = vortexStrength * (1 - Math.exp(-age * 2.0)); // Radius grows quickly then levels off
+                const yOffset = radius * Math.cos(spiralData[i2]);
+                const zOffset = radius * Math.sin(spiralData[i2]);
+
+                // Determine if it's a left or right vortex particle
+                const side = (i < vortexParticleCount / 2) ? 1 : -1; // 1 for right, -1 for left
+
+                positions[i3 + 1] = tipY + yOffset;
+                positions[i3 + 2] = (tipZ + zOffset) * side;
+
+                // Fade in/out effect
+                const ageRatio = Math.min(1, age / travelLength);
+                const effectStrength = Math.sin(ageRatio * Math.PI);
+
+                opacities[i] = effectStrength * Math.min(1, vortexStrength * 5); // Opacity also depends on strength
+                scales[i] = effectStrength * 2.0;
+
+                // Reset particle
+                if (age > travelLength || age < 0) {
+                    positions[i3] = 0; // Reset x position
+                    spiralData[i2] = Math.random() * Math.PI * 2; // New random start angle
+                }
+            }
+            vortexParticleSystem.geometry.attributes.position.needsUpdate = true;
+            vortexParticleSystem.geometry.attributes.customOpacity.needsUpdate = true;
+            vortexParticleSystem.geometry.attributes.scale.needsUpdate = true;
+            vortexParticleSystem.geometry.attributes.spiralData.needsUpdate = true;
         }
     }
 
@@ -1234,7 +1471,91 @@ function animate() {
     renderer.render(scene, camera);
 }
 
+/** Initializes the particle system for propeller airflow simulation. */
+function initPropAirflowParticles() {
+    const particleGeometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(propParticleCount * 3);
+    const opacities = new Float32Array(propParticleCount).fill(0);
+    const scales = new Float32Array(propParticleCount).fill(0);
+
+    particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    particleGeometry.setAttribute('customOpacity', new THREE.BufferAttribute(opacities, 1));
+    particleGeometry.setAttribute('scale', new THREE.BufferAttribute(scales, 1));
+
+    const particleMaterial = createAirflowMaterial(0x88aaff);
+
+    propParticleSystem = new THREE.Points(particleGeometry, particleMaterial);
+    propParticleSystem.visible = false;
+    planeGroup.add(propParticleSystem);
+}
+
+/** Initializes the particle system for wing/tail airflow simulation. */
+function initWingAirflowParticles() {
+    const particleGeometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(wingAirflowParticleCount * 3);
+    const velocities = new Float32Array(wingAirflowParticleCount * 3);
+    const opacities = new Float32Array(wingAirflowParticleCount).fill(0);
+    const scales = new Float32Array(wingAirflowParticleCount).fill(0);
+
+    const emissionWidth = 4; // Span of the airflow sheet
+    const emissionHeight = 2; // Height of the airflow sheet
+
+    for (let i = 0; i < wingAirflowParticleCount; i++) {
+        const i3 = i * 3;
+        // Distribute particles in a plane in front of the aircraft
+        positions[i3] = 2.0 + Math.random() * 2; // Start in front
+        positions[i3 + 1] = (Math.random() - 0.5) * emissionHeight;
+        positions[i3 + 2] = (Math.random() - 0.5) * emissionWidth;
+
+        // Initial velocity (will be updated in animate)
+        velocities[i3] = -1; // Moving towards the plane
+        velocities[i3 + 1] = 0;
+        velocities[i3 + 2] = 0;
+    }
+
+    particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    particleGeometry.setAttribute('velocity', new THREE.BufferAttribute(velocities, 3));
+    particleGeometry.setAttribute('customOpacity', new THREE.BufferAttribute(opacities, 1));
+    particleGeometry.setAttribute('scale', new THREE.BufferAttribute(scales, 1));
+
+    const particleMaterial = createAirflowMaterial(0xaaddff);
+
+    wingAirflowParticleSystem = new THREE.Points(particleGeometry, particleMaterial);
+    wingAirflowParticleSystem.visible = false;
+    scene.add(wingAirflowParticleSystem); // Add to the main scene, not the plane group
+}
+
+/** Initializes the particle system for wingtip vortex simulation. */
+function initVortexParticles() {
+    const particleGeometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(vortexParticleCount * 3).fill(0);
+    const opacities = new Float32Array(vortexParticleCount).fill(0);
+    const scales = new Float32Array(vortexParticleCount).fill(0);
+    // Custom attribute to store spiral angle
+    const spiralData = new Float32Array(vortexParticleCount);
+
+    for (let i = 0; i < vortexParticleCount; i++) {
+        // Store a random initial angle
+        spiralData[i] = Math.random() * Math.PI * 2;
+    }
+
+    particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    particleGeometry.setAttribute('customOpacity', new THREE.BufferAttribute(opacities, 1));
+    particleGeometry.setAttribute('scale', new THREE.BufferAttribute(scales, 1));
+    particleGeometry.setAttribute('spiralData', new THREE.BufferAttribute(spiralData, 1));
+
+    const particleMaterial = createAirflowMaterial(0xffffff); // White vortices
+
+    vortexParticleSystem = new THREE.Points(particleGeometry, particleMaterial);
+    vortexParticleSystem.visible = false;
+    // Add to the wing group so they originate from the correct wing height
+    wingGroup.add(vortexParticleSystem);
+}
+
 // --- التشغيل الأولي ---
+initPropAirflowParticles();
+initWingAirflowParticles();
+initVortexParticles();
 initCharts();
 updateUnitLabels();
 updateAll();
@@ -1242,9 +1563,31 @@ animate();
 
 // --- التعامل مع تغيير حجم النافذة ---
 window.addEventListener('resize', () => {
+    // التأكد من أن العارض موجود قبل محاولة الوصول إلى خصائصه
     const viewerDiv = document.querySelector('.viewer');
-    camera.aspect = viewerDiv.clientWidth / viewerDiv.clientHeight;
-    camera.updateProjectionMatrix();
-
-    renderer.setSize(viewerDiv.clientWidth, viewerDiv.clientHeight);
+    if (viewerDiv) {
+        camera.aspect = viewerDiv.clientWidth / viewerDiv.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(viewerDiv.clientWidth, viewerDiv.clientHeight);
+    }
 });
+
+/**
+ * A helper function to calculate aerodynamic coefficients without updating the UI.
+ * @returns {{cl: number, cd: number}} An object containing the lift and drag coefficients.
+ */
+function calculateCoefficients() {
+    const conversionFactor = UNIT_CONVERSIONS[unitSelector.value];
+    const wingSpan = getValidNumber(wingSpanInput) * conversionFactor;
+    const wingChord = getValidNumber(wingChordInput) * conversionFactor;
+    const taperRatio = getValidNumber(taperRatioInput);
+    const angleOfAttack = getValidNumber(angleOfAttackInput);
+    const tipChord = wingChord * taperRatio;
+    const wingArea = wingSpan * (wingChord + tipChord) / 2;
+    const alphaRad = angleOfAttack * (Math.PI / 180);
+    const cl = 1.0 * 2 * Math.PI * alphaRad; // Simplified Cl
+    const aspectRatio = wingArea > 0 ? Math.pow(wingSpan, 2) / wingArea : 0;
+    const cdi = aspectRatio > 0 ? Math.pow(cl, 2) / (Math.PI * aspectRatio * 0.8) : 0;
+    const cd = 0.025 + cdi;
+    return { cl, cd };
+}
