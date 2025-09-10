@@ -393,6 +393,23 @@
                         <label for="fuselage-taper-ratio">نسبة الاستدقاق (Taper): <span id="fuselage-taper-value">1.00</span></label>
                         <input type="range" id="fuselage-taper-ratio" min="0.2" max="1.0" value="1.0" step="0.05">
                     </div>
+                    <!-- Fuselage Ends Controls -->
+                    <div id="fuselage-ends-controls">
+                        <div class="input-group">
+                            <label for="fuselage-nose-shape">شكل المقدمة</label>
+                            <select id="fuselage-nose-shape">
+                                <option value="flat">مسطح (Flat)</option>
+                                <option value="rounded">مستدير (Rounded)</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="fuselage-tail-shape">شكل المؤخرة</label>
+                            <select id="fuselage-tail-shape">
+                                <option value="flat" selected>مسطح (Flat)</option>
+                                <option value="rounded">مستدير (Rounded)</option>
+                            </select>
+                        </div>
+                    </div>
                     <div class="input-group">
                         <label for="wing-prop-distance">المسافة بين الجناح والمروحة (<span class="unit-label">سم</span>)</label>
                         <input type="number" id="wing-prop-distance" value="20" step="1">
@@ -405,7 +422,7 @@
                     <!-- Cockpit Controls -->
                     <div class="input-group" style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 10px;">
                         <label for="has-cockpit">إضافة قمرة قيادة؟</label>
-                        <input type="checkbox" id="has-cockpit" style="flex-basis: auto; margin-left: auto;">
+                        <input type="checkbox" id="has-cockpit" checked style="flex-basis: auto; margin-left: auto;">
                     </div>
                     <div id="cockpit-controls" style="display:none; padding-right: 15px; border-right: 3px solid #eee;">
                         <div class="input-group">
@@ -429,7 +446,11 @@
                         </div>
                         <div class="input-group">
                             <label for="cockpit-position">الموضع من المقدمة (<span class="unit-label">سم</span>)</label>
-                            <input type="number" id="cockpit-position" value="10" step="1">
+                            <input type="number" id="cockpit-position" value="5" step="1">
+                        </div>
+                        <div class="input-group">
+                            <label for="cockpit-opacity">شفافية القمرة: <span id="cockpit-opacity-value">70</span>%</label>
+                            <input type="range" id="cockpit-opacity" min="0" max="1" value="0.7" step="0.05">
                         </div>
                     </div>
                 </fieldset>
