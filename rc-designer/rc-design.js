@@ -322,6 +322,114 @@ function generateAirfoil(chord, thickness, airfoilType, numPoints = 15) {
     return points;
 }
 
+const createSurface = (span, rootChord, taperRatio, sweepAngle, thickness, airfoil, isVertical = false, createRootCap = false) => {
+    const effectiveSpan = isVertical ? span : span / 2; // الأسطح العمودية تمتد بطولها الكامل من القاعدة
+    const sweepRad = sweepAngle * Math.PI / 180;
+    const geometry = new THREE.BufferGeometry();
+    const vertices = [];
+    const indices = [];
+    const segments = 5; // Fewer segments for tail is fine
+    const pointsPerSection = (15 * 2);
+
+    for (let i = 0; i <= segments; i++) {
+        const spanProgress = i / segments;
+        const currentY = spanProgress * effectiveSpan;
+        const currentChord = rootChord + (rootChord * taperRatio - rootChord) * spanProgress;
+        const currentSweep = currentY * Math.tan(sweepRad);
+        const airfoilPoints = generateAirfoil(currentChord, thickness, airfoil, 15);
+
+        airfoilPoints.forEach(p => {
+            if (isVertical) {
+                vertices.push(p.x + currentSweep, currentY, p.y); // Swap Y and Z for vertical stabilizer
+            } else {
+                vertices.push(p.x + currentSweep, p.y, currentY);
+            }
+        });
+    }
+
+    for (let i = 0; i < segments; i++) {
+        for (let j = 0; j < pointsPerSection; j++) {
+            const p1 = i * pointsPerSection + j;
+            const p2 = i * pointsPerSection + ((j + 1) % pointsPerSection);
+            const p3 = (i + 1) * pointsPerSection + j;
+            const p4 = (i + 1) * pointsPerSection + ((j + 1) % pointsPerSection);
+            indices.push(p1, p3, p4, p1, p4, p2);
+        }
+    }
+
+    const tipStartIndex = segments * pointsPerSection;
+    for (let j = 1; j < pointsPerSection - 1; j++) {
+        indices.push(tipStartIndex, tipStartIndex + j + 1, tipStartIndex + j);
+    }
+
+    // Add root cap if requested
+    if (createRootCap) {
+        const rootStartIndex = 0;
+        for (let j = 1; j < pointsPerSection - 1; j++) {
+            // Wind in the opposite direction for the root cap
+            indices.push(rootStartIndex, rootStartIndex + j, rootStartIndex + j + 1);
+        }
+    }
+
+    geometry.setIndex(indices);
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    geometry.computeVertexNormals();
+    return geometry;
+};
+
+/**
+ * Creates a realistic propeller blade geometry with airfoil shape and twist.
+ * @param {number} radius The length of the blade from the spinner edge to the tip.
+ * @param {number} rootChord The chord width at the base of the blade.
+ * @param {number} tipChord The chord width at the tip of the blade.
+ * @param {number} thickness The thickness of the airfoil.
+ * @param {number} pitch The propeller pitch in meters.
+ * @param {number} spinnerRadius The radius of the central spinner.
+ * @param {string} airfoilType The type of airfoil to use for the blade cross-section.
+ * @returns {THREE.BufferGeometry} The generated blade geometry.
+ */
+const createPropellerBladeGeom = (radius, rootChord, tipChord, thickness, pitch, spinnerRadius, airfoilType) => {
+    const geom = new THREE.BufferGeometry();
+    const vertices = [];
+    const indices = [];
+    const segments = 8; // Fewer segments for performance
+    const pointsPerSection = (15 * 2); // From generateAirfoil
+
+    for (let i = 0; i <= segments; i++) {
+        const progress = i / segments;
+        const currentY = spinnerRadius + progress * radius; // Distance from center
+        const currentChord = rootChord + (tipChord - rootChord) * progress;
+        const twistAngle = (currentY > 0.001) ? Math.atan(pitch / (2 * Math.PI * currentY)) : 0;
+        
+        // Generate airfoil points in the XZ plane
+        const airfoilPoints = generateAirfoil(currentChord, thickness, airfoilType, 15);
+
+        airfoilPoints.forEach(p => {
+            const vec = new THREE.Vector3(p.y, 0, p.x); // Airfoil is X,Y -> map to X,Z plane for the blade
+            // Apply twist around Y axis (span-wise axis)
+            vec.applyAxisAngle(new THREE.Vector3(0, 1, 0), twistAngle);
+            // Position along blade span
+            vec.y += currentY;
+            vertices.push(vec.x, vec.y, vec.z);
+        });
+    }
+
+    // Create faces (same logic as wing)
+    for (let i = 0; i < segments; i++) {
+        for (let j = 0; j < pointsPerSection; j++) {
+            const p1 = i * pointsPerSection + j;
+            const p2 = i * pointsPerSection + ((j + 1) % pointsPerSection);
+            const p3 = (i + 1) * pointsPerSection + j;
+            const p4 = (i + 1) * pointsPerSection + ((j + 1) % pointsPerSection);
+            indices.push(p1, p3, p4, p1, p4, p2);
+        }
+    }
+    geom.setIndex(indices);
+    geom.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    geom.computeVertexNormals();
+    return geom;
+};
+
 function updatePlaneModel() {
     const conversionFactor = UNIT_CONVERSIONS[unitSelector.value];
 
@@ -671,114 +779,6 @@ function updatePlaneModel() {
     const elevatorWidth = getValidNumber(elevatorWidthInput) * conversionFactor;
     const hasRudder = hasRudderInput.checked;
     const rudderWidth = getValidNumber(rudderWidthInput) * conversionFactor;
-
-    const createSurface = (span, rootChord, taperRatio, sweepAngle, thickness, airfoil, isVertical = false, createRootCap = false) => {
-        const effectiveSpan = isVertical ? span : span / 2; // الأسطح العمودية تمتد بطولها الكامل من القاعدة
-        const sweepRad = sweepAngle * Math.PI / 180;
-        const geometry = new THREE.BufferGeometry();
-        const vertices = [];
-        const indices = [];
-        const segments = 5; // Fewer segments for tail is fine
-        const pointsPerSection = (15 * 2);
-
-        for (let i = 0; i <= segments; i++) {
-            const spanProgress = i / segments;
-            const currentY = spanProgress * effectiveSpan;
-            const currentChord = rootChord + (rootChord * taperRatio - rootChord) * spanProgress;
-            const currentSweep = currentY * Math.tan(sweepRad);
-            const airfoilPoints = generateAirfoil(currentChord, thickness, airfoil, 15);
-
-            airfoilPoints.forEach(p => {
-                if (isVertical) {
-                    vertices.push(p.x + currentSweep, currentY, p.y); // Swap Y and Z for vertical stabilizer
-                } else {
-                    vertices.push(p.x + currentSweep, p.y, currentY);
-                }
-            });
-        }
-
-        for (let i = 0; i < segments; i++) {
-            for (let j = 0; j < pointsPerSection; j++) {
-                const p1 = i * pointsPerSection + j;
-                const p2 = i * pointsPerSection + ((j + 1) % pointsPerSection);
-                const p3 = (i + 1) * pointsPerSection + j;
-                const p4 = (i + 1) * pointsPerSection + ((j + 1) % pointsPerSection);
-                indices.push(p1, p3, p4, p1, p4, p2);
-            }
-        }
-
-        const tipStartIndex = segments * pointsPerSection;
-        for (let j = 1; j < pointsPerSection - 1; j++) {
-            indices.push(tipStartIndex, tipStartIndex + j + 1, tipStartIndex + j);
-        }
-
-        // Add root cap if requested
-        if (createRootCap) {
-            const rootStartIndex = 0;
-            for (let j = 1; j < pointsPerSection - 1; j++) {
-                // Wind in the opposite direction for the root cap
-                indices.push(rootStartIndex, rootStartIndex + j, rootStartIndex + j + 1);
-            }
-        }
-
-        geometry.setIndex(indices);
-        geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-        geometry.computeVertexNormals();
-        return geometry;
-    };
-
-/**
- * Creates a realistic propeller blade geometry with airfoil shape and twist.
- * @param {number} radius The length of the blade from the spinner edge to the tip.
- * @param {number} rootChord The chord width at the base of the blade.
- * @param {number} tipChord The chord width at the tip of the blade.
- * @param {number} thickness The thickness of the airfoil.
- * @param {number} pitch The propeller pitch in meters.
- * @param {number} spinnerRadius The radius of the central spinner.
- * @param {string} airfoilType The type of airfoil to use for the blade cross-section.
- * @returns {THREE.BufferGeometry} The generated blade geometry.
- */
-const createPropellerBladeGeom = (radius, rootChord, tipChord, thickness, pitch, spinnerRadius, airfoilType) => {
-    const geom = new THREE.BufferGeometry();
-    const vertices = [];
-    const indices = [];
-    const segments = 8; // Fewer segments for performance
-    const pointsPerSection = (15 * 2); // From generateAirfoil
-
-    for (let i = 0; i <= segments; i++) {
-        const progress = i / segments;
-        const currentY = spinnerRadius + progress * radius; // Distance from center
-        const currentChord = rootChord + (tipChord - rootChord) * progress;
-        const twistAngle = (currentY > 0.001) ? Math.atan(pitch / (2 * Math.PI * currentY)) : 0;
-        
-        // Generate airfoil points in the XZ plane
-        const airfoilPoints = generateAirfoil(currentChord, thickness, airfoilType, 15);
-
-        airfoilPoints.forEach(p => {
-            const vec = new THREE.Vector3(p.y, 0, p.x); // Airfoil is X,Y -> map to X,Z plane for the blade
-            // Apply twist around Y axis (span-wise axis)
-            vec.applyAxisAngle(new THREE.Vector3(0, 1, 0), twistAngle);
-            // Position along blade span
-            vec.y += currentY;
-            vertices.push(vec.x, vec.y, vec.z);
-        });
-    }
-
-    // Create faces (same logic as wing)
-    for (let i = 0; i < segments; i++) {
-        for (let j = 0; j < pointsPerSection; j++) {
-            const p1 = i * pointsPerSection + j;
-            const p2 = i * pointsPerSection + ((j + 1) % pointsPerSection);
-            const p3 = (i + 1) * pointsPerSection + j;
-            const p4 = (i + 1) * pointsPerSection + ((j + 1) % pointsPerSection);
-            indices.push(p1, p3, p4, p1, p4, p2);
-        }
-    }
-    geom.setIndex(indices);
-    geom.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-    geom.computeVertexNormals();
-    return geom;
-};
 
     // --- Tail Assembly ---
     if (tailType === 'conventional') {
