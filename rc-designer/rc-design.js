@@ -203,6 +203,8 @@ const fuselageTaperRatioInput = document.getElementById('fuselage-taper-ratio');
 const fuselageTaperValueEl = document.getElementById('fuselage-taper-value');
 const fuselageTaperGroup = document.getElementById('fuselage-taper-group');
 const fuselageTearRearDiaGroup = document.getElementById('fuselage-teardrop-rear-diameter-group');
+const wingPropDistanceInput = document.getElementById('wing-prop-distance');
+const wingTailDistanceInput = document.getElementById('wing-tail-distance');
 const fuselageMaterialInput = document.getElementById('fuselage-material');
 const structureMaterialInput = document.getElementById('structure-material');
 const propDiameterInput = document.getElementById('prop-diameter');
@@ -374,6 +376,14 @@ function updatePlaneModel() {
 
     // New: Read fuselage taper ratio
     const fuselageTaperRatio = getValidNumber(fuselageTaperRatioInput);
+
+    // New: Read component distances
+    const wingPropDistance = getValidNumber(wingPropDistanceInput) * conversionFactor;
+    const wingTailDistance = getValidNumber(wingTailDistanceInput) * conversionFactor;
+
+    // Calculate X positions for components
+    const wingPositionX = (fuselageLength / 2) - wingPropDistance;
+    const tailPositionX = wingPositionX - wingTailDistance;
 
     // قيم المروحة تبقى بالبوصة كما هي متعارف عليها
     const propDiameter = getValidNumber(propDiameterInput) * 0.0254; // to meters
@@ -646,6 +656,7 @@ function updatePlaneModel() {
 
 
     // تحديث موضع الجناح (علوي/متوسط/سفلي)
+    wingGroup.position.x = wingPositionX;
     if (wingPosition === 'high') wingGroup.position.y = currentFuselageHeight / 2;
     else if (wingPosition === 'mid') wingGroup.position.y = 0;
     else if (wingPosition === 'low') wingGroup.position.y = -currentFuselageHeight / 2;
@@ -778,17 +789,15 @@ const createPropellerBladeGeom = (radius, rootChord, tipChord, thickness, pitch,
         const hStabGeom = createSurface(tailSpan, hStabChordEffective, tailTaperRatio, tailSweepAngle, tailThickness, tailAirfoilType, false);
         // إزاحة المثبت الأفقي ليبدأ من جانب جسم الطائرة
         hStabGeom.translate(0, 0, currentFuselageWidth / 2);
-        const rightHStab = new THREE.Mesh(hStabGeom, tailMaterial);
-        rightHStab.position.x = -fuselageLength / 2 - hStabChordEffective / 2;
-
+        const rightHStab = new THREE.Mesh(hStabGeom, tailMaterial); // Define rightHStab
+        rightHStab.position.x = tailPositionX - hStabChordEffective / 2; // Corrected position
         // Clone and mirror for the left half
         const leftHStab = rightHStab.clone();
         leftHStab.scale.z = -1;
 
         const vStabGeom = createSurface(vStabHeight, vStabChordEffective, tailTaperRatio, tailSweepAngle, tailThickness, tailAirfoilType, true);
         const vStab = new THREE.Mesh(vStabGeom, fuselageMaterial);
-        vStab.position.x = -fuselageLength / 2 - vStabChordEffective / 2;
-        // رفع المثبت العمودي ليجلس فوق جسم الطائرة
+        vStab.position.x = tailPositionX - vStabChordEffective / 2; // Corrected incomplete line
         vStab.position.y = currentFuselageHeight / 2;
 
         tailGroup.add(rightHStab, leftHStab, vStab);
@@ -800,18 +809,17 @@ const createPropellerBladeGeom = (radius, rootChord, tipChord, thickness, pitch,
         const hStabGeom = createSurface(tailSpan, hStabChordEffective, tailTaperRatio, tailSweepAngle, tailThickness, tailAirfoilType, false);
         const rightHStab = new THREE.Mesh(hStabGeom, tailMaterial);
         // رفع المثبت الأفقي ليجلس فوق المثبت العمودي
-        rightHStab.position.set(-fuselageLength / 2 - hStabChordEffective / 2, vStabHeight + currentFuselageHeight / 2, 0);
+        rightHStab.position.set(tailPositionX - hStabChordEffective / 2, vStabHeight + currentFuselageHeight / 2, 0);
 
         // Clone and mirror for the left half
-        const leftHStab = rightHStab.clone();
+        const leftHStab = rightHStab.clone(); // Corrected: leftHStab was not defined
         leftHStab.scale.z = -1;
 
         const vStabGeom = createSurface(vStabHeight, vStabChordEffective, tailTaperRatio, tailSweepAngle, tailThickness, tailAirfoilType, true);
         const vStab = new THREE.Mesh(vStabGeom, fuselageMaterial);
-        vStab.position.x = -fuselageLength / 2 - vStabChordEffective / 2;
+        vStab.position.x = tailPositionX - vStabChordEffective / 2;
         // رفع المثبت العمودي ليجلس فوق جسم الطائرة
         vStab.position.y = currentFuselageHeight / 2;
-
         tailGroup.add(rightHStab, leftHStab, vStab);
     } else if (tailType === 'v-tail') {
         const vStabChordEffective = hasRudder ? vStabChord - rudderWidth : vStabChord;
@@ -830,12 +838,12 @@ const createPropellerBladeGeom = (radius, rootChord, tipChord, thickness, pitch,
 
         const vTailAssembly = new THREE.Group();
         vTailAssembly.add(rightVPanel, leftVPanel);
-        vTailAssembly.position.x = -fuselageLength / 2 - vStabChordEffective / 2;
+        vTailAssembly.position.x = tailPositionX - vStabChordEffective / 2;
         // رفع مجموعة الذيل لتجلس فوق جسم الطائرة
         vTailAssembly.position.y = currentFuselageHeight / 2;
         tailGroup.add(vTailAssembly);
-    }
 
+    }
     // --- Tail Control Surfaces ---
     if (hasElevator && tailType !== 'v-tail') {
         // إنشاء سطح مائل ومستدق لنصف الرافع
@@ -858,12 +866,11 @@ const createPropellerBladeGeom = (radius, rootChord, tipChord, thickness, pitch,
 
         // نضع المحور عند الحافة الخلفية للجزء الثابت من الذيل
         const hStabRootChordEffective = tailChord - elevatorWidth;
-        const pivotX = -fuselageLength / 2 - hStabRootChordEffective;
-        const elevatorY = (tailType === 't-tail' ? vStabHeight + currentFuselageHeight / 2 : 0);
+        const pivotX = tailPositionX - hStabRootChordEffective;
+        const elevatorY = (tailType === 't-tail' ? vStabHeight + currentFuselageHeight / 2 : tailGroup.position.y);
         
         rightElevatorPivot.position.set(pivotX, elevatorY, 0);
         leftElevatorPivot.position.set(pivotX, elevatorY, 0);
-
         tailControlsGroup.add(rightElevatorPivot, leftElevatorPivot);
     }
 
@@ -879,15 +886,14 @@ const createPropellerBladeGeom = (radius, rootChord, tipChord, thickness, pitch,
         rudderPivot.add(rudder);
         // نضع المحور عند الحافة الخلفية للجزء الثابت من الذيل العمودي
         const vStabRootChordEffective = vStabChord - rudderWidth;
-        const pivotX = -fuselageLength / 2 - vStabRootChordEffective;
+        const pivotX = tailPositionX - vStabRootChordEffective;
         
         rudderPivot.position.set(pivotX, currentFuselageHeight / 2, 0); // تبدأ الهندسة من y=0، لذا نرفعها
 
         tailControlsGroup.add(rudderPivot);
     } else if (hasRudderInput.checked && tailType === 'v-tail') {
-        // This part is complex and can be added in a future step to ensure stability
+        // This part is complex and can be added in a future step
     }
-
 
     // --- تحديث جسم الطائرة ---
     // إزالة الجسم القديم قبل إضافة الجديد
