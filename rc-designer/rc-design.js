@@ -31,7 +31,6 @@ const fuselageMaterial = new THREE.MeshStandardMaterial({ color: 0x0056b3, side:
 const wingMaterial = new THREE.MeshStandardMaterial({ color: 0xcccccc, side: THREE.DoubleSide });
 const tailMaterial = new THREE.MeshStandardMaterial({ color: 0xdddddd, side: THREE.DoubleSide });
 const aileronMaterial = new THREE.MeshStandardMaterial({ color: 0xffc107, side: THREE.DoubleSide });
-const cockpitMaterial = new THREE.MeshStandardMaterial({ color: 0x6ab0de, transparent: true, opacity: 0.7, side: THREE.DoubleSide });
 
 // مجموعة المحرك
 const engineGroup = new THREE.Group();
@@ -64,10 +63,6 @@ planeGroup.add(tailGroup);
 // مجموعة أسطح التحكم في الذيل
 const tailControlsGroup = new THREE.Group();
 planeGroup.add(tailControlsGroup);
-
-// مجموعة قمرة القيادة
-const cockpitGroup = new THREE.Group();
-planeGroup.add(cockpitGroup);
 
 
 // المروحة
@@ -249,18 +244,7 @@ const fuselageTearFrontDiaGroup = document.getElementById('fuselage-teardrop-fro
 const fuselageTaperRatioInput = document.getElementById('fuselage-taper-ratio');
 const fuselageTaperValueEl = document.getElementById('fuselage-taper-value');
 const fuselageTaperGroup = document.getElementById('fuselage-taper-group');
-const hasCockpitInput = document.getElementById('has-cockpit');
-const cockpitControls = document.getElementById('cockpit-controls');
-const cockpitShapeInput = document.getElementById('cockpit-shape');
-const cockpitLengthInput = document.getElementById('cockpit-length');
-const cockpitWidthInput = document.getElementById('cockpit-width');
-const cockpitHeightInput = document.getElementById('cockpit-height');
-const cockpitPositionInput = document.getElementById('cockpit-position');
-const cockpitOpacityInput = document.getElementById('cockpit-opacity');
-const cockpitOpacityValueEl = document.getElementById('cockpit-opacity-value');
 const fuselageTearRearDiaGroup = document.getElementById('fuselage-teardrop-rear-diameter-group');
-const fuselageNoseShapeInput = document.getElementById('fuselage-nose-shape');
-const fuselageTailShapeInput = document.getElementById('fuselage-tail-shape');
 const wingPropDistanceInput = document.getElementById('wing-prop-distance');
 const wingTailDistanceInput = document.getElementById('wing-tail-distance');
 const fuselageMaterialInput = document.getElementById('fuselage-material');
@@ -291,7 +275,6 @@ const tailColorInput = document.getElementById('tail-color');
 const aileronColorInput = document.getElementById('aileron-color');
 const propColorInput = document.getElementById('prop-color');
 const engineColorInput = document.getElementById('engine-color');
-const cockpitColorInput = document.getElementById('cockpit-color');
 const strutColorInput = document.getElementById('strut-color');
 const wheelColorInput = document.getElementById('wheel-color');
 const backgroundColorInput = document.getElementById('background-color');
@@ -710,15 +693,12 @@ function updatePlaneModel() {
     const wingColor = wingColorInput.value;
     const tailColor = tailColorInput.value;
     const backgroundColor = backgroundColorInput.value;
-    const cockpitOpacity = getValidNumber(cockpitOpacityInput);
 
     // تحديث الألوان
     fuselageMaterial.color.set(fuselageColor);
     wingMaterial.color.set(wingColor);
     tailMaterial.color.set(tailColor);
     aileronMaterial.color.set(aileronColorInput.value);
-    cockpitMaterial.color.set(cockpitColorInput.value);
-    cockpitMaterial.opacity = cockpitOpacity;
     engineMaterial.color.set(engineColorInput.value);
     propMaterial.color.set(propColorInput.value);
     strutMaterial.color.set(strutColorInput.value);
@@ -747,10 +727,10 @@ function updatePlaneModel() {
     fuselageTearRearDiaGroup.style.display = 'none';
 
     if (fuselageShape === 'rectangular') {
-        fuselageRectWidthGroup.style.display = 'flex'; // Use 'flex' to match other styles
+        fuselageRectWidthGroup.style.display = 'flex';
         fuselageRectHeightGroup.style.display = 'flex';
     } else if (fuselageShape === 'cylindrical') {
-        fuselageCylDiameterGroup.style.display = 'flex'; // Use 'flex'
+        fuselageCylDiameterGroup.style.display = 'flex';
     } else if (fuselageShape === 'teardrop') {
         fuselageTearFrontDiaGroup.style.display = 'flex';
         fuselageTearRearDiaGroup.style.display = 'flex';
@@ -1014,12 +994,12 @@ function updatePlaneModel() {
         hStabGeom.translate(0, 0, currentFuselageWidth / 2);
         const rightHStab = new THREE.Mesh(hStabGeom, tailMaterial); // Define rightHStab
         rightHStab.position.x = tailPositionX - hStabChordEffective / 2; // Corrected position
-        // استنساخ وعكس للنصف الأيسر
+        // Clone and mirror for the left half
         const leftHStab = rightHStab.clone();
         leftHStab.scale.z = -1;
 
-        const vStabGeom = createSurface(vStabHeight, vStabChordEffective, tailTaperRatio, tailSweepAngle, tailThickness, tailAirfoilType, true, true); // Add root cap
-        const vStab = new THREE.Mesh(vStabGeom, tailMaterial); // Bug Fix: Use tailMaterial instead of fuselageMaterial
+        const vStabGeom = createSurface(vStabHeight, vStabChordEffective, tailTaperRatio, tailSweepAngle, tailThickness, tailAirfoilType, true);
+        const vStab = new THREE.Mesh(vStabGeom, fuselageMaterial);
         vStab.position.x = tailPositionX - vStabChordEffective / 2; // Corrected incomplete line
         vStab.position.y = currentFuselageHeight / 2;
 
@@ -1031,15 +1011,15 @@ function updatePlaneModel() {
         // Create right half of the horizontal stabilizer
         const hStabGeom = createSurface(tailSpan, hStabChordEffective, tailTaperRatio, tailSweepAngle, tailThickness, tailAirfoilType, false);
         const rightHStab = new THREE.Mesh(hStabGeom, tailMaterial);
-        // Position the horizontal stabilizer to sit on top of the vertical one
+        // رفع المثبت الأفقي ليجلس فوق المثبت العمودي
         rightHStab.position.set(tailPositionX - hStabChordEffective / 2, vStabHeight + currentFuselageHeight / 2, 0);
 
-        // استنساخ وعكس للنصف الأيسر
+        // Clone and mirror for the left half
         const leftHStab = rightHStab.clone(); // Corrected: leftHStab was not defined
         leftHStab.scale.z = -1;
 
-        const vStabGeom = createSurface(vStabHeight, vStabChordEffective, tailTaperRatio, tailSweepAngle, tailThickness, tailAirfoilType, true, true); // Add root cap
-        const vStab = new THREE.Mesh(vStabGeom, tailMaterial); // Bug Fix: Use tailMaterial instead of fuselageMaterial
+        const vStabGeom = createSurface(vStabHeight, vStabChordEffective, tailTaperRatio, tailSweepAngle, tailThickness, tailAirfoilType, true);
+        const vStab = new THREE.Mesh(vStabGeom, fuselageMaterial);
         vStab.position.x = tailPositionX - vStabChordEffective / 2;
         // رفع المثبت العمودي ليجلس فوق جسم الطائرة
         vStab.position.y = currentFuselageHeight / 2;
@@ -1120,12 +1100,8 @@ function updatePlaneModel() {
 
     // --- تحديث جسم الطائرة ---
     // إزالة الجسم القديم قبل إضافة الجديد
-    while(planeGroup.getObjectByName('fuselage_part')) {
-        planeGroup.remove(planeGroup.getObjectByName('fuselage_part'));
-    }
-
+    planeGroup.remove(fuselage);
     let newFuselageGeom;
-    const fuselageGroup = new THREE.Group();
     if (fuselageShape === 'rectangular') {
         // Calculate tapered dimensions for the rear
         const rearWidth = currentFuselageWidth * fuselageTaperRatio;
@@ -1190,93 +1166,10 @@ function updatePlaneModel() {
         newFuselageGeom = new THREE.BoxGeometry(fuselageLength, 0.15, 0.15);
     }
 
-    const mainFuselage = new THREE.Mesh(newFuselageGeom, fuselageMaterial);
-    mainFuselage.name = 'fuselage_part';
-    fuselageGroup.add(mainFuselage);
-
-    // --- إضافة نهايات مستديرة ---
-    const noseShape = fuselageNoseShapeInput.value;
-    const tailShape = fuselageTailShapeInput.value;
-
-    if (noseShape === 'rounded') {
-        let noseGeom;
-        if (fuselageShape === 'rectangular') {
-            // لا يمكن إنشاء نصف كرة بيضاوية مباشرة، سنستخدم كرة مشوهة
-            noseGeom = new THREE.SphereGeometry(1, 32, 16);
-            noseGeom.scale(currentFuselageWidth / 2, currentFuselageHeight / 2, currentFuselageWidth / 2);
-        } else { // cylindrical or teardrop
-            const frontRadius = (fuselageShape === 'cylindrical') 
-                ? (getValidNumber(fuselageDiameterInput) * conversionFactor) / 2
-                : (getValidNumber(fuselageFrontDiameterInput) * conversionFactor) / 2;
-            noseGeom = new THREE.SphereGeometry(frontRadius, 32, 16);
-        }
-        const noseCap = new THREE.Mesh(noseGeom, fuselageMaterial);
-        noseCap.position.x = fuselageLength / 2;
-        noseCap.name = 'fuselage_part';
-        fuselageGroup.add(noseCap);
-    }
-
-    if (tailShape === 'rounded') {
-        let tailGeom;
-        if (fuselageShape === 'rectangular') {
-            const rearWidth = currentFuselageWidth * fuselageTaperRatio;
-            const rearHeight = currentFuselageHeight * fuselageTaperRatio;
-            tailGeom = new THREE.SphereGeometry(1, 32, 16);
-            tailGeom.scale(rearWidth / 2, rearHeight / 2, rearWidth / 2);
-        } else { // cylindrical or teardrop
-            let rearRadius;
-            if (fuselageShape === 'cylindrical') {
-                const frontRadius = (getValidNumber(fuselageDiameterInput) * conversionFactor) / 2;
-                rearRadius = frontRadius * fuselageTaperRatio;
-            } else { // teardrop
-                rearRadius = (getValidNumber(fuselageRearDiameterInput) * conversionFactor) / 2;
-            }
-            tailGeom = new THREE.SphereGeometry(rearRadius, 32, 16);
-        }
-        const tailCap = new THREE.Mesh(tailGeom, fuselageMaterial);
-        tailCap.position.x = -fuselageLength / 2;
-        tailCap.name = 'fuselage_part';
-        fuselageGroup.add(tailCap);
-    }
-
-    // استبدال الجسم القديم بالمجموعة الجديدة
-    planeGroup.remove(fuselage); // إزالة الكائن القديم
-    fuselage = fuselageGroup; // تعيين المجموعة الجديدة كجسم الطائرة
-    planeGroup.add(fuselage);
-
-    // --- قمرة القيادة (Cockpit) ---
-    while (cockpitGroup.children.length > 0) cockpitGroup.remove(cockpitGroup.children[0]);
-
-    cockpitControls.style.display = hasCockpitInput.checked ? 'block' : 'none';
-
-    if (hasCockpitInput.checked) {
-        const cockpitLength = getValidNumber(cockpitLengthInput) * conversionFactor;
-        const cockpitWidth = getValidNumber(cockpitWidthInput) * conversionFactor;
-        const cockpitHeight = getValidNumber(cockpitHeightInput) * conversionFactor;
-        const cockpitPosition = getValidNumber(cockpitPositionInput) * conversionFactor;
-        const cockpitShape = cockpitShapeInput.value;
-
-        let cockpitGeom;
-
-        if (cockpitShape === 'bubble') {
-            // استخدام نصف كرة ممتد
-            cockpitGeom = new THREE.SphereGeometry(1, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
-            cockpitGeom.rotateX(-Math.PI / 2); // تدوير القاعدة لتكون على مستوى XZ
-        } else { // streamlined
-            // استخدام مخروط ممتد لتمثيل الشكل الانسيابي
-            cockpitGeom = new THREE.CylinderGeometry(0, 1, 1, 32, 1); // مخروط بوحدة قياس واحدة
-            cockpitGeom.translate(0, 0.5, 0); // رفع القاعدة لتكون عند y=0
-            cockpitGeom.rotateZ(-Math.PI / 2); // توجيه المخروط للخلف على طول المحور X
-        }
-
-        const cockpit = new THREE.Mesh(cockpitGeom, cockpitMaterial);
-        cockpit.scale.set(cockpitLength, cockpitHeight, cockpitWidth);
-
-        // تحديد الموضع فوق جسم الطائرة
-        const cockpitX = (fuselageLength / 2) - cockpitPosition - (cockpitShape === 'bubble' ? cockpitLength / 2 : cockpitLength);
-        cockpit.position.set(cockpitX, currentFuselageHeight / 2, 0);
-        cockpitGroup.add(cockpit);
-    }
+    // استبدال الهندسة والمادة في الكائن الحالي بدلاً من إنشاء كائن جديد
+    fuselage.geometry.dispose(); // التخلص من الهندسة القديمة
+    fuselage.geometry = newFuselageGeom;
+    planeGroup.add(fuselage); // إعادة إضافة الجسم المحدث
 
     // --- إنشاء وتحديد موضع المحرك والمروحة ---
     // 1. إزالة النماذج القديمة
@@ -1528,27 +1421,6 @@ function calculateAerodynamics() {
     // --- حسابات محدثة ---
     const tipChord = wingChord * taperRatio;
     const wingArea = wingSpan * (wingChord + tipChord) / 2; // Area of a trapezoid
-
-    // **إصلاح الشاشة السوداء**: منع الحسابات إذا كانت مساحة الجناح صفراً أو أقل.
-    // هذا يمنع أخطاء القسمة على صفر (مثل حساب نسبة العرض إلى الارتفاع) التي تؤدي إلى قيم NaN.
-    if (wingArea <= 0) {
-        liftResultEl.textContent = '0.00';
-        dragResultEl.textContent = '0.00';
-        thrustResultEl.textContent = '0.00';
-        wingAreaResultEl.textContent = '0.00';
-        wingWeightResultEl.textContent = '0';
-        tailAreaResultEl.textContent = '0.00';
-        tailWeightResultEl.textContent = '0';
-        fuselageWeightResultEl.textContent = '0';
-        fuselageAreaResultEl.textContent = '0.00';
-        propWeightResultEl.textContent = '0';
-        engineWeightResultEl.textContent = '0';
-        landingGearWeightResultEl.textContent = '0';
-        totalWeightResultEl.textContent = '0';
-        twrResultEl.textContent = '0.00';
-        return;
-    }
-
     const alphaRad = angleOfAttack * (Math.PI / 180);
 
     // نستخدم مساحة الجناح الكلية للحسابات. أسطح التحكم هي جزء من الجناح وتساهم في الرفع والوزن.
@@ -1945,9 +1817,6 @@ hasRetractableGearInput.addEventListener('change', updateAll);
 hasLandingGearInput.addEventListener('change', updateAll);
 fuselageShapeInput.addEventListener('change', updateAll);
 hasRudderInput.addEventListener('change', updateAll);
-hasCockpitInput.addEventListener('change', updateAll);
-fuselageNoseShapeInput.addEventListener('change', updateAll);
-fuselageTailShapeInput.addEventListener('change', updateAll);
 engineTypeInput.addEventListener('change', updateEngineUI);
 electricMotorTypeInput.addEventListener('change', updateEngineUI);
 icEngineTypeInput.addEventListener('change', updateEngineUI);
@@ -1967,7 +1836,6 @@ tailSweepAngleInput.addEventListener('input', () => tailSweepValueEl.textContent
 tailTaperRatioInput.addEventListener('input', () => tailTaperValueEl.textContent = parseFloat(tailTaperRatioInput.value).toFixed(2));
 particleDensityInput.addEventListener('input', () => particleDensityValueEl.textContent = Math.round(particleDensityInput.value * 100));
 fuselageTaperRatioInput.addEventListener('input', () => fuselageTaperValueEl.textContent = parseFloat(fuselageTaperRatioInput.value).toFixed(2));
-cockpitOpacityInput.addEventListener('input', () => cockpitOpacityValueEl.textContent = Math.round(cockpitOpacityInput.value * 100));
 airflowTransparencyInput.addEventListener('input', () => airflowTransparencyValueEl.textContent = Math.round(airflowTransparencyInput.value * 100));
 particleSizeInput.addEventListener('input', () => particleSizeValueEl.textContent = Math.round(particleSizeInput.value * 100));
 vibrationIntensityInput.addEventListener('input', () => vibrationValueEl.textContent = Math.round(vibrationIntensityInput.value * 100));
