@@ -204,6 +204,7 @@ const angleOfAttackInput = document.getElementById('angle-of-attack');
 const airSpeedInput = document.getElementById('air-speed');
 const airDensityInput = document.getElementById('air-density');
 const planeWeightInput = document.getElementById('plane-weight');
+const showAmbientWindInput = document.getElementById('show-ambient-wind');
 const fuselageColorInput = document.getElementById('fuselage-color');
 const wingColorInput = document.getElementById('wing-color');
 const tailColorInput = document.getElementById('tail-color');
@@ -1093,29 +1094,28 @@ function createAirflowMaterial(color) {
     });
 }
 
-function setAirflowVisibility(isVisible) {
+function setAirflowVisibility(isSpinning) {
+    const showAmbient = showAmbientWindInput.checked;
+
     if (propParticleSystem) {
-        propParticleSystem.visible = isVisible;
+        propParticleSystem.visible = isSpinning;
     }
     if (wingAirflowParticleSystem) {
-        wingAirflowParticleSystem.visible = isVisible;
-        if (!isVisible) {
+        wingAirflowParticleSystem.visible = isSpinning && showAmbient;
+        if (!isSpinning) { // Reset only when stopping the whole simulation
             // Re-initializing is a robust way to reset all particle states
-            // First, dispose of old geometry to prevent memory leaks
             wingAirflowParticleSystem.geometry.dispose();
-            // It's added to the scene, not the plane group
             scene.remove(wingAirflowParticleSystem);
             initWingAirflowParticles();
         }
     }
     if (vortexParticleSystem) {
-        vortexParticleSystem.visible = isVisible;
+        vortexParticleSystem.visible = isSpinning && showAmbient;
     }
 }
 
 function updateAll() {
     updatePlaneModel();
-    calculateAerodynamics();
     if (liftChart && dragChart) {
         updateCharts();
     }
@@ -1162,13 +1162,16 @@ togglePropSpinBtn.addEventListener('click', () => {
         togglePropSpinBtn.textContent = 'إيقاف';
         togglePropSpinBtn.style.backgroundColor = '#ffc107'; // لون مميز للإشارة إلى التشغيل
         togglePropSpinBtn.style.color = '#000';
-        setAirflowVisibility(true); // إظهار تدفق الهواء
     } else {
         togglePropSpinBtn.textContent = 'تشغيل';
         togglePropSpinBtn.style.backgroundColor = '#e9ecef'; // اللون الافتراضي
         togglePropSpinBtn.style.color = '#333';
-        setAirflowVisibility(false); // إخفاء تدفق الهواء
     }
+    setAirflowVisibility(isPropSpinning);
+});
+
+showAmbientWindInput.addEventListener('change', () => {
+    setAirflowVisibility(isPropSpinning);
 });
 
 // --- تفاعل الماوس مع الجنيحات ---
@@ -1258,12 +1261,18 @@ function animate() {
     planeGroup.rotation.set(0, 0, 0);
 
     if (isPropSpinning) {
+        const propRpm = getValidNumber(propRpmInput);
+        const propPitch = getValidNumber(propPitchInput) * 0.0254; // to meters
+        
+        // سرعة الهواء الرئيسية يتم حسابها الآن ديناميكيًا من المروحة
+        // هذه السرعة ستحرك جميع جزيئات الهواء (العامة، الدوامات)
+        const mainAirSpeed = (propRpm / 60) * propPitch;
+
         // --- دوران المروحة ---
-        const rotationPerSecond = (getValidNumber(propRpmInput) / 60) * Math.PI * 2;
+        const rotationPerSecond = (propRpm / 60) * Math.PI * 2;
         propellerGroup.rotation.x += rotationPerSecond * deltaTime;
 
         // --- تأثير اهتزاز الطائرة ---
-        const propRpm = getValidNumber(propRpmInput);
         const minVibrationRpm = 4000; // RPM التي يبدأ عندها الاهتزاز
         const maxVibrationRpm = 8000; // RPM التي يكون عندها الاهتزاز في أقصى شدته
 
@@ -1313,10 +1322,9 @@ function animate() {
             const propDiameter = getValidNumber(propDiameterInput) * 0.0254;
             const fuselageLength = getValidNumber(fuselageLengthInput) * UNIT_CONVERSIONS[unitSelector.value];
             const propRpm = getValidNumber(propRpmInput);
-            const propPitch = getValidNumber(propPitchInput) * 0.0254; // to meters
 
             // السرعة المحورية (للخلف) تعتمد على الخطوة والسرعة الدورانية
-            const axialSpeed = ((propRpm / 60) * propPitch) * 1.5; // أسرع قليلاً للتأثير البصري
+            const axialSpeed = mainAirSpeed * 1.5; // أسرع قليلاً للتأثير البصري
             // السرعة الدورانية (الحلزونية) تعتمد على السرعة الدورانية للمروحة
             const rotationalSpeed = (propRpm / 60) * Math.PI * 2 * 0.5; // عامل 0.5 لتقليل سرعة الدوران البصري
 
@@ -1367,7 +1375,6 @@ function animate() {
             const velocities = wingAirflowParticleSystem.geometry.attributes.velocity.array;
             const opacities = wingAirflowParticleSystem.geometry.attributes.customOpacity.array;
             const scales = wingAirflowParticleSystem.geometry.attributes.scale.array;
-            const mainAirSpeed = getValidNumber(airSpeedInput);
 
             const { cl } = calculateCoefficients(); // Get current lift coefficient
 
@@ -1473,7 +1480,6 @@ function animate() {
             const scales = vortexParticleSystem.geometry.attributes.scale.array;
             const spiralData = vortexParticleSystem.geometry.attributes.spiralData.array;
 
-            const mainAirSpeed = getValidNumber(airSpeedInput);
             const wingSpan = getValidNumber(wingSpanInput) * conversionFactor;
             const fuselageWidth = fuselage.geometry.parameters.depth;
             const { cl } = calculateCoefficients(); // Get current lift coefficient
