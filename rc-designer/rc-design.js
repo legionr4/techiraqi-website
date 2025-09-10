@@ -1670,10 +1670,10 @@ function calculateAerodynamics() {
     const wingTailDistance = getValidNumber(wingTailDistanceInput) * conversionFactor;
 
     // --- حسابات محدثة ---
+    const tipChord = wingChord * taperRatio;
+    const mainWingArea = wingSpan * (wingChord + tipChord) / 2; // Area of a trapezoid
     const alphaRad = angleOfAttack * (Math.PI / 180);
 
-    // نستخدم مساحة الجناح الكلية للحسابات. أسطح التحكم هي جزء من الجناح وتساهم في الرفع والوزن.
-    const mainWingArea = wingArea;
     // --- Tail Area Calculation ---
     const tailSpan = getValidNumber(tailSpanInput) * conversionFactor;
     const tailChord = getValidNumber(tailChordInput) * conversionFactor;
@@ -1692,7 +1692,6 @@ function calculateAerodynamics() {
 
     // 1. قوة الرفع (Lift)
     // L = 0.5 * Cl * rho * V^2 * A
-    // Cl (معامل الرفع) ≈ 2 * PI * alpha (تقريب لنظرية الجنيح الرقيق)
     let airfoilLiftFactor = 1.0;
     if (airfoilType === 'flat-bottom') { // عامل رفع أعلى قليلاً
         airfoilLiftFactor = 1.1; // عامل رفع أعلى قليلاً
