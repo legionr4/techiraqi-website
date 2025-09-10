@@ -1723,28 +1723,80 @@ function calculateAerodynamics() {
     // حساب وزن الجسم
     let fuselageWeightKg = 0;
     let fuselageVolume = 0;
+    let fuselageSurfaceArea = 0;
+    const fuselageLength = getValidNumber(fuselageLengthInput) * conversionFactor; // Already read, but good to have it here
+
     if (fuselageShape === 'rectangular') {
         const frontWidth = getValidNumber(fuselageWidthInput) * conversionFactor;
         const frontHeight = getValidNumber(fuselageHeightInput) * conversionFactor;
         const rearWidth = frontWidth * fuselageTaperRatio;
         const rearHeight = frontHeight * fuselageTaperRatio;
-        
+
         const frontArea = frontWidth * frontHeight;
         const rearArea = rearWidth * rearHeight;
-        
+
         // Volume of a rectangular frustum
         fuselageVolume = (1/3) * fuselageLength * (frontArea + rearArea + Math.sqrt(frontArea * rearArea));
-    } else if (fuselageShape === 'cylindrical') {
-        const fuselageDiameter = getValidNumber(fuselageDiameterInput) * conversionFactor;
-        const radiusTop = fuselageDiameter / 2;
-        const radiusBottom = (fuselageDiameter / 2) * fuselageTaperRatio;
-        // Volume of a conical frustum
-        fuselageVolume = (1/3) * Math.PI * fuselageLength * (Math.pow(radiusTop, 2) + (radiusTop * radiusBottom) + Math.pow(radiusBottom, 2));
-    } else if (fuselageShape === 'teardrop') {
-        const frontDiameter = getValidNumber(fuselageFrontDiameterInput) * conversionFactor;
-        const rearDiameter = getValidNumber(fuselageRearDiameterInput) * conversionFactor;
-        // حجم المخروط الناقص
-        fuselageVolume = (1/3) * Math.PI * fuselageLength * (Math.pow(frontDiameter/2, 2) + (frontDiameter/2)*(rearDiameter/2) + Math.pow(rearDiameter/2, 2));
+
+        // Area of the 4 side faces (approximated as simple trapezoids)
+        const topBottomArea = fuselageLength * (frontWidth + rearWidth); // 2 * length * (w1+w2)/2
+        const leftRightArea = fuselageLength * (frontHeight + rearHeight); // 2 * length * (h1+h2)/2
+        fuselageSurfaceArea = frontArea + rearArea + topBottomArea + leftRightArea;
+
+    } else { // Cylindrical or Teardrop with potential rounded/ogival ends
+        const noseShape = fuselageNoseShapeInput.value;
+        const tailShape = fuselageTailShapeInput.value;
+        let bodyLength = fuselageLength;
+        let radiusFront, radiusRear;
+
+        if (fuselageShape === 'cylindrical') {
+            const fuselageDiameter = getValidNumber(fuselageDiameterInput) * conversionFactor;
+            radiusFront = fuselageDiameter / 2;
+            radiusRear = radiusFront * fuselageTaperRatio;
+        } else { // teardrop
+            radiusFront = (getValidNumber(fuselageFrontDiameterInput) * conversionFactor) / 2;
+            radiusRear = (getValidNumber(fuselageRearDiameterInput) * conversionFactor) / 2;
+        }
+
+        // --- Nose Cone Calculation ---
+        if (noseShape !== 'flat' && radiusFront > 0) {
+            const noseLength = (noseShape === 'ogival') ? radiusFront * 2.0 : radiusFront;
+            bodyLength -= noseLength;
+
+            if (noseShape === 'rounded') { // Hemisphere
+                fuselageVolume += (2/3) * Math.PI * Math.pow(radiusFront, 3);
+                fuselageSurfaceArea += 2 * Math.PI * Math.pow(radiusFront, 2); // Curved surface
+            } else { // Ogival (approximated as a cone)
+                fuselageVolume += (1/3) * Math.PI * Math.pow(radiusFront, 2) * noseLength;
+                const slantHeight = Math.sqrt(Math.pow(noseLength, 2) + Math.pow(radiusFront, 2));
+                fuselageSurfaceArea += Math.PI * radiusFront * slantHeight; // Lateral surface
+            }
+        } else {
+            // Add area of the flat front face
+            fuselageSurfaceArea += Math.PI * Math.pow(radiusFront, 2);
+        }
+
+        // --- Tail Cone Calculation ---
+        if (tailShape !== 'flat' && radiusRear > 0) {
+            const tailLength = radiusRear; // For rounded tail
+            bodyLength -= tailLength;
+
+            // Currently only 'rounded' is an option for tail
+            fuselageVolume += (2/3) * Math.PI * Math.pow(radiusRear, 3);
+            fuselageSurfaceArea += 2 * Math.PI * Math.pow(radiusRear, 2); // Curved surface
+        } else {
+            // Add area of the flat rear face
+            fuselageSurfaceArea += Math.PI * Math.pow(radiusRear, 2);
+        }
+
+        // --- Main Body Calculation ---
+        if (bodyLength > 0) {
+            // Volume of a conical frustum
+            fuselageVolume += (1/3) * Math.PI * bodyLength * (Math.pow(radiusFront, 2) + (radiusFront * radiusRear) + Math.pow(radiusRear, 2));
+            // Lateral surface area of a conical frustum
+            const slantHeight = Math.sqrt(Math.pow(bodyLength, 2) + Math.pow(radiusFront - radiusRear, 2));
+            fuselageSurfaceArea += Math.PI * (radiusFront + radiusRear) * slantHeight;
+        }
     }
     fuselageWeightKg = fuselageVolume * fuselageMaterialDensity;
 
@@ -1760,37 +1812,6 @@ function calculateAerodynamics() {
         // Volume of a half-ellipsoid: (2/3) * PI * a * b * c
         const cockpitVolume = (2 / 3) * Math.PI * (cockpitLength / 2) * cockpitHeight * (cockpitWidth / 2);
         cockpitWeightKg = cockpitVolume * cockpitMaterialDensity;
-    }
-
-    // حساب مساحة سطح الجسم
-    let fuselageSurfaceArea = 0;
-    if (fuselageShape === 'rectangular') {
-        const frontWidth = getValidNumber(fuselageWidthInput) * conversionFactor; const fuselageLength = getValidNumber(fuselageLengthInput) * conversionFactor;
-        const frontHeight = getValidNumber(fuselageHeightInput) * conversionFactor;
-        const rearWidth = frontWidth * fuselageTaperRatio;
-        const rearHeight = frontHeight * fuselageTaperRatio;
-
-        const frontArea = frontWidth * frontHeight;
-        const rearArea = rearWidth * rearHeight;
-
-        // Area of the 4 side faces (approximated as simple trapezoids)
-        const topBottomArea = fuselageLength * (frontWidth + rearWidth); // 2 * length * (w1+w2)/2
-        const leftRightArea = fuselageLength * (frontHeight + rearHeight); // 2 * length * (h1+h2)/2
-
-        fuselageSurfaceArea = frontArea + rearArea + topBottomArea + leftRightArea;
-
-    } else if (fuselageShape === 'cylindrical') {
-        const fuselageDiameter = getValidNumber(fuselageDiameterInput) * conversionFactor; const fuselageLength = getValidNumber(fuselageLengthInput) * conversionFactor;
-        const r1 = fuselageDiameter / 2; // radiusTop
-        const r2 = r1 * fuselageTaperRatio; // radiusBottom
-        const slantHeight = Math.sqrt(Math.pow(fuselageLength, 2) + Math.pow(r1 - r2, 2));
-        fuselageSurfaceArea = Math.PI * Math.pow(r1, 2) + Math.PI * Math.pow(r2, 2) + Math.PI * (r1 + r2) * slantHeight;
-
-    } else if (fuselageShape === 'teardrop') {
-        const r1 = (getValidNumber(fuselageFrontDiameterInput) * conversionFactor) / 2; const fuselageLength = getValidNumber(fuselageLengthInput) * conversionFactor;
-        const r2 = (getValidNumber(fuselageRearDiameterInput) * conversionFactor) / 2;
-        const slantHeight = Math.sqrt(Math.pow(fuselageLength, 2) + Math.pow(r1 - r2, 2));
-        fuselageSurfaceArea = Math.PI * Math.pow(r1, 2) + Math.PI * Math.pow(r2, 2) + Math.PI * (r1 + r2) * slantHeight;
     }
 
     // حساب وزن المروحة
@@ -1899,7 +1920,6 @@ function calculateAerodynamics() {
 
     // موضع الجناح على المحور X (من updatePlaneModel)
     const wingPropDistance = getValidNumber(wingPropDistanceInput) * conversionFactor;
-    const fuselageLength = getValidNumber(fuselageLengthInput) * conversionFactor;
     const wingPositionX = (fuselageLength / 2) - wingPropDistance;
 
     // 2. المركز الهوائي (AC) - يقع عند 25% من الـ MAC
