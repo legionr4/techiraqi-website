@@ -1723,8 +1723,6 @@ function calculateAerodynamics() {
         wingtipWeightKg = 2 * singleWingtipVolume * structureMaterialDensity; // لليمين واليسار
     }
 
-
-
     const tailThickness = getValidNumber(tailThicknessInput) * conversionFactor;
     const tailVolume = totalTailArea * tailThickness;
     const tailWeightKg = tailVolume * structureMaterialDensity;
@@ -1911,7 +1909,7 @@ function calculateAerodynamics() {
     const totalAccessoriesWeightGrams = receiverWeightGrams + servoWeightGrams + cameraWeightGrams + otherAccessoriesWeightGrams;
     const totalAccessoriesWeightKg = totalAccessoriesWeightGrams / 1000;
 
-    const totalWeightKg = wingWeightKg + tailWeightKg + fuselageWeightKg + propWeightKg + landingGearWeightKg + engineWeightKg + energySourceWeightKg + cockpitWeightKg + totalAccessoriesWeightKg;
+    const totalWeightKg = wingWeightKg + tailWeightKg + fuselageWeightKg + propWeightKg + landingGearWeightKg + engineWeightKg + energySourceWeightKg + cockpitWeightKg + totalAccessoriesWeightKg + wingtipWeightKg;
 
     // 5. نسبة الدفع إلى الوزن (Thrust-to-Weight Ratio)
     const weightInNewtons = totalWeightKg * 9.81;
@@ -1951,9 +1949,8 @@ function calculateAerodynamics() {
     addMoment(wingWeightKg, wingPositionX + mac_x_le + (0.4 * mac)); // مركز الجناح عند ~40% MAC (تقدير أكثر تحفظًا)
     addMoment(tailWeightKg, tailPositionX - (getValidNumber(tailChordInput) * conversionFactor * 0.4)); // مركز الذيل عند ~40% من وتره
 
-    // عزم أطراف الجناح (Wingtips)
-    if (wingtipWeightKg > 0) {
-        // يقع مركز ثقل طرف الجناح عند طرف الجناح الرئيسي
+    // عزم أطراف الجناح (يُضاف فقط إذا كانت مُفعّلة)
+    if (hasWingtipInput.checked) {
         const tipChord = wingChord * taperRatio;
         const tipX = wingPositionX + (wingSpan / 2) * Math.tan(sweepRad) - (tipChord / 4); // تقدير الموضع X
         addMoment(wingtipWeightKg, tipX);
