@@ -432,6 +432,39 @@
                             <option value="ic">ميكانيكي (IC)</option>
                         </select>
                     </div>
+                    <div class="input-group">
+                        <label for="engine-placement">موضع المحرك</label>
+                        <select id="engine-placement">
+                            <option value="front" selected>أمامي (Tractor)</option>
+                            <option value="rear">خلفي (Pusher)</option>
+                            <option value="wing">على الجناح (Wing-mounted)</option>
+                        </select>
+                    </div>
+                    <!-- Wing Mount Options -->
+                    <div id="wing-engine-placement-options" style="display:none;">
+                        <div class="input-group">
+                            <label for="engine-wing-position">الموضع على الجناح (من الجسم): <span id="engine-wing-pos-value">25</span>%</label>
+                            <input type="range" id="engine-wing-position" min="10" max="80" value="25" step="1">
+                        </div>
+                        <div class="input-group">
+                            <label for="engine-wing-vertical-pos">موضع التركيب العمودي</label>
+                            <select id="engine-wing-vertical-pos">
+                                <option value="below" selected>أسفل الجناح</option>
+                                <option value="above">أعلى الجناح</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="engine-wing-fore-aft">موضع التركيب الأفقي</label>
+                            <select id="engine-wing-fore-aft">
+                                <option value="leading" selected>على الحافة الأمامية</option>
+                                <option value="trailing">على الحافة الخلفية</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="engine-pylon-length">مسافة الحامل عن الجناح (<span class="unit-label">سم</span>)</label>
+                            <input type="number" id="engine-pylon-length" value="2" step="0.5">
+                        </div>
+                    </div>
 
                     <!-- Electric Engine Options -->
                     <div id="electric-engine-options">
@@ -442,17 +475,29 @@
                                 <option value="brushless_1000kv">Brushless 1000KV</option>
                             </select>
                         </div>
-                        <div class="info-group">
-                            <span>الحجم:</span>
-                            <span id="electric-motor-size">--</span>
+                        <div class="input-group">
+                            <label for="electric-motor-weight-input">الوزن (جرام)</label>
+                            <input type="number" id="electric-motor-weight-input" step="1">
                         </div>
-                        <div class="info-group">
-                            <span>الوزن (جرام):</span>
-                            <span id="electric-motor-weight">--</span>
+                        <div class="input-group">
+                            <label for="electric-motor-torque-input">العزم (N.m)</label>
+                            <input type="number" id="electric-motor-torque-input" step="0.01">
                         </div>
-                        <div class="info-group">
-                            <span>العزم (N.m):</span>
-                            <span id="electric-motor-torque">--</span>
+                        <div class="input-group">
+                            <label for="electric-motor-kv-input">KV (RPM/Volt)</label>
+                            <input type="number" id="electric-motor-kv-input" step="50">
+                        </div>
+                        <div class="input-group">
+                            <label for="electric-motor-voltage-input">الفولتية (V)</label>
+                            <input type="number" id="electric-motor-voltage-input" step="0.1">
+                        </div>
+                        <div class="input-group">
+                            <label for="electric-motor-length-input">طول المحرك (<span class="unit-label">سم</span>)</label>
+                            <input type="number" id="electric-motor-length-input" step="0.1">
+                        </div>
+                        <div class="input-group">
+                            <label for="electric-motor-diameter-input">قطر المحرك (<span class="unit-label">سم</span>)</label>
+                            <input type="number" id="electric-motor-diameter-input" step="0.1">
                         </div>
                     </div>
 
@@ -465,17 +510,25 @@
                                 <option value="glow_46">.46 Glow Engine</option>
                             </select>
                         </div>
-                         <div class="info-group">
-                            <span>السعة (cc):</span>
-                            <span id="ic-engine-displacement">--</span>
+                        <div class="input-group">
+                            <label for="ic-engine-displacement-input">السعة (cc)</label>
+                            <input type="number" id="ic-engine-displacement-input" step="0.1">
                         </div>
-                        <div class="info-group">
-                            <span>الوزن (جرام):</span>
-                            <span id="ic-engine-weight">--</span>
+                        <div class="input-group">
+                            <label for="ic-engine-weight-input">الوزن (جرام)</label>
+                            <input type="number" id="ic-engine-weight-input" step="1">
                         </div>
-                        <div class="info-group">
-                            <span>العزم (N.m):</span>
-                            <span id="ic-engine-torque">--</span>
+                        <div class="input-group">
+                            <label for="ic-engine-torque-input">العزم (N.m)</label>
+                            <input type="number" id="ic-engine-torque-input" step="0.1">
+                        </div>
+                        <div class="input-group">
+                            <label for="ic-engine-length-input">طول المحرك (<span class="unit-label">سم</span>)</label>
+                            <input type="number" id="ic-engine-length-input" step="0.1">
+                        </div>
+                        <div class="input-group">
+                            <label for="ic-engine-diameter-input">قطر المحرك (<span class="unit-label">سم</span>)</label>
+                            <input type="number" id="ic-engine-diameter-input" step="0.1">
                         </div>
                     </div>
                 </fieldset>
@@ -517,10 +570,6 @@
                     <div class="input-group">
                         <label for="prop-rpm">سرعة الدوران (RPM)</label>
                         <input type="number" id="prop-rpm" value="8000" step="100">
-                    </div>
-                    <div class="input-group">
-                        <label for="vibration-intensity">شدة الاهتزاز: <span id="vibration-value">100</span>%</label>
-                        <input type="range" id="vibration-intensity" min="0" max="1" value="1" step="0.1">
                     </div>
                     <div class="input-group">
                         <label for="toggle-prop-spin">تشغيل دوران المروحة</label>
@@ -611,6 +660,10 @@
                     <div class="input-group">
                         <label for="particle-size">حجم الجسيمات: <span id="particle-size-value">50</span>%</label>
                         <input type="range" id="particle-size" min="0" max="1" value="0.5" step="0.05">
+                    </div>
+                    <div class="input-group">
+                        <label for="vibration-intensity">شدة الاهتزاز: <span id="vibration-value">100</span>%</label>
+                        <input type="range" id="vibration-intensity" min="0" max="1" value="1" step="0.1">
                     </div>
                     <div class="input-group">
                         <label for="airflow-transparency">شفافية تدفق الهواء: <span id="airflow-transparency-value">100</span>%</label>

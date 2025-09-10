@@ -37,6 +37,10 @@ const engineGroup = new THREE.Group();
 planeGroup.add(engineGroup);
 const engineMaterial = new THREE.MeshStandardMaterial({ color: 0x666666 }); // A metallic grey
 
+// مجموعة محركات الجناح
+const wingEnginesGroup = new THREE.Group();
+planeGroup.add(wingEnginesGroup);
+
 // مجموعة عجلات الهبوط
 const landingGearGroup = new THREE.Group();
 planeGroup.add(landingGearGroup);
@@ -148,12 +152,28 @@ const MATERIAL_DENSITIES = {
 
 const ENGINE_SPECS = {
     electric: {
-        'dc_180': { name: 'DC 180', weight: 50, size: '20x15x30mm', torque: 0.02, rpm: 12000, modelSize: { type: 'box', x: 0.03, y: 0.02, z: 0.015 } },
-        'brushless_1000kv': { name: 'Brushless 1000KV', weight: 70, size: '28x26mm', torque: 0.08, rpm: 11000, modelSize: { type: 'cylinder', length: 0.026, diameter: 0.028 } }
+        'dc_180': {
+            weight: 50, torque: 0.02, kv: 2000, voltage: 6,
+            length: 3, diameter: 2,
+            modelSize: { type: 'box', x: 0.03, y: 0.02, z: 0.015 }
+        },
+        'brushless_1000kv': {
+            weight: 70, torque: 0.08, kv: 1000, voltage: 11.1,
+            length: 2.6, diameter: 2.8,
+            modelSize: { type: 'cylinder', length: 0.026, diameter: 0.028 }
+        }
     },
     ic: {
-        'glow_15': { name: '.15 Glow Engine', weight: 200, displacement: '2.5cc', torque: 0.3, rpm: 15000, modelSize: { type: 'cylinder', length: 0.06, diameter: 0.05 } },
-        'glow_46': { name: '.46 Glow Engine', weight: 450, displacement: '7.5cc', torque: 1.2, rpm: 12000, modelSize: { type: 'cylinder', length: 0.08, diameter: 0.07 } }
+        'glow_15': {
+            weight: 200, displacement: 2.5, torque: 0.3,
+            length: 6, diameter: 5,
+            modelSize: { type: 'cylinder', length: 0.06, diameter: 0.05 }
+        },
+        'glow_46': {
+            weight: 450, displacement: 7.5, torque: 1.2,
+            length: 8, diameter: 7,
+            modelSize: { type: 'cylinder', length: 0.08, diameter: 0.07 }
+        }
     }
 };
 // تخزين عناصر الإدخال والنتائج لتحسين الأداء
@@ -287,13 +307,29 @@ const icEngineOptions = document.getElementById('ic-engine-options');
 const electricMotorTypeInput = document.getElementById('electric-motor-type');
 const icEngineTypeInput = document.getElementById('ic-engine-type');
 
-// Engine Info Displays
-const electricMotorSizeEl = document.getElementById('electric-motor-size');
-const electricMotorWeightEl = document.getElementById('electric-motor-weight');
-const electricMotorTorqueEl = document.getElementById('electric-motor-torque');
-const icEngineDisplacementEl = document.getElementById('ic-engine-displacement');
-const icEngineWeightEl = document.getElementById('ic-engine-weight');
-const icEngineTorqueEl = document.getElementById('ic-engine-torque');
+// Electric Engine Inputs
+const enginePlacementInput = document.getElementById('engine-placement');
+const wingEnginePlacementOptions = document.getElementById('wing-engine-placement-options');
+const engineWingPositionInput = document.getElementById('engine-wing-position');
+const engineWingPosValueEl = document.getElementById('engine-wing-pos-value');
+const engineWingVerticalPosInput = document.getElementById('engine-wing-vertical-pos');
+const engineWingForeAftInput = document.getElementById('engine-wing-fore-aft');
+const enginePylonLengthInput = document.getElementById('engine-pylon-length');
+
+const electricMotorWeightInput = document.getElementById('electric-motor-weight-input');
+const electricMotorTorqueInput = document.getElementById('electric-motor-torque-input');
+const electricMotorKvInput = document.getElementById('electric-motor-kv-input');
+const electricMotorVoltageInput = document.getElementById('electric-motor-voltage-input');
+const electricMotorLengthInput = document.getElementById('electric-motor-length-input');
+const electricMotorDiameterInput = document.getElementById('electric-motor-diameter-input');
+
+// IC Engine Inputs
+const icEngineDisplacementInput = document.getElementById('ic-engine-displacement-input');
+const icEngineWeightInput = document.getElementById('ic-engine-weight-input');
+const icEngineTorqueInput = document.getElementById('ic-engine-torque-input');
+const icEngineLengthInput = document.getElementById('ic-engine-length-input');
+const icEngineDiameterInput = document.getElementById('ic-engine-diameter-input');
+
 
 
 
@@ -544,6 +580,22 @@ function updatePlaneParameters() {
     planeParams.cl = cl;
 }
 
+function updateEngineInputs(spec, type) {
+    if (type === 'electric') {
+        electricMotorWeightInput.value = spec.weight || 0;
+        electricMotorTorqueInput.value = spec.torque || 0;
+        electricMotorKvInput.value = spec.kv || 0;
+        electricMotorVoltageInput.value = spec.voltage || 0;
+        electricMotorLengthInput.value = spec.length || 0;
+        electricMotorDiameterInput.value = spec.diameter || 0;
+    } else { // ic
+        icEngineWeightInput.value = spec.weight || 0;
+        icEngineDisplacementInput.value = spec.displacement || 0;
+        icEngineTorqueInput.value = spec.torque || 0;
+        icEngineLengthInput.value = spec.length || 0;
+        icEngineDiameterInput.value = spec.diameter || 0;
+    }
+}
 function updateEngineUI() {
     const engineType = engineTypeInput.value;
 
@@ -552,25 +604,16 @@ function updateEngineUI() {
     icEngineOptions.style.display = engineType === 'ic' ? 'block' : 'none';
 
     let selectedEngineSpec;
-    let selectedRpm;
 
     if (engineType === 'electric') {
         const motorType = electricMotorTypeInput.value;
         selectedEngineSpec = ENGINE_SPECS.electric[motorType];
-        electricMotorSizeEl.textContent = selectedEngineSpec.size;
-        electricMotorWeightEl.textContent = selectedEngineSpec.weight;
-        electricMotorTorqueEl.textContent = selectedEngineSpec.torque;
-        selectedRpm = selectedEngineSpec.rpm;
+        updateEngineInputs(selectedEngineSpec, 'electric');
     } else { // ic
         const motorType = icEngineTypeInput.value;
         selectedEngineSpec = ENGINE_SPECS.ic[motorType];
-        icEngineDisplacementEl.textContent = selectedEngineSpec.displacement;
-        icEngineWeightEl.textContent = selectedEngineSpec.weight;
-        icEngineTorqueEl.textContent = selectedEngineSpec.torque;
-        selectedRpm = selectedEngineSpec.rpm;
+        updateEngineInputs(selectedEngineSpec, 'ic');
     }
-
-    propRpmInput.value = selectedRpm;
 }
 
 function updatePlaneModel() {
@@ -691,6 +734,11 @@ function updatePlaneModel() {
 
     // Update engine UI elements
     updateEngineUI();
+
+    // إظهار/إخفاء خيارات موضع محرك الجناح
+    const enginePlacement = enginePlacementInput.value;
+    wingEnginePlacementOptions.style.display = enginePlacement === 'wing' ? 'block' : 'none';
+
 
     // Landing Gear Controls visibility
     landingGearControls.style.display = hasLandingGearInput.checked ? 'block' : 'none';
@@ -1122,60 +1170,118 @@ function updatePlaneModel() {
     fuselage.geometry = newFuselageGeom;
     planeGroup.add(fuselage); // إعادة إضافة الجسم المحدث
 
+    // --- إنشاء وتحديد موضع المحرك والمروحة ---
+    // 1. إزالة النماذج القديمة
+    while(engineGroup.children.length > 0) engineGroup.remove(engineGroup.children[0]);
+    while(propellerGroup.children.length > 0) propellerGroup.remove(propellerGroup.children[0]);
+    while(wingEnginesGroup.children.length > 0) wingEnginesGroup.remove(wingEnginesGroup.children[0]);
 
-    // تحديث المواقع
-    // --- Engine ---
-    while(engineGroup.children.length > 0) {
-        engineGroup.remove(engineGroup.children[0]);
-    }
-
+    // 2. قراءة أبعاد المحرك والمروحة
     const engineType = engineTypeInput.value;
-    let selectedEngineSpec;
-    let engineModelGeom;
-
+    let engineLengthMeters = 0;
+    let engineDiameterMeters = 0;
     if (engineType === 'electric') {
-        const motorType = electricMotorTypeInput.value;
-        selectedEngineSpec = ENGINE_SPECS.electric[motorType];
+        engineLengthMeters = getValidNumber(electricMotorLengthInput) * conversionFactor;
+        engineDiameterMeters = getValidNumber(electricMotorDiameterInput) * conversionFactor;
     } else { // ic
-        const motorType = icEngineTypeInput.value;
-        selectedEngineSpec = ENGINE_SPECS.ic[motorType];
+        engineLengthMeters = getValidNumber(icEngineLengthInput) * conversionFactor;
+        engineDiameterMeters = getValidNumber(icEngineDiameterInput) * conversionFactor;
     }
 
-    if (selectedEngineSpec) {
-        const modelSize = selectedEngineSpec.modelSize;
-        if (modelSize.type === 'box') {
-            engineModelGeom = new THREE.BoxGeometry(modelSize.x, modelSize.y, modelSize.z);
-        } else { // cylinder
-            engineModelGeom = new THREE.CylinderGeometry(modelSize.diameter / 2, modelSize.diameter / 2, modelSize.length, 16);
-            engineModelGeom.rotateZ(Math.PI / 2); // Align with fuselage
-        }
-        const engineModel = new THREE.Mesh(engineModelGeom, engineMaterial);
-        const engineLength = modelSize.type === 'box' ? modelSize.x : modelSize.length;
-        engineModel.position.x = fuselageLength / 2 + engineLength / 2;
-        engineGroup.add(engineModel);
-        propellerGroup.position.x = fuselageLength / 2 + engineLength + 0.01; // Small gap
-    } else {
-        propellerGroup.position.x = fuselageLength / 2 + 0.05;
+    // 3. إنشاء نماذج أولية للمحرك والمروحة
+    let engineProto = null;
+    if (engineLengthMeters > 0 && engineDiameterMeters > 0) {
+        const engineGeom = new THREE.CylinderGeometry(engineDiameterMeters / 2, engineDiameterMeters / 2, engineLengthMeters, 16);
+        engineGeom.rotateZ(Math.PI / 2); // تدوير الأسطوانة لتكون أفقية
+        engineProto = new THREE.Mesh(engineGeom, engineMaterial);
     }
-    // تحديث المروحة
-    while(propellerGroup.children.length) propellerGroup.remove(propellerGroup.children[0]);
 
-    // إنشاء المخروط (Spinner)
+    const propProto = new THREE.Group();
     const spinnerGeom = new THREE.SphereGeometry(spinnerDiameter / 2, 16, 12);
-    spinnerGeom.scale(1.5, 1, 1); // جعله أكثر شبهًا بالمخروط
-    const spinner = new THREE.Mesh(spinnerGeom, propMaterial);
-    propellerGroup.add(spinner);
-
-    // إنشاء الشفرات
+    spinnerGeom.scale(1.5, 1, 1);
+    propProto.add(new THREE.Mesh(spinnerGeom, propMaterial));
     const bladeRadius = (propDiameter / 2) - (spinnerDiameter / 2);
-    // إنشاء هندسة شفرة واحدة واقعية
     const bladeGeom = createPropellerBladeGeom(bladeRadius, propChord, propChord * 0.5, propThickness, pitchInMeters, spinnerDiameter / 2, 'flat-bottom');
-
     for (let i = 0; i < propBlades; i++) {
         const blade = new THREE.Mesh(bladeGeom, propMaterial);
-        const angle = (i / propBlades) * Math.PI * 2;
-        blade.rotation.x = angle; // تدوير الشفرة حول محور الطائرة
-        propellerGroup.add(blade);
+        blade.rotation.x = (i / propBlades) * Math.PI * 2;
+        propProto.add(blade);
+    }
+
+    // 4. تحديد الموضع بناءً على اختيار المستخدم
+    if (enginePlacement === 'front') {
+        if (engineProto) {
+            const engine = engineProto.clone();
+            engine.position.x = fuselageLength / 2 + engineLengthMeters / 2;
+            engineGroup.add(engine);
+        }
+        propellerGroup.add(propProto.clone());
+        propellerGroup.position.x = fuselageLength / 2 + engineLengthMeters + 0.01;
+    } else if (enginePlacement === 'rear') {
+        if (engineProto) {
+            const engine = engineProto.clone();
+            engine.position.x = -fuselageLength / 2 - engineLengthMeters / 2;
+            engineGroup.add(engine);
+        }
+        const pusherProp = propProto.clone();
+        pusherProp.rotation.y = Math.PI; // تدوير المروحة 180 درجة
+        propellerGroup.add(pusherProp);
+        propellerGroup.position.x = -fuselageLength / 2 - engineLengthMeters - 0.01;
+    } else if (enginePlacement === 'wing') {
+        if (engineProto) {
+            // قراءة جميع خيارات تركيب الجناح
+            const wingEnginePosPercent = getValidNumber(engineWingPositionInput) / 100;
+            const wingEngineVerticalPos = engineWingVerticalPosInput.value;
+            const wingEngineForeAft = engineWingForeAftInput.value;
+            const pylonLengthMeters = getValidNumber(enginePylonLengthInput) * conversionFactor;
+
+            // حساب الموضع على امتداد الجناح
+            const posOnWingZ = (halfSpan * wingEnginePosPercent) + (currentFuselageWidth / 2);
+            const spanProgress = (posOnWingZ - currentFuselageWidth / 2) / halfSpan;
+
+            // حساب خصائص الجناح عند هذا الموضع
+            const chordAtPylon = rootChord + (rootChord * taperRatio - rootChord) * spanProgress;
+            const sweepAtPylon = (posOnWingZ - currentFuselageWidth / 2) * Math.tan(sweepRad);
+            const leadingEdgeX = wingPositionX + sweepAtPylon + chordAtPylon / 2;
+            const trailingEdgeX = wingPositionX + sweepAtPylon - chordAtPylon / 2;
+
+            // حساب الموضع العمودي (أعلى/أسفل)
+            const wingCenterY = wingGroup.position.y;
+            let engineYOffset;
+            if (wingEngineVerticalPos === 'above') {
+                engineYOffset = wingCenterY + (wingThickness / 2) + (engineDiameterMeters / 2);
+            } else { // 'below'
+                engineYOffset = wingCenterY - (wingThickness / 2) - (engineDiameterMeters / 2);
+            }
+
+            // حساب الموضع الأفقي (أمامي/خلفي) وإعداد المروحة
+            let engineCenterX, propCenterX;
+            let propModel;
+            if (wingEngineForeAft === 'leading') {
+                engineCenterX = leadingEdgeX + pylonLengthMeters + (engineLengthMeters / 2);
+                propCenterX = engineCenterX + (engineLengthMeters / 2) + 0.01;
+                propModel = propProto.clone(); // مروحة سحب (Tractor)
+            } else { // 'trailing'
+                engineCenterX = trailingEdgeX - pylonLengthMeters - (engineLengthMeters / 2);
+                propCenterX = engineCenterX - (engineLengthMeters / 2) - 0.01;
+                propModel = propProto.clone();
+                propModel.rotation.y = Math.PI; // مروحة دفع (Pusher)
+            }
+
+            // إنشاء ووضع المحركات والمراوح
+            const rightEngine = engineProto.clone();
+            const leftEngine = engineProto.clone();
+            const rightProp = propModel.clone();
+            const leftProp = propModel.clone();
+
+            rightEngine.position.set(engineCenterX, engineYOffset, posOnWingZ);
+            leftEngine.position.set(engineCenterX, engineYOffset, -posOnWingZ);
+
+            rightProp.position.set(propCenterX, engineYOffset, posOnWingZ);
+            leftProp.position.set(propCenterX, engineYOffset, -posOnWingZ);
+
+            wingEnginesGroup.add(rightEngine, leftEngine, rightProp, leftProp);
+        }
     }
     // --- Landing Gear ---
     while(landingGearGroup.children.length > 0) {
@@ -1417,12 +1523,11 @@ function calculateAerodynamics() {
     // Engine Weight Calculation
     const engineType = engineTypeInput.value;
     let engineWeightKg = 0;
+
     if (engineType === 'electric') {
-        const motorType = electricMotorTypeInput.value;
-        engineWeightKg = ENGINE_SPECS.electric[motorType].weight / 1000;
+        engineWeightKg = getValidNumber(electricMotorWeightInput) / 1000;
     } else { // ic
-        const motorType = icEngineTypeInput.value;
-        engineWeightKg = ENGINE_SPECS.ic[motorType].weight / 1000;
+        engineWeightKg = getValidNumber(icEngineWeightInput) / 1000;
     }
     
     let landingGearWeightKg = 0;
@@ -1687,6 +1792,10 @@ hasRudderInput.addEventListener('change', updateAll);
 engineTypeInput.addEventListener('change', updateAll);
 electricMotorTypeInput.addEventListener('change', updateAll);
 icEngineTypeInput.addEventListener('change', updateAll);
+enginePlacementInput.addEventListener('change', updateAll);
+engineWingVerticalPosInput.addEventListener('change', updateAll);
+engineWingForeAftInput.addEventListener('change', updateAll);
+enginePylonLengthInput.addEventListener('input', debouncedUpdate);
 
 
 
@@ -1701,6 +1810,7 @@ airflowTransparencyInput.addEventListener('input', () => airflowTransparencyValu
 particleSizeInput.addEventListener('input', () => particleSizeValueEl.textContent = Math.round(particleSizeInput.value * 100));
 vibrationIntensityInput.addEventListener('input', () => vibrationValueEl.textContent = Math.round(vibrationIntensityInput.value * 100));
 unitSelector.addEventListener('change', updateUnitLabels);
+engineWingPositionInput.addEventListener('input', () => engineWingPosValueEl.textContent = engineWingPositionInput.value);
 
 showAxesCheckbox.addEventListener('change', () => {
     axesHelper.visible = showAxesCheckbox.checked;
