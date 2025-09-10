@@ -479,6 +479,10 @@
                     </div>
                     <div id="landing-gear-controls" style="display:none;">
                         <div class="input-group">
+                            <label for="has-retractable-gear">قابلة للسحب (Retractable)؟</label>
+                            <input type="checkbox" id="has-retractable-gear" style="flex-basis: auto; margin-left: auto;">
+                        </div>
+                        <div class="input-group">
                             <label for="gear-type">نوع العجلات</label>
                             <select id="gear-type">
                                 <option value="tricycle" selected>ثلاثية (Tricycle)</option>
@@ -572,8 +576,12 @@
                         <input type="color" id="aileron-color" value="#ffc107">
                     </div>
                     <div class="input-group">
-                        <label for="gear-color">لون عجلات الهبوط</label>
-                        <input type="color" id="gear-color" value="#555555">
+                        <label for="strut-color">لون دعامات الهبوط</label>
+                        <input type="color" id="strut-color" value="#888888">
+                    </div>
+                    <div class="input-group">
+                        <label for="wheel-color">لون العجلات</label>
+                        <input type="color" id="wheel-color" value="#333333">
                     </div>
                 </fieldset>
             </form>
@@ -620,6 +628,14 @@
                 <div class="result-item">
                     <p>وزن المروحة التقديري (جرام):</p>
                     <span id="prop-weight-result">0</span>
+                </div>
+                <div class="result-item">
+                    <p>وزن العجلة الواحدة (جرام):</p>
+                    <span id="wheel-weight-result">0</span>
+                </div>
+                <div class="result-item">
+                    <p>وزن الدعامة الواحدة (جرام):</p>
+                    <span id="strut-weight-result">0</span>
                 </div>
                 <div class="result-item">
                     <p>وزن عجلات الهبوط (جرام):</p>

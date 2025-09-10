@@ -35,7 +35,8 @@ const aileronMaterial = new THREE.MeshStandardMaterial({ color: 0xffc107, side: 
 // مجموعة عجلات الهبوط
 const landingGearGroup = new THREE.Group();
 planeGroup.add(landingGearGroup);
-const gearMaterial = new THREE.MeshStandardMaterial({ color: 0x555555, side: THREE.DoubleSide });
+const strutMaterial = new THREE.MeshStandardMaterial({ color: 0x888888, side: THREE.DoubleSide });
+const wheelMaterial = new THREE.MeshStandardMaterial({ color: 0x333333, side: THREE.DoubleSide });
 
 // جسم الطائرة
 const fuselageGeom = new THREE.BoxGeometry(1, 0.15, 0.15);
@@ -234,7 +235,8 @@ const fuselageColorInput = document.getElementById('fuselage-color');
 const wingColorInput = document.getElementById('wing-color');
 const tailColorInput = document.getElementById('tail-color');
 const aileronColorInput = document.getElementById('aileron-color');
-const gearColorInput = document.getElementById('gear-color');
+const strutColorInput = document.getElementById('strut-color');
+const wheelColorInput = document.getElementById('wheel-color');
 
 // عناصر عرض قيم شريط التمرير
 const sweepValueEl = document.getElementById('sweep-value');
@@ -255,6 +257,7 @@ const wheelThicknessInput = document.getElementById('wheel-thickness');
 const strutLengthInput = document.getElementById('strut-length');
 const strutThicknessInput = document.getElementById('strut-thickness');
 const mainGearPositionInput = document.getElementById('main-gear-position');
+const hasRetractableGearInput = document.getElementById('has-retractable-gear');
 const mainGearWidthInput = document.getElementById('main-gear-width');
 
 
@@ -269,6 +272,8 @@ const tailAreaResultEl = document.getElementById('tail-area-result');
 const tailWeightResultEl = document.getElementById('tail-weight-result');
 const fuselageWeightResultEl = document.getElementById('fuselage-weight-result');
 const fuselageAreaResultEl = document.getElementById('fuselage-area-result');
+const wheelWeightResultEl = document.getElementById('wheel-weight-result');
+const strutWeightResultEl = document.getElementById('strut-weight-result');
 const landingGearWeightResultEl = document.getElementById('landing-gear-weight-result');
 const totalWeightResultEl = document.getElementById('total-weight-result');
 const propWeightResultEl = document.getElementById('prop-weight-result');
@@ -581,7 +586,8 @@ function updatePlaneModel() {
     wingMaterial.color.set(wingColor);
     tailMaterial.color.set(tailColor);
     aileronMaterial.color.set(aileronColorInput.value);
-    gearMaterial.color.set(gearColorInput.value);
+    strutMaterial.color.set(strutColorInput.value);
+    wheelMaterial.color.set(wheelColorInput.value);
 
      // Wingtip Controls visibility
     if(hasWingtipInput.checked){
@@ -1081,6 +1087,7 @@ function updatePlaneModel() {
         const strutThickness = getValidNumber(strutThicknessInput) * conversionFactor;
         const mainGearPosition = getValidNumber(mainGearPositionInput) * conversionFactor;
         const mainGearWidth = getValidNumber(mainGearWidthInput) * conversionFactor;
+        const hasRetractableGear = hasRetractableGearInput.checked;
 
         // Create reusable geometries
         const wheelGeom = new THREE.CylinderGeometry(wheelDiameter / 2, wheelDiameter / 2, wheelThickness, 24);
@@ -1090,8 +1097,8 @@ function updatePlaneModel() {
         // --- Main Gear ---
         const createMainGear = (side) => {
             const gearAssembly = new THREE.Group();
-            const strut = new THREE.Mesh(strutGeom, gearMaterial);
-            const wheel = new THREE.Mesh(wheelGeom, gearMaterial);
+            const strut = new THREE.Mesh(strutGeom, strutMaterial);
+            const wheel = new THREE.Mesh(wheelGeom, wheelMaterial);
 
             // Position strut relative to assembly origin (top of strut)
             strut.position.y = -strutLength / 2;
@@ -1102,8 +1109,13 @@ function updatePlaneModel() {
             gearAssembly.add(strut, wheel);
 
             // Position the whole assembly
+            let gearYPosition = -currentFuselageHeight / 2; // Default extended position
+            if (hasRetractableGear) {
+                // Move the gear up by its strut length to simulate retraction
+                gearYPosition += strutLength;
+            }
             gearAssembly.position.x = (fuselageLength / 2) - mainGearPosition;
-            gearAssembly.position.y = -currentFuselageHeight / 2;
+            gearAssembly.position.y = gearYPosition;
             gearAssembly.position.z = (mainGearWidth / 2) * side;
 
             return gearAssembly;
@@ -1123,10 +1135,14 @@ function updatePlaneModel() {
         } else if (gearType === 'taildragger') {
             const tailWheelGeom = new THREE.CylinderGeometry(wheelDiameter / 3, wheelDiameter / 3, wheelThickness * 0.8, 16);
             tailWheelGeom.rotateX(Math.PI / 2);
-            const tailWheel = new THREE.Mesh(tailWheelGeom, gearMaterial);
+            const tailWheel = new THREE.Mesh(tailWheelGeom, wheelMaterial);
 
+            let tailWheelYPosition = -currentFuselageHeight / 2 + (wheelDiameter / 3); // Simplified extended position
+            if (hasRetractableGear) {
+                tailWheelYPosition += (wheelDiameter / 3); // Move up by its own radius
+            }
             tailWheel.position.x = tailPositionX; // Position it near the tail assembly
-            tailWheel.position.y = -currentFuselageHeight / 2 + (wheelDiameter / 3); // Simplified position
+            tailWheel.position.y = tailWheelYPosition;
             tailWheel.position.z = 0;
             landingGearGroup.add(tailWheel);
         }
@@ -1296,12 +1312,16 @@ function calculateAerodynamics() {
     const propWeightKg = propVolume * propMaterialDensity;
     
     let landingGearWeightKg = 0;
+    let singleWheelWeightKg = 0;
+    let singleStrutWeightKg = 0;
     if (hasLandingGearInput.checked) {
         const wheelDiameter = getValidNumber(wheelDiameterInput) * conversionFactor;
         const wheelThickness = getValidNumber(wheelThicknessInput) * conversionFactor;
         const strutLength = getValidNumber(strutLengthInput) * conversionFactor;
         const strutThickness = getValidNumber(strutThicknessInput) * conversionFactor;
         const gearType = gearTypeInput.value;
+        const hasRetractableGear = hasRetractableGearInput.checked;
+        const gearMaterialDensity = MATERIAL_DENSITIES['plastic']; // Assuming plastic/nylon for gear
 
         const mainWheelVolume = Math.PI * Math.pow(wheelDiameter / 2, 2) * wheelThickness;
         const strutVolume = Math.PI * Math.pow(strutThickness / 2, 2) * strutLength;
@@ -1316,8 +1336,9 @@ function calculateAerodynamics() {
             const tailWheelVolume = Math.PI * Math.pow(wheelDiameter / 3 / 2, 2) * (wheelThickness * 0.8);
             totalGearVolume += tailWheelVolume; // Add tail wheel (no strut for simplicity)
         }
-        const gearMaterialDensity = MATERIAL_DENSITIES['plastic']; // Assuming plastic/nylon for gear
         landingGearWeightKg = totalGearVolume * gearMaterialDensity;
+        singleWheelWeightKg = mainWheelVolume * gearMaterialDensity;
+        singleStrutWeightKg = strutVolume * gearMaterialDensity;
     }
 
     const planeComponentsWeightKg = planeComponentsWeightGrams / 1000;
@@ -1337,6 +1358,15 @@ function calculateAerodynamics() {
     tailWeightResultEl.textContent = (tailWeightKg * 1000).toFixed(0);
     fuselageAreaResultEl.textContent = fuselageSurfaceArea > 0 ? fuselageSurfaceArea.toFixed(2) : '0.00';
     fuselageWeightResultEl.textContent = (fuselageWeightKg * 1000).toFixed(0);
+    if (hasLandingGearInput.checked) {
+        wheelWeightResultEl.parentElement.style.display = 'flex';
+        strutWeightResultEl.parentElement.style.display = 'flex';
+        wheelWeightResultEl.textContent = (singleWheelWeightKg * 1000).toFixed(1);
+        strutWeightResultEl.textContent = (singleStrutWeightKg * 1000).toFixed(1);
+    } else {
+        wheelWeightResultEl.parentElement.style.display = 'none';
+        strutWeightResultEl.parentElement.style.display = 'none';
+    }
     landingGearWeightResultEl.textContent = (landingGearWeightKg * 1000).toFixed(0);
     propWeightResultEl.textContent = (propWeightKg * 1000).toFixed(0);
     totalWeightResultEl.textContent = (totalWeightKg * 1000).toFixed(0);
@@ -1535,6 +1565,7 @@ hasAileronInput.addEventListener('change', updateAll);
 hasWingtipInput.addEventListener('change', updateAll);
 tailTypeInput.addEventListener('change', updateAll);
 hasElevatorInput.addEventListener('change', updateAll);
+hasRetractableGearInput.addEventListener('change', updateAll);
 hasLandingGearInput.addEventListener('change', updateAll);
 fuselageShapeInput.addEventListener('change', updateAll);
 hasRudderInput.addEventListener('change', updateAll);
