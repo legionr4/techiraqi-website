@@ -27,7 +27,11 @@ scene.add( axesHelper );
 
 // --- إنشاء أجزاء الطائرة ---
 const planeGroup = new THREE.Group();
-const fuselageMaterial = new THREE.MeshStandardMaterial({ color: 0x0056b3, side: THREE.DoubleSide });
+const fuselageMaterial = new THREE.MeshStandardMaterial({
+    color: 0x0056b3,
+    side: THREE.DoubleSide,
+    transparent: true // تفعيل الشفافية
+});
 const wingMaterial = new THREE.MeshStandardMaterial({ color: 0xcccccc, side: THREE.DoubleSide });
 const tailMaterial = new THREE.MeshStandardMaterial({ color: 0xdddddd, side: THREE.DoubleSide });
 const aileronMaterial = new THREE.MeshStandardMaterial({ color: 0xffc107, side: THREE.DoubleSide });
@@ -57,6 +61,14 @@ const wheelMaterial = new THREE.MeshStandardMaterial({ color: 0x333333, side: TH
 // تم تغيير fuselage إلى Group لاستيعاب الأجزاء المتعددة (الجسم، المقدمة، المؤخرة)
 const fuselageGroup = new THREE.Group();
 planeGroup.add(fuselageGroup);
+
+// علامة مركز الثقل على جسم الطائرة
+const cgOnFuselageMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000, depthTest: false }); // أحمر، مع إلغاء اختبار العمق لضمان ظهوره
+const cgOnFuselageGeom = new THREE.SphereGeometry(0.03, 16, 16); // أكبر قليلاً ليكون واضحاً
+const cgOnFuselageSphere = new THREE.Mesh(cgOnFuselageGeom, cgOnFuselageMaterial);
+cgOnFuselageSphere.renderOrder = 1; // يتم عرضه فوق الأجسام الأخرى
+fuselageGroup.add(cgOnFuselageSphere);
+
 
 // مجموعة الجناح (سيتم إنشاؤها ديناميكيًا)
 const wingGroup = new THREE.Group();
@@ -277,6 +289,8 @@ const fuselageTearFrontDiaGroup = document.getElementById('fuselage-teardrop-fro
 const fuselageTaperRatioInput = document.getElementById('fuselage-taper-ratio');
 const fuselageTaperValueEl = document.getElementById('fuselage-taper-value');
 const fuselageTaperGroup = document.getElementById('fuselage-taper-group');
+const fuselageOpacityInput = document.getElementById('fuselage-opacity');
+const fuselageOpacityValueEl = document.getElementById('fuselage-opacity-value');
 const fuselageEndsControls = document.getElementById('fuselage-ends-controls');
 const fuselageNoseShapeInput = document.getElementById('fuselage-nose-shape');
 const fuselageTailShapeInput = document.getElementById('fuselage-tail-shape');
@@ -334,6 +348,7 @@ const fuelLevelValueEl = document.getElementById('fuel-level-value');
 const tailSweepValueEl = document.getElementById('tail-sweep-value');
 const tailTaperValueEl = document.getElementById('tail-taper-value');
 const particleDensityValueEl = document.getElementById('particle-density-value');
+const fuselageOpacityValueEl = document.getElementById('fuselage-opacity-value');
 const particleSizeValueEl = document.getElementById('particle-size-value');
 const vibrationValueEl = document.getElementById('vibration-value');
 const cockpitOpacityValueEl = document.getElementById('cockpit-opacity-value');
@@ -812,12 +827,14 @@ function updatePlaneModel() {
     const propBlades = parseInt(getValidNumber(propBladesInput));
     const fuselageColor = fuselageColorInput.value;
     const wingColor = wingColorInput.value;
+    const fuselageOpacity = getValidNumber(fuselageOpacityInput);
     const tailColor = tailColorInput.value;
     const backgroundColor = backgroundColorInput.value;
 
 
     // تحديث الألوان
     fuselageMaterial.color.set(fuselageColor);
+    fuselageMaterial.opacity = fuselageOpacity;
     wingMaterial.color.set(wingColor);
     tailMaterial.color.set(tailColor);
     aileronMaterial.color.set(aileronColorInput.value);
@@ -2051,6 +2068,10 @@ function calculateAerodynamics() {
     acSphere.position.y = 0;
     acSphere.position.z = 0;
 
+    // تحديث موضع علامة مركز الثقل على جسم الطائرة
+    cgOnFuselageSphere.position.x = cg_x;
+    cgOnFuselageSphere.visible = showCgAcCheckbox.checked;
+
     // عرض النتائج
     liftResultEl.textContent = lift > 0 ? lift.toFixed(2) : '0.00';
     dragResultEl.textContent = drag > 0 ? drag.toFixed(2) : '0.00';
@@ -2320,6 +2341,7 @@ tailSweepAngleInput.addEventListener('input', () => tailSweepValueEl.textContent
 tailTaperRatioInput.addEventListener('input', () => tailTaperValueEl.textContent = parseFloat(tailTaperRatioInput.value).toFixed(2));
 particleDensityInput.addEventListener('input', () => particleDensityValueEl.textContent = Math.round(particleDensityInput.value * 100));
 fuselageTaperRatioInput.addEventListener('input', () => fuselageTaperValueEl.textContent = parseFloat(fuselageTaperRatioInput.value).toFixed(2));
+fuselageOpacityInput.addEventListener('input', () => fuselageOpacityValueEl.textContent = Math.round(fuselageOpacityInput.value * 100));
 airflowTransparencyInput.addEventListener('input', () => airflowTransparencyValueEl.textContent = Math.round(airflowTransparencyInput.value * 100));
 particleSizeInput.addEventListener('input', () => particleSizeValueEl.textContent = Math.round(particleSizeInput.value * 100));
 vibrationIntensityInput.addEventListener('input', () => vibrationValueEl.textContent = Math.round(vibrationIntensityInput.value * 100));
