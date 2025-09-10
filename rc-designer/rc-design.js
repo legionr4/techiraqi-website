@@ -1346,10 +1346,10 @@ function updatePlaneModel() {
                 noseGeom.rotateZ(-Math.PI / 2); // توجيه الجزء المسطح نحو الجسم
             } else { // ogival
                 noseGeom = createOgiveGeometry(radiusFront, noseLength, 32);
-                noseGeom.rotateZ(-Math.PI / 2); // تصحيح: توجيه الجزء المدبب للأمام
+                noseGeom.rotateZ(Math.PI / 2); // تصحيح نهائي: توجيه الجزء المدبب للأمام
             }
             const noseCone = new THREE.Mesh(noseGeom, fuselageMaterial);
-            noseCone.position.x = (fuselageLength / 2) - (noseLength / 2); // وضع مركز المقدمة عند مقدمة الجسم
+            noseCone.position.x = (fuselageLength / 2) - noseLength; // تصحيح نهائي: وضع قاعدة المقدمة عند مقدمة الجسم
             fuselageGroup.add(noseCone);
         }
 
@@ -1357,7 +1357,7 @@ function updatePlaneModel() {
         if (tailShape !== 'flat') {
             const tailLength = radiusRear; // طول المؤخرة يساوي قطرها
             bodyLength -= tailLength;
-            
+
             const tailGeom = new THREE.SphereGeometry(radiusRear, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
             tailGeom.rotateZ(Math.PI / 2);
             const tailCone = new THREE.Mesh(tailGeom, fuselageMaterial); // وضع قاعدة المؤخرة عند نهاية الجسم
