@@ -624,6 +624,9 @@ function createOgiveGeometry(radius, length, segments) {
     }
 
     const geometry = new THREE.LatheGeometry(points, segments);
+    // تم التعديل: تحريك الهندسة بحيث يكون أصلها عند القاعدة (y=0) بدلاً من الرأس
+    // هذا يجعلها متوافقة مع هندسة نصف الكرة (hemisphere)
+    geometry.translate(0, -length, 0);
     return geometry;
 }
 
@@ -1317,12 +1320,10 @@ function updatePlaneModel() {
         fuselageGroup.add(new THREE.Mesh(geom, fuselageMaterial));
 
     } else {
-        // For Cylindrical and Teardrop shapes
+        // للنماذج الأسطوانية وذات شكل قطرة الدمع
         const noseShape = fuselageNoseShapeInput.value;
         const tailShape = fuselageTailShapeInput.value;
 
-        let bodyLength = fuselageLength;
-        let bodyOffset = 0;
         let radiusFront, radiusRear;
 
         if (fuselageShape === 'cylindrical') {
@@ -1334,49 +1335,59 @@ function updatePlaneModel() {
             radiusRear = (getValidNumber(fuselageRearDiameterInput) * conversionFactor) / 2;
         }
 
-        // --- Nose Cone ---
-        if (noseShape !== 'flat') {
-            // طول المقدمة يعتمد على قطرها، يمكن تعديل النسبة للحصول على أشكال مختلفة
-            const noseLength = (noseShape === 'ogival') ? radiusFront * 2.0 : radiusFront;
-            bodyLength -= noseLength; // تقصير الجسم الرئيسي لإفساح المجال للمقدمة
+        // --- حساب أطوال المقدمة والمؤخرة بناءً على شكلهما ---
+        let noseLength = 0;
+        if (noseShape === 'rounded') {
+            noseLength = radiusFront; // طول نصف الكرة هو نصف قطرها
+        } else if (noseShape === 'ogival') {
+            noseLength = radiusFront * 2.0; // طول الشكل البيضوي يُعرّف بأنه ضعف نصف القطر
+        }
 
+        let tailLength = 0;
+        if (tailShape === 'rounded') {
+            tailLength = radiusRear; // طول نصف الكرة هو نصف قطرها
+        }
+
+        // طول الجزء الأوسط من الجسم هو الطول الكلي مطروحًا منه أطوال الأغطية الطرفية
+        const bodyLength = fuselageLength - noseLength - tailLength;
+
+        // --- بناء المقدمة ---
+        if (noseShape !== 'flat' && radiusFront > 0) {
             let noseGeom;
             if (noseShape === 'rounded') {
+                // إنشاء نصف كرة
                 noseGeom = new THREE.SphereGeometry(radiusFront, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
-                noseGeom.rotateZ(-Math.PI / 2); // توجيه الجزء المسطح نحو الجسم
+                // تدويرها لتشير إلى الأمام على طول المحور X+
+                noseGeom.rotateY(-Math.PI / 2);
             } else { // ogival
+                // تم تعديل createOgiveGeometry ليكون أصلها عند القاعدة
                 noseGeom = createOgiveGeometry(radiusFront, noseLength, 32);
-                noseGeom.rotateZ(Math.PI / 2); // تصحيح نهائي: توجيه الجزء المدبب للأمام
+                // تدويرها لتشير إلى الأمام على طول المحور X+
+                noseGeom.rotateZ(Math.PI / 2);
             }
             const noseCone = new THREE.Mesh(noseGeom, fuselageMaterial);
-            noseCone.position.x = (fuselageLength / 2) - (noseLength / 2); // وضع مركز المقدمة عند مقدمة الجسم
+            // وضع قاعدة المقدمة عند مقدمة الجسم
+            noseCone.position.x = fuselageLength / 2 - noseLength;
             fuselageGroup.add(noseCone);
         }
 
-        // --- Tail Cone ---
-        if (tailShape !== 'flat') {
-            const tailLength = radiusRear; // طول المؤخرة يساوي قطرها
-            bodyLength -= tailLength;
-            
+        // --- بناء المؤخرة ---
+        if (tailShape !== 'flat' && radiusRear > 0) {
             const tailGeom = new THREE.SphereGeometry(radiusRear, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
-            tailGeom.rotateZ(Math.PI / 2);
-            const tailCone = new THREE.Mesh(tailGeom, fuselageMaterial); // وضع قاعدة المؤخرة عند نهاية الجسم
-            tailCone.position.x = (-fuselageLength / 2) + tailLength;
+            tailGeom.rotateY(Math.PI / 2); // تدويرها لتشير إلى الخلف على طول المحور X-
+            const tailCone = new THREE.Mesh(tailGeom, fuselageMaterial);
+            tailCone.position.x = -fuselageLength / 2 + tailLength;
             fuselageGroup.add(tailCone);
         }
 
-        // --- Main Body ---
-        if (bodyLength > 0) {
+        // --- بناء الجسم الأوسط ---
+        if (bodyLength > 0.001) { // إضافة هامش صغير لتجنب الأجسام ذات الطول الصفري
             const bodyGeom = new THREE.CylinderGeometry(radiusRear, radiusFront, bodyLength, 32);
-            // حساب الإزاحة اللازمة للجسم الرئيسي ليتصل بشكل صحيح مع المقدمة والمؤخرة
-            const noseLength = (fuselageNoseShapeInput.value !== 'flat') ? ((fuselageNoseShapeInput.value === 'ogival') ? radiusFront * 2.0 : radiusFront) : 0;
-            const tailLength = (fuselageTailShapeInput.value !== 'flat') ? radiusRear : 0;
-            const noseOffset = noseLength / 2;
-            const tailOffset = tailLength / 2;
-            const bodyOffset = (tailOffset - noseOffset);
             bodyGeom.rotateZ(Math.PI / 2);
             const mainBody = new THREE.Mesh(bodyGeom, fuselageMaterial);
-            mainBody.position.x = bodyOffset;
+
+            // مركز الجسم الأوسط يقع في منتصف المسافة بين نهاية المقدمة وبداية المؤخرة
+            mainBody.position.x = (tailLength - noseLength) / 2;
             fuselageGroup.add(mainBody);
         }
     }
