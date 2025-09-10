@@ -348,7 +348,6 @@ const fuelLevelValueEl = document.getElementById('fuel-level-value');
 const tailSweepValueEl = document.getElementById('tail-sweep-value');
 const tailTaperValueEl = document.getElementById('tail-taper-value');
 const particleDensityValueEl = document.getElementById('particle-density-value');
-const fuselageOpacityValueEl = document.getElementById('fuselage-opacity-value');
 const particleSizeValueEl = document.getElementById('particle-size-value');
 const vibrationValueEl = document.getElementById('vibration-value');
 const cockpitOpacityValueEl = document.getElementById('cockpit-opacity-value');
