@@ -438,7 +438,7 @@ function generateAirfoil(chord, thickness, airfoilType, numPoints = 15) {
     return points;
 }
 
-const createSurface = (span, rootChord, taperRatio, sweepAngle, thickness, airfoil, isVertical = false, createRootCap = false) => {
+const createSurface = (span, rootChord, taperRatio, sweepAngle, thickness, airfoil, isVertical = false) => {
     const effectiveSpan = isVertical ? span : span / 2; // الأسطح العمودية تمتد بطولها الكامل من القاعدة
     const sweepRad = sweepAngle * Math.PI / 180;
     const geometry = new THREE.BufferGeometry();
@@ -476,15 +476,6 @@ const createSurface = (span, rootChord, taperRatio, sweepAngle, thickness, airfo
     const tipStartIndex = segments * pointsPerSection;
     for (let j = 1; j < pointsPerSection - 1; j++) {
         indices.push(tipStartIndex, tipStartIndex + j + 1, tipStartIndex + j);
-    }
-
-    // Add root cap if requested
-    if (createRootCap) {
-        const rootStartIndex = 0;
-        for (let j = 1; j < pointsPerSection - 1; j++) {
-            // Wind in the opposite direction for the root cap
-            indices.push(rootStartIndex, rootStartIndex + j, rootStartIndex + j + 1);
-        }
     }
 
     geometry.setIndex(indices);
