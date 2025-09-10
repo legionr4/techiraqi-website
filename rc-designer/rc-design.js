@@ -2113,7 +2113,7 @@ function calculateAerodynamics() {
 
             // وزن المحركين + وزن المروحتين
             const totalWingPropulsionWeight = (engineWeightKg * 2) + (propWeightKg * 2);
-            addMoment(totalWingPropulsionWeight, wingEngineX);
+            addMoment(totalWingPropulsionWeight, engineCenterX);
 
             // --- حساب وزن وعزم حوامل المحركات (Pylons) ---
             const pylonLengthMeters = getValidNumber(enginePylonLengthInput) * conversionFactor;
@@ -2136,11 +2136,9 @@ function calculateAerodynamics() {
                 const totalPylonWeightKg = singlePylonWeightKg * 2;
 
                 // إضافة الوزن إلى الإجمالي
-                totalWeightKg += totalPylonWeightKg;
+                // totalWeightKg += totalPylonWeightKg; // تم نقل هذا السطر لتجنب الحساب المزدوج
 
                 // إضافة العزم
-                const wingEngineForeAft = engineWingForeAftInput.value;
-                const leadingEdgeX = wingEnginesGroup.children[0].position.x - (pylonLengthMeters / 2) - (engineWeightKg > 0 ? (getValidNumber(electricMotorLengthInput) * conversionFactor / 2) : 0); // تقدير
                 const pylonX = (wingEngineForeAft === 'leading')
                     ? leadingEdgeX + pylonLengthMeters / 2
                     : leadingEdgeX - pylonLengthMeters / 2; // تقدير مبسط
