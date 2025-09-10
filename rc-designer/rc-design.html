@@ -370,20 +370,44 @@
                 <fieldset>
                     <legend>المروحة</legend>
                     <div class="input-group">
-                        <label for="prop-diameter">القطر (بوصة)</label>
+                        <label for="prop-diameter">قطر المروحة (بوصة)</label>
                         <input type="number" id="prop-diameter" value="10" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="prop-pitch">خطوة المروحة (بوصة)</label>
+                        <input type="number" id="prop-pitch" value="6" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="prop-chord">عرض الشفرة عند القاعدة (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="prop-chord" value="2.5" step="0.1">
+                    </div>
+                    <div class="input-group">
+                        <label for="prop-thickness">سماكة الشفرة (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="prop-thickness" value="0.5" step="0.1">
+                    </div>
+                    <div class="input-group">
+                        <label for="spinner-diameter">قطر المحور/المخروط (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="spinner-diameter" value="4" step="0.5">
                     </div>
                     <div class="input-group">
                         <label for="prop-blades">عدد الشفرات</label>
                         <input type="number" id="prop-blades" value="2" step="1" min="2">
                     </div>
                     <div class="input-group">
-                        <label for="prop-pitch">الخطوة (بوصة)</label>
-                        <input type="number" id="prop-pitch" value="6" step="1">
+                        <label for="prop-material">مادة صنع المروحة</label>
+                        <select id="prop-material">
+                            <option value="plastic" selected>بلاستيك (Nylon/ABS)</option>
+                            <option value="carbon_fiber">ألياف الكربون (Carbon Fiber)</option>
+                            <option value="wood">خشب (Wood)</option>
+                        </select>
                     </div>
-                     <div class="input-group">
+                    <div class="input-group">
                         <label for="prop-rpm">سرعة الدوران (RPM)</label>
                         <input type="number" id="prop-rpm" value="8000" step="100">
+                    </div>
+                    <div class="input-group">
+                        <label for="toggle-prop-spin">تشغيل دوران المروحة</label>
+                        <button type="button" id="toggle-prop-spin" style="flex-basis: 45%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; background-color: #e9ecef;">تشغيل</button>
                     </div>
                 </fieldset>
 
@@ -466,6 +490,10 @@
                 <div class="result-item">
                     <p>وزن الذيل التقديري (جرام):</p>
                     <span id="tail-weight-result">0</span>
+                </div>
+                <div class="result-item">
+                    <p>وزن المروحة التقديري (جرام):</p>
+                    <span id="prop-weight-result">0</span>
                 </div>
                 <div class="result-item">
                     <p>الوزن الكلي التقديري (جرام):</p>

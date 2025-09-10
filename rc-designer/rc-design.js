@@ -3,6 +3,7 @@ const canvas = document.getElementById('viewer-canvas');
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xeeeeee);
 const camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
+const clock = new THREE.Clock(); // لتتبع الوقت بين الإطارات
 camera.position.set(1.5, 1, 2);
 
 const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
@@ -129,7 +130,9 @@ const UNIT_CONVERSIONS = {
 const MATERIAL_DENSITIES = {
     'foam': 45,   // متوسط كثافة فوم EPO
     'balsa': 160, // خشب البلسا
-    'plastic': 1050 // بلاستيك ABS
+    'plastic': 1150, // بلاستيك Nylon/ABS
+    'carbon_fiber': 1600,
+    'wood': 700
 };
 
 // تخزين عناصر الإدخال والنتائج لتحسين الأداء
@@ -190,7 +193,12 @@ const structureMaterialInput = document.getElementById('structure-material');
 const propDiameterInput = document.getElementById('prop-diameter');
 const propBladesInput = document.getElementById('prop-blades');
 const propPitchInput = document.getElementById('prop-pitch');
+const propChordInput = document.getElementById('prop-chord');
+const propThicknessInput = document.getElementById('prop-thickness');
+const propMaterialInput = document.getElementById('prop-material');
+const spinnerDiameterInput = document.getElementById('spinner-diameter');
 const propRpmInput = document.getElementById('prop-rpm');
+const togglePropSpinBtn = document.getElementById('toggle-prop-spin');
 const angleOfAttackInput = document.getElementById('angle-of-attack');
 const airSpeedInput = document.getElementById('air-speed');
 const airDensityInput = document.getElementById('air-density');
@@ -218,8 +226,10 @@ const wingWeightResultEl = document.getElementById('wing-weight-result');
 const tailAreaResultEl = document.getElementById('tail-area-result');
 const tailWeightResultEl = document.getElementById('tail-weight-result');
 const totalWeightResultEl = document.getElementById('total-weight-result');
+const propWeightResultEl = document.getElementById('prop-weight-result');
 
 let liftChart, dragChart;
+let isPropSpinning = false; // متغير لتتبع حالة دوران المروحة
 
 /**
  * Generates points for various airfoil shapes.
@@ -310,6 +320,10 @@ function updatePlaneModel() {
     
     // قيم المروحة تبقى بالبوصة كما هي متعارف عليها
     const propDiameter = getValidNumber(propDiameterInput) * 0.0254; // to meters
+    const propChord = getValidNumber(propChordInput) * conversionFactor;
+    const propThickness = getValidNumber(propThicknessInput) * conversionFactor;
+    const spinnerDiameter = getValidNumber(spinnerDiameterInput) * conversionFactor;
+    const pitchInMeters = getValidNumber(propPitchInput) * 0.0254;
     const propBlades = parseInt(getValidNumber(propBladesInput));
     const fuselageColor = fuselageColorInput.value;
     const wingColor = wingColorInput.value;
@@ -618,6 +632,59 @@ function updatePlaneModel() {
         return geometry;
     };
 
+/**
+ * Creates a realistic propeller blade geometry with airfoil shape and twist.
+ * @param {number} radius The length of the blade from the spinner edge to the tip.
+ * @param {number} rootChord The chord width at the base of the blade.
+ * @param {number} tipChord The chord width at the tip of the blade.
+ * @param {number} thickness The thickness of the airfoil.
+ * @param {number} pitch The propeller pitch in meters.
+ * @param {number} spinnerRadius The radius of the central spinner.
+ * @param {string} airfoilType The type of airfoil to use for the blade cross-section.
+ * @returns {THREE.BufferGeometry} The generated blade geometry.
+ */
+const createPropellerBladeGeom = (radius, rootChord, tipChord, thickness, pitch, spinnerRadius, airfoilType) => {
+    const geom = new THREE.BufferGeometry();
+    const vertices = [];
+    const indices = [];
+    const segments = 8; // Fewer segments for performance
+    const pointsPerSection = (15 * 2); // From generateAirfoil
+
+    for (let i = 0; i <= segments; i++) {
+        const progress = i / segments;
+        const currentY = spinnerRadius + progress * radius; // Distance from center
+        const currentChord = rootChord + (tipChord - rootChord) * progress;
+        const twistAngle = (currentY > 0.001) ? Math.atan(pitch / (2 * Math.PI * currentY)) : 0;
+        
+        // Generate airfoil points in the XZ plane
+        const airfoilPoints = generateAirfoil(currentChord, thickness, airfoilType, 15);
+
+        airfoilPoints.forEach(p => {
+            const vec = new THREE.Vector3(p.y, 0, p.x); // Airfoil is X,Y -> map to X,Z plane for the blade
+            // Apply twist around Y axis (span-wise axis)
+            vec.applyAxisAngle(new THREE.Vector3(0, 1, 0), twistAngle);
+            // Position along blade span
+            vec.y += currentY;
+            vertices.push(vec.x, vec.y, vec.z);
+        });
+    }
+
+    // Create faces (same logic as wing)
+    for (let i = 0; i < segments; i++) {
+        for (let j = 0; j < pointsPerSection; j++) {
+            const p1 = i * pointsPerSection + j;
+            const p2 = i * pointsPerSection + ((j + 1) % pointsPerSection);
+            const p3 = (i + 1) * pointsPerSection + j;
+            const p4 = (i + 1) * pointsPerSection + ((j + 1) % pointsPerSection);
+            indices.push(p1, p3, p4, p1, p4, p2);
+        }
+    }
+    geom.setIndex(indices);
+    geom.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    geom.computeVertexNormals();
+    return geom;
+};
+
     // --- Tail Assembly ---
     if (tailType === 'conventional') {
         const hStabChordEffective = hasElevator ? tailChord - elevatorWidth : tailChord;
@@ -745,11 +812,22 @@ function updatePlaneModel() {
 
     // تحديث المروحة
     while(propellerGroup.children.length) propellerGroup.remove(propellerGroup.children[0]);
+
+    // إنشاء المخروط (Spinner)
+    const spinnerGeom = new THREE.SphereGeometry(spinnerDiameter / 2, 16, 12);
+    spinnerGeom.scale(1.5, 1, 1); // جعله أكثر شبهًا بالمخروط
+    const spinner = new THREE.Mesh(spinnerGeom, propMaterial);
+    propellerGroup.add(spinner);
+
+    // إنشاء الشفرات
+    const bladeRadius = (propDiameter / 2) - (spinnerDiameter / 2);
+    // إنشاء هندسة شفرة واحدة واقعية
+    const bladeGeom = createPropellerBladeGeom(bladeRadius, propChord, propChord * 0.5, propThickness, pitchInMeters, spinnerDiameter / 2, 'flat-bottom');
+
     for (let i = 0; i < propBlades; i++) {
-        const blade = new THREE.Mesh(propBladeGeom, propMaterial);
-        blade.scale.y = propDiameter / 0.25;
+        const blade = new THREE.Mesh(bladeGeom, propMaterial);
         const angle = (i / propBlades) * Math.PI * 2;
-        blade.rotation.x = angle;
+        blade.rotation.x = angle; // تدوير الشفرة حول محور الطائرة
         propellerGroup.add(blade);
     }
 }
@@ -768,6 +846,11 @@ function calculateAerodynamics() {
     const airSpeed = getValidNumber(airSpeedInput);
     const airDensity = getValidNumber(airDensityInput);
     const propDiameter = getValidNumber(propDiameterInput) * 0.0254; // to meters
+    const propChord = getValidNumber(propChordInput) * conversionFactor;
+    const propThickness = getValidNumber(propThicknessInput) * conversionFactor;
+    const spinnerDiameter = getValidNumber(spinnerDiameterInput) * conversionFactor;
+    const propBlades = parseInt(getValidNumber(propBladesInput));
+    const propMaterial = propMaterialInput.value;
     const propPitch = getValidNumber(propPitchInput); // inches
     const propRpm = getValidNumber(propRpmInput);
     const planeComponentsWeightGrams = getValidNumber(planeWeightInput);
@@ -835,8 +918,17 @@ function calculateAerodynamics() {
     const tailVolume = totalTailArea * tailThickness;
     const tailWeightKg = tailVolume * structureMaterialDensity;
 
+    // حساب وزن المروحة
+    const bladeRadius = (propDiameter / 2) - (spinnerDiameter / 2);
+    const avgBladeChord = propChord * 0.75; // تقدير متوسط عرض الشفرة
+    const singleBladeVolume = bladeRadius > 0 ? bladeRadius * avgBladeChord * propThickness : 0;
+    const spinnerVolume = (4/3) * Math.PI * Math.pow(spinnerDiameter / 2, 3);
+    const propVolume = (singleBladeVolume * propBlades) + spinnerVolume;
+    const propMaterialDensity = MATERIAL_DENSITIES[propMaterial];
+    const propWeightKg = propVolume * propMaterialDensity;
+
     const planeComponentsWeightKg = planeComponentsWeightGrams / 1000;
-    const totalWeightKg = wingWeightKg + tailWeightKg + planeComponentsWeightKg;
+    const totalWeightKg = wingWeightKg + tailWeightKg + propWeightKg + planeComponentsWeightKg;
 
     // 5. نسبة الدفع إلى الوزن (Thrust-to-Weight Ratio)
     const weightInNewtons = totalWeightKg * 9.81;
@@ -850,6 +942,7 @@ function calculateAerodynamics() {
     wingWeightResultEl.textContent = (wingWeightKg * 1000).toFixed(0);
     tailAreaResultEl.textContent = totalTailArea > 0 ? totalTailArea.toFixed(2) : '0.00';
     tailWeightResultEl.textContent = (tailWeightKg * 1000).toFixed(0);
+    propWeightResultEl.textContent = (propWeightKg * 1000).toFixed(0);
     totalWeightResultEl.textContent = (totalWeightKg * 1000).toFixed(0);
     twrResultEl.textContent = twr > 0 ? twr.toFixed(2) : '0.00';
 }
@@ -999,6 +1092,20 @@ tailSweepAngleInput.addEventListener('input', () => tailSweepValueEl.textContent
 tailTaperRatioInput.addEventListener('input', () => tailTaperValueEl.textContent = parseFloat(tailTaperRatioInput.value).toFixed(2));
 unitSelector.addEventListener('change', updateUnitLabels);
 
+togglePropSpinBtn.addEventListener('click', () => {
+    isPropSpinning = !isPropSpinning;
+    if (isPropSpinning) {
+        togglePropSpinBtn.textContent = 'إيقاف';
+        togglePropSpinBtn.style.backgroundColor = '#ffc107'; // لون مميز للإشارة إلى التشغيل
+        togglePropSpinBtn.style.color = '#000';
+    } else {
+        togglePropSpinBtn.textContent = 'تشغيل';
+        togglePropSpinBtn.style.backgroundColor = '#e9ecef'; // اللون الافتراضي
+        togglePropSpinBtn.style.color = '#333';
+        // propellerGroup.rotation.x = 0; // اختياري: إعادة تعيين زاوية المروحة عند الإيقاف
+    }
+});
+
 // --- تفاعل الماوس مع الجنيحات ---
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
@@ -1077,6 +1184,15 @@ window.addEventListener('click', onMouseClick, false);
 // --- حلقة العرض ---
 function animate() {
     requestAnimationFrame(animate);
+
+    const deltaTime = clock.getDelta(); // الوقت المنقضي منذ الإطار الأخير
+
+    if (isPropSpinning) {
+        const rpm = getValidNumber(propRpmInput);
+        const rps = rpm / 60; // الدورات في الثانية
+        const rotationPerSecond = rps * Math.PI * 2; // الزاوية بالراديان في الثانية
+        propellerGroup.rotation.x += rotationPerSecond * deltaTime;
+    }
 
     controls.update(); // ضروري إذا تم تفعيل enableDamping
 
