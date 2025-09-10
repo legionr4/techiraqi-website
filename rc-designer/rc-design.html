@@ -555,6 +555,10 @@
                         <label for="particle-size">حجم الجسيمات: <span id="particle-size-value">50</span>%</label>
                         <input type="range" id="particle-size" min="0" max="1" value="0.5" step="0.05">
                     </div>
+                    <div class="input-group">
+                        <label for="airflow-transparency">شفافية تدفق الهواء: <span id="airflow-transparency-value">100</span>%</label>
+                        <input type="range" id="airflow-transparency" min="0" max="1" value="1" step="0.01">
+                    </div>
                 </fieldset>
 
                 <fieldset>
@@ -576,12 +580,20 @@
                         <input type="color" id="aileron-color" value="#ffc107">
                     </div>
                     <div class="input-group">
+                        <label for="prop-color">لون المروحة</label>
+                        <input type="color" id="prop-color" value="#333333">
+                    </div>
+                    <div class="input-group">
                         <label for="strut-color">لون دعامات الهبوط</label>
                         <input type="color" id="strut-color" value="#888888">
                     </div>
                     <div class="input-group">
                         <label for="wheel-color">لون العجلات</label>
                         <input type="color" id="wheel-color" value="#333333">
+                    </div>
+                    <div class="input-group">
+                        <label for="background-color">لون الخلفية</label>
+                        <input type="color" id="background-color" value="#eeeeee">
                     </div>
                 </fieldset>
             </form>

@@ -231,12 +231,16 @@ const planeWeightInput = document.getElementById('plane-weight');
 const particleDensityInput = document.getElementById('particle-density');
 const particleSizeInput = document.getElementById('particle-size');
 const showAmbientWindInput = document.getElementById('show-ambient-wind');
+const airflowTransparencyInput = document.getElementById('airflow-transparency');
+const airflowTransparencyValueEl = document.getElementById('airflow-transparency-value');
 const fuselageColorInput = document.getElementById('fuselage-color');
 const wingColorInput = document.getElementById('wing-color');
 const tailColorInput = document.getElementById('tail-color');
 const aileronColorInput = document.getElementById('aileron-color');
+const propColorInput = document.getElementById('prop-color');
 const strutColorInput = document.getElementById('strut-color');
 const wheelColorInput = document.getElementById('wheel-color');
+const backgroundColorInput = document.getElementById('background-color');
 
 // عناصر عرض قيم شريط التمرير
 const sweepValueEl = document.getElementById('sweep-value');
@@ -482,6 +486,7 @@ function updatePlaneParameters() {
     planeParams.userParticleDensity = getValidNumber(particleDensityInput);
     planeParams.userParticleSize = getValidNumber(particleSizeInput);
     planeParams.userVibrationIntensity = getValidNumber(vibrationIntensityInput);
+    planeParams.airflowTransparency = getValidNumber(airflowTransparencyInput);
 
     // Cache fuselage dimensions
     const fuselageShape = fuselageShapeInput.value;
@@ -580,14 +585,17 @@ function updatePlaneModel() {
     const fuselageColor = fuselageColorInput.value;
     const wingColor = wingColorInput.value;
     const tailColor = tailColorInput.value;
+    const backgroundColor = backgroundColorInput.value;
 
     // تحديث الألوان
     fuselageMaterial.color.set(fuselageColor);
     wingMaterial.color.set(wingColor);
     tailMaterial.color.set(tailColor);
     aileronMaterial.color.set(aileronColorInput.value);
+    propMaterial.color.set(propColorInput.value);
     strutMaterial.color.set(strutColorInput.value);
     wheelMaterial.color.set(wheelColorInput.value);
+    scene.background.set(backgroundColor);
 
      // Wingtip Controls visibility
     if(hasWingtipInput.checked){
@@ -1579,6 +1587,7 @@ tailSweepAngleInput.addEventListener('input', () => tailSweepValueEl.textContent
 tailTaperRatioInput.addEventListener('input', () => tailTaperValueEl.textContent = parseFloat(tailTaperRatioInput.value).toFixed(2));
 particleDensityInput.addEventListener('input', () => particleDensityValueEl.textContent = Math.round(particleDensityInput.value * 100));
 fuselageTaperRatioInput.addEventListener('input', () => fuselageTaperValueEl.textContent = parseFloat(fuselageTaperRatioInput.value).toFixed(2));
+airflowTransparencyInput.addEventListener('input', () => airflowTransparencyValueEl.textContent = Math.round(airflowTransparencyInput.value * 100));
 particleSizeInput.addEventListener('input', () => particleSizeValueEl.textContent = Math.round(particleSizeInput.value * 100));
 vibrationIntensityInput.addEventListener('input', () => vibrationValueEl.textContent = Math.round(vibrationIntensityInput.value * 100));
 unitSelector.addEventListener('change', updateUnitLabels);
@@ -1793,7 +1802,7 @@ function animate() {
                 const ageRatio = Math.max(0, Math.min(1, currentTravel / travelDistance));
                 const effectStrength = Math.sin(ageRatio * Math.PI); // Smooth fade-in and fade-out
 
-                opacities[i] = effectStrength * 0.25 * densityFactor; // تقليل الشفافية بشكل كبير
+                opacities[i] = effectStrength * 0.25 * densityFactor * planeParams.airflowTransparency; // تقليل الشفافية بشكل كبير
                 scales[i] = effectStrength * 0.5 * sizeFactor;   // تقليل الحجم بشكل كبير
             }
             propParticleSystem.geometry.attributes.position.needsUpdate = true;
@@ -1876,7 +1885,7 @@ function animate() {
                 const ageRatio = Math.max(0, Math.min(1, currentTravel / travelDistance));
                 const effectStrength = Math.sin(ageRatio * Math.PI); // Smooth fade-in and fade-out
 
-                opacities[i] = effectStrength * 0.15 * densityFactor; // جعلها شفافة جداً
+                opacities[i] = effectStrength * 0.15 * densityFactor * planeParams.airflowTransparency; // جعلها شفافة جداً
                 scales[i] = effectStrength * 0.4 * sizeFactor;    // جعلها دقيقة جداً
 
                 // Reset particle if it goes too far behind
@@ -1934,7 +1943,7 @@ function animate() {
                 const ageRatio = Math.min(1, age / travelLength);
                 const effectStrength = Math.sin(ageRatio * Math.PI);
 
-                opacities[i] = effectStrength * Math.min(1, vortexStrength * 2.5) * densityFactor; // تقليل الشفافية
+                opacities[i] = effectStrength * Math.min(1, vortexStrength * 2.5) * densityFactor * planeParams.airflowTransparency; // تقليل الشفافية
                 scales[i] = effectStrength * 0.8 * sizeFactor;                                // تقليل الحجم
 
                 // Reset particle
