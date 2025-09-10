@@ -1350,7 +1350,7 @@ function updatePlaneModel() {
                 noseGeom.rotateZ(Math.PI / 2); // توجيه الجزء المدبب للأمام
             }
             const noseCone = new THREE.Mesh(noseGeom, fuselageMaterial);
-            noseCone.position.x = (fuselageLength / 2) - noseLength; // وضع قاعدة المقدمة عند بداية الجسم
+            noseCone.position.x = (fuselageLength / 2) - (noseLength / 2); // وضع مركز المقدمة عند مقدمة الجسم
             fuselageGroup.add(noseCone);
         }
 
