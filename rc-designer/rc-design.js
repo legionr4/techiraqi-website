@@ -90,17 +90,6 @@ const propMaterial = new THREE.MeshStandardMaterial({ color: 0x333333 });
 propellerGroup.position.x = 0.55;
 planeGroup.add(propellerGroup);
 
-// --- مركز الجاذبية (CG) والمركز الهوائي (AC) ---
-const cgSphereGeom = new THREE.SphereGeometry(0.03, 16, 16);
-const cgMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 }); // أحمر
-const cgSphere = new THREE.Mesh(cgSphereGeom, cgMaterial);
-cgSphere.name = "CGSphere";
-
-const acSphereGeom = new THREE.SphereGeometry(0.03, 16, 16);
-const acMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff }); // أزرق
-const acSphere = new THREE.Mesh(acSphereGeom, acMaterial);
-acSphere.name = "ACSphere";
-
 scene.add(planeGroup);
 
 // --- دوال التحديث والحساب ---
@@ -422,7 +411,6 @@ const cockpitWeightResultEl = document.getElementById('cockpit-weight-result');
 const fuelTankWeightResultEl = document.getElementById('fuel-tank-weight-result');
 const fuelLevelInput = document.getElementById('fuel-level');
 const fuelTypeInput = document.getElementById('fuel-type');
-const showCgAcInput = document.getElementById('show-cg-ac');
 const accessoriesWeightResultEl = document.getElementById('accessories-weight-result');
 const wheelWeightResultEl = document.getElementById('wheel-weight-result');
 const strutWeightResultEl = document.getElementById('strut-weight-result');
@@ -430,9 +418,6 @@ const engineWeightResultEl = document.getElementById('engine-weight-result');
 const landingGearWeightResultEl = document.getElementById('landing-gear-weight-result');
 const totalWeightResultEl = document.getElementById('total-weight-result');
 const propWeightResultEl = document.getElementById('prop-weight-result');
-const cgPositionResultEl = document.getElementById('cg-position-result');
-const acPositionResultEl = document.getElementById('ac-position-result');
-const staticMarginResultEl = document.getElementById('static-margin-result');
 
 const planeParams = {}; // Object to hold cached plane parameters for the animation loop
 
@@ -825,12 +810,6 @@ function updatePlaneModel() {
     wheelMaterial.color.set(wheelColorInput.value);
     energySourceMaterial.color.set(energySourceColorInput.value);
     scene.background.set(backgroundColor);
-
-    // إظهار أو إخفاء كرات CG و AC
-    const showCgAc = showCgAcInput.checked;
-    scene.getObjectByName("CGSphere").visible = showCgAc;
-    scene.getObjectByName("ACSphere").visible = showCgAc;
-
 
      // Wingtip Controls visibility
     if(hasWingtipInput.checked){
@@ -1250,6 +1229,17 @@ function updatePlaneModel() {
         const halfRearWidth = rearWidth / 2;
         const halfRearHeight = rearHeight / 2;
 
+        const vertices = new Float32Array([ // ... (vertices definition)
+            halfLength,  halfFrontHeight,  halfFrontWidth, -halfLength,  halfRearHeight,  halfRearWidth,
+            halfLength, -halfFrontHeight,  halfFrontWidth, -halfLength, -halfRearHeight,  halfRearWidth,
+            halfLength, -halfFrontHeight, -halfFrontWidth, -halfLength, -halfRearHeight, -halfRearWidth,
+            halfLength,  halfFrontHeight, -halfFrontWidth, -halfLength,  halfRearHeight, -halfRearWidth,
+        ]);
+        const indices = new Uint16Array([ // ... (indices definition)
+            0, 2, 1, 0, 3, 2, 4, 5, 6, 4, 6, 7,
+            0, 1, 5, 0, 5, 4, 2, 3, 7, 2, 7, 6,
+            0, 4, 7, 0, 7, 3, 1, 2, 6, 1, 6, 5
+        ]);
         const geom = new THREE.BufferGeometry();
         geom.setAttribute('position', new THREE.BufferAttribute(new Float32Array([
             halfLength, halfFrontHeight, halfFrontWidth, halfLength, -halfFrontHeight, halfFrontWidth, halfLength, -halfFrontHeight, -halfFrontWidth, halfLength, halfFrontHeight, -halfFrontWidth,
@@ -1616,15 +1606,6 @@ function updatePlaneModel() {
         const tankPosition = getValidNumber(fuelTankPositionInput) * conversionFactor;
         energySourceGroup.position.x = tankPosition;
     }
-
-    // --- تحديث موضع كرات CG و AC ---
-    // سيتم حساب القيم في calculateAerodynamics وتخزينها في planeParams
-    if (planeParams.cg) {
-        cgSphere.position.copy(planeParams.cg);
-    }
-    if (planeParams.ac) {
-        acSphere.position.copy(planeParams.ac);
-    }
 }
 
 function calculateAerodynamics() {
@@ -1632,7 +1613,6 @@ function calculateAerodynamics() {
     const conversionFactor = UNIT_CONVERSIONS[unitSelector.value];
 
     // قراءة القيم
-    const engineType = engineTypeInput.value;
     const wingSpan = getValidNumber(wingSpanInput) * conversionFactor;
     const wingChord = getValidNumber(wingChordInput) * conversionFactor;
     const wingThickness = getValidNumber(wingThicknessInput) * conversionFactor;
@@ -1653,28 +1633,29 @@ function calculateAerodynamics() {
     const fuselageMaterialValue = fuselageMaterialInput.value;
     const fuselageShape = fuselageShapeInput.value;
     const fuselageTaperRatio = getValidNumber(fuselageTaperRatioInput); // New: Read taper ratio
-    const fuselageLength = getValidNumber(fuselageLengthInput) * conversionFactor;
-    const wingPosition = wingPositionInput.value;
-    const wingPropDistance = getValidNumber(wingPropDistanceInput) * conversionFactor;
-    const wingTailDistance = getValidNumber(wingTailDistanceInput) * conversionFactor;
+
+
+
+
 
     // --- حسابات محدثة ---
     const tipChord = wingChord * taperRatio;
-    const mainWingArea = wingSpan * (wingChord + tipChord) / 2; // Area of a trapezoid
+    const wingArea = wingSpan * (wingChord + tipChord) / 2; // Area of a trapezoid
     const alphaRad = angleOfAttack * (Math.PI / 180);
 
+    // نستخدم مساحة الجناح الكلية للحسابات. أسطح التحكم هي جزء من الجناح وتساهم في الرفع والوزن.
+    const mainWingArea = wingArea;
     // --- Tail Area Calculation ---
     const tailSpan = getValidNumber(tailSpanInput) * conversionFactor;
     const tailChord = getValidNumber(tailChordInput) * conversionFactor;
     const vStabHeight = getValidNumber(vStabHeightInput) * conversionFactor;
     const vStabChord = getValidNumber(vStabChordInput) * conversionFactor;
     const tailType = tailTypeInput.value;
-    const tailTaperRatio = getValidNumber(tailTaperRatioInput);
     let totalTailArea = 0;
 
     if (tailType === 'conventional' || tailType === 't-tail') {
-        const hStabArea = tailSpan * (tailChord + tailChord * tailTaperRatio) / 2;
-        const vStabArea = vStabHeight * (vStabChord + vStabChord * tailTaperRatio) / 2;
+        const hStabArea = tailSpan * tailChord;
+        const vStabArea = vStabHeight * vStabChord;
         totalTailArea = hStabArea + vStabArea;
     } else if (tailType === 'v-tail') {
         totalTailArea = 2 * (vStabHeight * vStabChord);
@@ -1682,6 +1663,7 @@ function calculateAerodynamics() {
 
     // 1. قوة الرفع (Lift)
     // L = 0.5 * Cl * rho * V^2 * A
+    // Cl (معامل الرفع) ≈ 2 * PI * alpha (تقريب لنظرية الجنيح الرقيق)
     let airfoilLiftFactor = 1.0;
     if (airfoilType === 'flat-bottom') { // عامل رفع أعلى قليلاً
         airfoilLiftFactor = 1.1; // عامل رفع أعلى قليلاً
@@ -1703,23 +1685,24 @@ function calculateAerodynamics() {
     const cd = cdp + cdi;
     const drag = 0.5 * cd * airDensity * Math.pow(airSpeed, 2) * mainWingArea;
 
+    // 3. قوة الدفع (Thrust)
+    // صيغة تجريبية مبسطة جداً للدفع الساكن (Static Thrust)
+    // لا تعكس الواقع بدقة ولكن تعطي فكرة عن علاقة المتغيرات
     const n_rps = propRpm / 60; // revolutions per second
     const thrust = 4.392399 * Math.pow(10, -8) * propRpm * Math.pow(propDiameter / 0.0254, 3.5) / Math.sqrt(propPitch) * (4.23333 * Math.pow(10, -4) * propRpm * propPitch - airSpeed * 0.5144);
 
-    // --- حسابات الوزن ومركز الجاذبية (CG) ---
-    const components = [];
+    // 4. حساب الوزن (Weight Calculation)
+    const wingVolume = mainWingArea * wingThickness; // Volume in m³
     const structureMaterialDensity = MATERIAL_DENSITIES[structureMaterial]; // Density in kg/m³
     const fuselageMaterialDensity = MATERIAL_DENSITIES[fuselageMaterialValue];
+    const wingWeightKg = wingVolume * structureMaterialDensity; // Weight in kg
 
     const tailThickness = getValidNumber(tailThicknessInput) * conversionFactor;
     const tailVolume = totalTailArea * tailThickness;
     const tailWeightKg = tailVolume * structureMaterialDensity;
 
-    // حساب حجم ومساحة سطح الجسم (مع الأجزاء البيضاوية)
-    // متغيرات لتجميع العزوم (الوزن * المسافة)
+    // حساب وزن الجسم
     let fuselageVolume = 0;
-    let fuselageSurfaceArea = 0;
-
     if (fuselageShape === 'rectangular') {
         const frontWidth = getValidNumber(fuselageWidthInput) * conversionFactor;
         const frontHeight = getValidNumber(fuselageHeightInput) * conversionFactor;
@@ -1731,53 +1714,19 @@ function calculateAerodynamics() {
         
         // Volume of a rectangular frustum
         fuselageVolume = (1/3) * fuselageLength * (frontArea + rearArea + Math.sqrt(frontArea * rearArea));
-        // Area of the 4 side faces (approximated as simple trapezoids)
-        const topBottomArea = fuselageLength * (frontWidth + rearWidth); // 2 * length * (w1+w2)/2
-        const leftRightArea = fuselageLength * (frontHeight + rearHeight); // 2 * length * (h1+h2)/2
-        fuselageSurfaceArea = frontArea + rearArea + topBottomArea + leftRightArea;
-
     } else if (fuselageShape === 'cylindrical') {
-        let bodyLength = fuselageLength;
         const fuselageDiameter = getValidNumber(fuselageDiameterInput) * conversionFactor;
-        const radiusFront = fuselageDiameter / 2;
-        const radiusRear = radiusFront * fuselageTaperRatio;
-        const noseShape = fuselageNoseShapeInput.value;
-        const tailShape = fuselageTailShapeInput.value;
-
-        // Nose Cone
-        if (noseShape !== 'flat' && radiusFront > 0) {
-            const noseLength = (noseShape === 'ogival') ? radiusFront * 1.5 : radiusFront;
-            bodyLength -= noseLength;
-            fuselageVolume += (1 / 3) * Math.PI * Math.pow(radiusFront, 2) * noseLength; // Cone approximation
-            fuselageSurfaceArea += Math.PI * radiusFront * Math.sqrt(Math.pow(radiusFront, 2) + Math.pow(noseLength, 2));
-        }
-        // Tail Cone
-        if (tailShape !== 'flat' && radiusRear > 0) {
-            const tailLength = radiusRear;
-            bodyLength -= tailLength;
-            fuselageVolume += (2 / 3) * Math.PI * Math.pow(radiusRear, 3); // Hemisphere
-            fuselageSurfaceArea += 2 * Math.PI * Math.pow(radiusRear, 2);
-        }
-        // Main Body (Frustum)
-        if (bodyLength > 0) {
-            fuselageVolume += (1/3) * Math.PI * bodyLength * (Math.pow(radiusFront, 2) + (radiusFront * radiusRear) + Math.pow(radiusRear, 2));
-            const slantHeight = Math.sqrt(Math.pow(bodyLength, 2) + Math.pow(radiusFront - radiusRear, 2));
-            fuselageSurfaceArea += Math.PI * (radiusFront + radiusRear) * slantHeight;
-        }
-
+        const radiusTop = fuselageDiameter / 2;
+        const radiusBottom = (fuselageDiameter / 2) * fuselageTaperRatio;
+        // Volume of a conical frustum
+        fuselageVolume = (1/3) * Math.PI * fuselageLength * (Math.pow(radiusTop, 2) + (radiusTop * radiusBottom) + Math.pow(radiusBottom, 2));
     } else if (fuselageShape === 'teardrop') {
         const frontDiameter = getValidNumber(fuselageFrontDiameterInput) * conversionFactor;
         const rearDiameter = getValidNumber(fuselageRearDiameterInput) * conversionFactor;
         // حجم المخروط الناقص
         fuselageVolume = (1/3) * Math.PI * fuselageLength * (Math.pow(frontDiameter/2, 2) + (frontDiameter/2)*(rearDiameter/2) + Math.pow(rearDiameter/2, 2));
-        const slantHeight = Math.sqrt(Math.pow(fuselageLength, 2) + Math.pow((frontDiameter/2) - (rearDiameter/2), 2));
-        fuselageSurfaceArea = Math.PI * Math.pow(frontDiameter/2, 2) + Math.PI * Math.pow(rearDiameter/2, 2) + Math.PI * (frontDiameter/2 + rearDiameter/2) * slantHeight;
     }
-    components.push({
-        name: 'fuselage',
-        weight: fuselageVolume * fuselageMaterialDensity,
-        cg: new THREE.Vector3(0, 0, 0) // Reference point
-    });
+    const fuselageWeightKg = fuselageVolume * fuselageMaterialDensity;
 
     // حساب وزن القمرة
     let cockpitWeightKg = 0;
@@ -1791,19 +1740,40 @@ function calculateAerodynamics() {
         // Volume of a half-ellipsoid: (2/3) * PI * a * b * c
         const cockpitVolume = (2 / 3) * Math.PI * (cockpitLength / 2) * cockpitHeight * (cockpitWidth / 2);
         cockpitWeightKg = cockpitVolume * cockpitMaterialDensity;
-        
-        const cockpit_cg_x = (fuselageLength / 2) - (getValidNumber(cockpitPositionInput) * conversionFactor) - (cockpitLength / 2);
-        const fuselage_h_at_cockpit = getValidNumber(fuselageHeightInput) * conversionFactor; // Simplified
-        const cockpit_cg_y = fuselage_h_at_cockpit / 2 + cockpitHeight * 0.375; // CG of a half-ellipsoid is at 3/8h
-        components.push({
-            name: 'cockpit',
-            weight: cockpitWeightKg,
-            cg: new THREE.Vector3(cockpit_cg_x, cockpit_cg_y, 0)
-        });
+    }
+
+    // حساب مساحة سطح الجسم
+    if (fuselageShape === 'rectangular') {
+        const frontWidth = getValidNumber(fuselageWidthInput) * conversionFactor; const fuselageLength = getValidNumber(fuselageLengthInput) * conversionFactor;
+        const frontHeight = getValidNumber(fuselageHeightInput) * conversionFactor;
+        const rearWidth = frontWidth * fuselageTaperRatio;
+        const rearHeight = frontHeight * fuselageTaperRatio;
+
+        const frontArea = frontWidth * frontHeight;
+        const rearArea = rearWidth * rearHeight;
+
+        // Area of the 4 side faces (approximated as simple trapezoids)
+        const topBottomArea = fuselageLength * (frontWidth + rearWidth); // 2 * length * (w1+w2)/2
+        const leftRightArea = fuselageLength * (frontHeight + rearHeight); // 2 * length * (h1+h2)/2
+
+        fuselageSurfaceArea = frontArea + rearArea + topBottomArea + leftRightArea;
+
+    } else if (fuselageShape === 'cylindrical') {
+        const fuselageDiameter = getValidNumber(fuselageDiameterInput) * conversionFactor; const fuselageLength = getValidNumber(fuselageLengthInput) * conversionFactor;
+        const r1 = fuselageDiameter / 2; // radiusTop
+        const r2 = r1 * fuselageTaperRatio; // radiusBottom
+        const slantHeight = Math.sqrt(Math.pow(fuselageLength, 2) + Math.pow(r1 - r2, 2));
+        fuselageSurfaceArea = Math.PI * Math.pow(r1, 2) + Math.PI * Math.pow(r2, 2) + Math.PI * (r1 + r2) * slantHeight;
+
+    } else if (fuselageShape === 'teardrop') {
+        const r1 = (getValidNumber(fuselageFrontDiameterInput) * conversionFactor) / 2; const fuselageLength = getValidNumber(fuselageLengthInput) * conversionFactor;
+        const r2 = (getValidNumber(fuselageRearDiameterInput) * conversionFactor) / 2;
+        const slantHeight = Math.sqrt(Math.pow(fuselageLength, 2) + Math.pow(r1 - r2, 2));
+        fuselageSurfaceArea = Math.PI * Math.pow(r1, 2) + Math.PI * Math.pow(r2, 2) + Math.PI * (r1 + r2) * slantHeight;
     }
 
     // حساب وزن المروحة
-    const bladeRadius = (propDiameter / 2) - (spinnerDiameter / 2);
+    let fuselageSurfaceArea = 0;const bladeRadius = (propDiameter / 2) - (spinnerDiameter / 2);
     const avgBladeChord = propChord * 0.75; // تقدير متوسط عرض الشفرة
     const singleBladeVolume = bladeRadius > 0 ? bladeRadius * avgBladeChord * propThickness : 0; // حجم شفرة واحدة
     const spinnerVolume = (4/3) * Math.PI * Math.pow(spinnerDiameter / 2, 3);
@@ -1811,6 +1781,15 @@ function calculateAerodynamics() {
     const propMaterialDensity = MATERIAL_DENSITIES[propMaterial];
     const propWeightKg = propVolume * propMaterialDensity;
 
+    // Engine Weight Calculation
+    let engineWeightKg = 0;
+
+    if (engineType === 'electric') {
+        engineWeightKg = getValidNumber(electricMotorWeightInput) / 1000;
+    } else { // ic
+        engineWeightKg = getValidNumber(icEngineWeightInput) / 1000;
+    }
+    
     let landingGearWeightKg = 0;
     let singleWheelWeightKg = 0;
     let singleStrutWeightKg = 0;
@@ -1825,10 +1804,6 @@ function calculateAerodynamics() {
 
         const mainWheelVolume = Math.PI * Math.pow(wheelDiameter / 2, 2) * wheelThickness;
         const strutVolume = Math.PI * Math.pow(strutThickness / 2, 2) * strutLength;
-        
-        // حساب وزن كل جزء على حدة
-        singleWheelWeightKg = mainWheelVolume * gearMaterialDensity;
-        singleStrutWeightKg = strutVolume * gearMaterialDensity;
 
         let totalGearVolume = 0;
         if (gearType === 'tricycle' || gearType === 'taildragger' || gearType === 'main-only') {
@@ -1841,24 +1816,14 @@ function calculateAerodynamics() {
             totalGearVolume += tailWheelVolume; // Add tail wheel (no strut for simplicity)
         }
         landingGearWeightKg = totalGearVolume * gearMaterialDensity;
-
-        // عزم عجلات الهبوط (تقدير مبسط)
-        const mainGearX = (fuselageLength / 2) - (getValidNumber(mainGearPositionInput) * conversionFactor);
-        const fuselage_h_at_gear = getValidNumber(fuselageHeightInput) * conversionFactor; // Simplified
-        const gear_cg_y = -fuselage_h_at_gear / 2 - strutLength / 2;
-        components.push({
-            name: 'landingGear',
-            weight: landingGearWeightKg,
-            cg: new THREE.Vector3(mainGearX, gear_cg_y, 0)
-        });
+        singleWheelWeightKg = mainWheelVolume * gearMaterialDensity;
+        singleStrutWeightKg = strutVolume * gearMaterialDensity;
     }
 
     let energySourceWeightKg = 0;
     if (engineType === 'electric') {
         energySourceWeightKg = getValidNumber(batteryWeightInput) / 1000;
         fuelTankWeightResultEl.parentElement.style.display = 'none'; // إخفاء نتيجة وزن الخزان
-        const batteryPositionX = getValidNumber(batteryPositionInput) * conversionFactor;
-        components.push({ name: 'energySource', weight: energySourceWeightKg, cg: new THREE.Vector3(batteryPositionX, 0, 0) });
     } else { // ic
         // حساب وزن خزان الوقود بناءً على المستوى والنوع
         const tankLength = getValidNumber(fuelTankLengthInput) * conversionFactor;
@@ -1885,11 +1850,6 @@ function calculateAerodynamics() {
         energySourceWeightKg = fuelWeightKg + shellWeightKg;
         fuelTankWeightResultEl.textContent = (energySourceWeightKg * 1000).toFixed(0);
         fuelTankWeightResultEl.parentElement.style.display = 'flex'; // إظهار نتيجة وزن الخزان
-        
-        const tankPositionX = getValidNumber(fuelTankPositionInput) * conversionFactor;
-        components.push({
-            name: 'energySource', weight: energySourceWeightKg, cg: new THREE.Vector3(tankPositionX, 0, 0)
-        });
     }
 
     // حساب وزن الملحقات الإضافية
@@ -1899,106 +1859,10 @@ function calculateAerodynamics() {
     const otherAccessoriesWeightGrams = getValidNumber(otherAccessoriesWeightInput);
     const totalAccessoriesWeightGrams = receiverWeightGrams + servoWeightGrams + cameraWeightGrams + otherAccessoriesWeightGrams;
     const totalAccessoriesWeightKg = totalAccessoriesWeightGrams / 1000;
-    const accessories_cg_x = (fuselageLength / 2) - wingPropDistance; // Assume electronics are near wing
-    components.push({ name: 'accessories', weight: totalAccessoriesWeightKg, cg: new THREE.Vector3(accessories_cg_x, 0, 0) });
 
-    // --- Propulsion System (Engine + Prop) ---
-    const enginePlacement = enginePlacementInput.value;
-    const engineWeightKg = (engineType === 'electric') ? (getValidNumber(electricMotorWeightInput) / 1000) : (getValidNumber(icEngineWeightInput) / 1000);
-    const totalPropulsionWeight = engineWeightKg + propWeightKg;
+    const totalWeightKg = wingWeightKg + tailWeightKg + fuselageWeightKg + propWeightKg + landingGearWeightKg + engineWeightKg + energySourceWeightKg + cockpitWeightKg + totalAccessoriesWeightKg;
 
-    if (enginePlacement === 'front' || enginePlacement === 'rear') {
-        const engineLength = (engineType === 'electric' ? getValidNumber(electricMotorLengthInput) : getValidNumber(icEngineLengthInput)) * conversionFactor;
-        const direction = (enginePlacement === 'front' ? 1 : -1);
-        const engine_cg_x = direction * (fuselageLength / 2 + engineLength / 2);
-        const prop_cg_x = direction * (fuselageLength / 2 + engineLength + 0.01);
-        const propulsion_cg_x = (engineWeightKg * engine_cg_x + propWeightKg * prop_cg_x) / totalPropulsionWeight;
-        components.push({ name: 'propulsion', weight: totalPropulsionWeight, cg: new THREE.Vector3(propulsion_cg_x, 0, 0) });
-    } else if (enginePlacement === 'wing') {
-        const wingEngineDistMeters = getValidNumber(engineWingDistanceInput) * conversionFactor;
-        const pylonLengthMeters = getValidNumber(enginePylonLengthInput) * conversionFactor;
-        const engineLength = (getValidNumber(electricMotorLengthInput)) * conversionFactor;
-        const engineDiameter = (getValidNumber(electricMotorDiameterInput)) * conversionFactor;
-        const wingPositionX = (fuselageLength / 2) - wingPropDistance;
-        const sweepRad = (getValidNumber(sweepAngleInput)) * Math.PI / 180;
-        
-        const posOnWingZ = wingEngineDistMeters + (getValidNumber(fuselageWidthInput) * conversionFactor / 2);
-        const spanProgress = (posOnWingZ - (getValidNumber(fuselageWidthInput) * conversionFactor / 2)) / (wingSpan / 2);
-        const chordAtPylon = wingChord + (wingChord * taperRatio - wingChord) * spanProgress;
-        const sweepAtPylon = (posOnWingZ - (getValidNumber(fuselageWidthInput) * conversionFactor / 2)) * Math.tan(sweepRad);
-        const leadingEdgeX = wingPositionX + sweepAtPylon + chordAtPylon / 2;
-        
-        const engine_cg_x = leadingEdgeX + pylonLengthMeters + (engineLength / 2);
-        let wing_cg_y = 0;
-        if (wingPosition === 'high') wing_cg_y = (getValidNumber(fuselageHeightInput) * conversionFactor) / 2;
-        else if (wingPosition === 'low') wing_cg_y = -(getValidNumber(fuselageHeightInput) * conversionFactor) / 2;
-        const engine_cg_y = wing_cg_y + (wingThickness / 2) + (engineDiameter / 2);
-
-        // Add left and right engines as separate components
-        components.push({ name: 'rightEngine', weight: totalPropulsionWeight / 2, cg: new THREE.Vector3(engine_cg_x, engine_cg_y, posOnWingZ) });
-        components.push({ name: 'leftEngine', weight: totalPropulsionWeight / 2, cg: new THREE.Vector3(engine_cg_x, engine_cg_y, -posOnWingZ) });
-    }
-
-    // --- Wing and Tail CG ---
-    const wingPositionX = (fuselageLength / 2) - wingPropDistance;
-    const mac_length = (2 / 3) * wingChord * ((1 + taperRatio + Math.pow(taperRatio, 2)) / (1 + taperRatio));
-    const mac_y_position = (wingSpan / 2) * ((1 + 2 * taperRatio) / (3 * (1 + taperRatio)));
-    const sweepRad = (getValidNumber(sweepAngleInput)) * Math.PI / 180;
-    const mac_x_le_offset = mac_y_position * Math.tan(sweepRad);
-    const wing_cg_x = wingPositionX + mac_x_le_offset - (wingChord / 2) + (0.40 * mac_length);
-    let wing_cg_y = 0;
-    if (wingPosition === 'high') wing_cg_y = (getValidNumber(fuselageHeightInput) * conversionFactor) / 2;
-    else if (wingPosition === 'low') wing_cg_y = -(getValidNumber(fuselageHeightInput) * conversionFactor) / 2;
-    const wingWeightKg = mainWingArea * wingThickness * structureMaterialDensity;
-    components.push({ name: 'wing', weight: wingWeightKg, cg: new THREE.Vector3(wing_cg_x, wing_cg_y, 0) });
-
-    const tailPositionX = wingPositionX - wingTailDistance;
-    let tail_cg_y = 0;
-    const fuselage_h_at_tail = (getValidNumber(fuselageHeightInput) * conversionFactor) * fuselageTaperRatio;
-    if (tailType === 't-tail') {
-        tail_cg_y = fuselage_h_at_tail / 2 + vStabHeight;
-    } else { // Conventional
-        tail_cg_y = fuselage_h_at_tail / 2;
-    }
-    components.push({ name: 'tail', weight: tailWeightKg, cg: new THREE.Vector3(tailPositionX, tail_cg_y, 0) });
-
-    // --- Final CG Calculation ---
-    let totalWeightKg = 0;
-    const totalMoment = new THREE.Vector3(0, 0, 0);
-    components.forEach(comp => {
-        if (comp.weight > 0 && comp.cg) {
-            totalWeightKg += comp.weight;
-            totalMoment.add(comp.cg.clone().multiplyScalar(comp.weight));
-        }
-    });
-
-    let cg_position_vec = new THREE.Vector3(0, 0, 0);
-    if (totalWeightKg > 0) {
-        cg_position_vec.copy(totalMoment).divideScalar(totalWeightKg);
-    }
-    
-    // الموضع النهائي للمركز الهوائي (AC)
-    // AC هو عند 25% من طول MAC من الحافة الأمامية لـ MAC
-    const ac_x_position = wingPositionX + mac_x_le_offset - (wingChord / 2) + (0.25 * mac_length);
-    const ac_position_vec = new THREE.Vector3(ac_x_position, wing_cg_y, 0);
-
-    // حساب الهامش الثابت (Static Margin)
-    let staticMargin = 0;
-    if (mac_length > 0) {
-        staticMargin = ((ac_x_position - cg_position_vec.x) / mac_length) * 100; // كنسبة مئوية
-    }
-
-    // تخزين النتائج في planeParams لاستخدامها في حلقة العرض
-    planeParams.cg = cg_position_vec;
-    planeParams.ac = ac_position_vec;
-
-    // إضافة الكرات إلى المشهد (إذا لم تكن موجودة)
-    if (!scene.getObjectByName("CGSphere")) {
-        scene.add(cgSphere);
-        scene.add(acSphere);
-    }
-    
-    // نسبة الدفع إلى الوزن
+    // 5. نسبة الدفع إلى الوزن (Thrust-to-Weight Ratio)
     const weightInNewtons = totalWeightKg * 9.81;
     const twr = weightInNewtons > 0 ? (thrust / weightInNewtons) : 0;
 
@@ -2010,8 +1874,8 @@ function calculateAerodynamics() {
     wingWeightResultEl.textContent = (wingWeightKg * 1000).toFixed(0);
     tailAreaResultEl.textContent = totalTailArea > 0 ? totalTailArea.toFixed(2) : '0.00';
     tailWeightResultEl.textContent = (tailWeightKg * 1000).toFixed(0);
-    fuselageAreaResultEl.textContent = (components.find(c => c.name === 'fuselage')?.weight > 0) ? fuselageSurfaceArea.toFixed(2) : '0.00';
-    fuselageWeightResultEl.textContent = (components.find(c => c.name === 'fuselage')?.weight * 1000).toFixed(0);
+    fuselageAreaResultEl.textContent = fuselageSurfaceArea > 0 ? fuselageSurfaceArea.toFixed(2) : '0.00';
+    fuselageWeightResultEl.textContent = (fuselageWeightKg * 1000).toFixed(0);
     cockpitWeightResultEl.textContent = (cockpitWeightKg * 1000).toFixed(0);
     cockpitWeightResultEl.parentElement.style.display = hasCockpitInput.checked ? 'flex' : 'none';
     accessoriesWeightResultEl.textContent = totalAccessoriesWeightGrams.toFixed(0);
@@ -2030,10 +1894,6 @@ function calculateAerodynamics() {
     propWeightResultEl.textContent = (propWeightKg * 1000).toFixed(0);
     totalWeightResultEl.textContent = (totalWeightKg * 1000).toFixed(0);
     twrResultEl.textContent = twr > 0 ? twr.toFixed(2) : '0.00';
-    // عرض نتائج CG
-    cgPositionResultEl.textContent = (cg_position_vec.x / conversionFactor).toFixed(1);
-    acPositionResultEl.textContent = (ac_x_position / conversionFactor).toFixed(1);
-    staticMarginResultEl.textContent = `${staticMargin.toFixed(1)}%`;
 }
 
 function initCharts() {
@@ -2240,7 +2100,6 @@ hasCockpitInput.addEventListener('change', updateAll);
 fuelTankMaterialInput.addEventListener('change', updateAll);
 fuelTypeInput.addEventListener('change', updateAll);
 fuelLevelInput.addEventListener('input', debouncedUpdate);
-showCgAcInput.addEventListener('change', updateAll);
 electricMotorTypeInput.addEventListener('change', updateEngineUI);
 icEngineTypeInput.addEventListener('change', updateEngineUI);
 enginePlacementInput.addEventListener('change', updateAll);
@@ -2377,13 +2236,10 @@ function animate() {
 
     const deltaTime = clock.getDelta(); // الوقت المنقضي منذ الإطار الأخير (بالثواني)
 
-    // قراءة زاوية الهجوم الأساسية وتطبيقها على الطائرة
-    const baseAoA = planeParams.angleOfAttack || 0;
-    const baseAoARad = baseAoA * (Math.PI / 180);
-
-    // إعادة تعيين الموضع والدوران إلى القيم الأساسية (مع زاوية الهجوم) في كل إطار
+    // إعادة تعيين موضع ودوران planeGroup إلى قيمتها الأساسية في كل إطار.
+    // هذا يمنع أي اهتزازات متراكمة قد تؤدي إلى انجراف الطائرة.
     planeGroup.position.set(0, 0, 0);
-    planeGroup.rotation.set(0, 0, baseAoARad);
+    planeGroup.rotation.set(0, 0, 0);
 
     if (isPropSpinning) {
         // All parameters are now read from the cached planeParams object for performance
