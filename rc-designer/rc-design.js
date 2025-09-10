@@ -1357,8 +1357,8 @@ function updatePlaneModel() {
             if (noseShape === 'rounded') {
                 // إنشاء نصف كرة
                 noseGeom = new THREE.SphereGeometry(radiusFront, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
-                // تدويرها لتشير إلى الأمام على طول المحور X+
-                noseGeom.rotateY(-Math.PI / 2);
+                // تدويرها لتشير إلى الأمام (محور +Y الأصلي يصبح +X)
+                noseGeom.rotateZ(-Math.PI / 2);
             } else { // ogival
                 // تم تعديل createOgiveGeometry ليكون أصلها عند القاعدة
                 noseGeom = createOgiveGeometry(radiusFront, noseLength, 32);
@@ -1374,7 +1374,7 @@ function updatePlaneModel() {
         // --- بناء المؤخرة ---
         if (tailShape !== 'flat' && radiusRear > 0) {
             const tailGeom = new THREE.SphereGeometry(radiusRear, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
-            tailGeom.rotateY(Math.PI / 2); // تدويرها لتشير إلى الخلف على طول المحور X-
+            tailGeom.rotateZ(Math.PI / 2); // تدويرها لتشير إلى الخلف (محور +Y الأصلي يصبح -X)
             const tailCone = new THREE.Mesh(tailGeom, fuselageMaterial);
             tailCone.position.x = -fuselageLength / 2 + tailLength;
             fuselageGroup.add(tailCone);
