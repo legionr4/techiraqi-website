@@ -1679,6 +1679,7 @@ function calculateAerodynamics() {
     const tailChord = getValidNumber(tailChordInput) * conversionFactor;
     const vStabHeight = getValidNumber(vStabHeightInput) * conversionFactor;
     const vStabChord = getValidNumber(vStabChordInput) * conversionFactor;
+    const tailType = tailTypeInput.value;
     const tailTaperRatio = getValidNumber(tailTaperRatioInput);
     let totalTailArea = 0;
 
