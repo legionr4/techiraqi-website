@@ -3,12 +3,13 @@ const canvas = document.getElementById('viewer-canvas');
 const viewerDiv = canvas.parentElement; // الحصول على العنصر الحاوي
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xeeeeee);
-const camera = new THREE.PerspectiveCamera(75, viewerDiv.clientWidth / viewerDiv.clientHeight, 0.1, 1000);
+// ابدأ بنسبة عرض إلى ارتفاع افتراضية، سيتم تصحيحها بواسطة onWindowResize
+const camera = new THREE.PerspectiveCamera(75, 16 / 9, 0.1, 1000);
 const clock = new THREE.Clock(); // لتتبع الوقت بين الإطارات
 camera.position.set(1.5, 1, 2);
 
 const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
-renderer.setSize(viewerDiv.clientWidth, viewerDiv.clientHeight);
+// لا تقم بتعيين الحجم هنا، سيتم التعامل معه بواسطة onWindowResize
 
 // --- إضافة عناصر التحكم بالكاميرا ---
 const controls = new THREE.OrbitControls(camera, renderer.domElement);
