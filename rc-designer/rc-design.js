@@ -189,6 +189,17 @@ const aileronControls = document.getElementById('aileron-controls');
 
 
 const fuselageLengthInput = document.getElementById('fuselage-length');
+const fuselageShapeInput = document.getElementById('fuselage-shape');
+const fuselageWidthInput = document.getElementById('fuselage-width');
+const fuselageHeightInput = document.getElementById('fuselage-height');
+const fuselageDiameterInput = document.getElementById('fuselage-diameter');
+const fuselageFrontDiameterInput = document.getElementById('fuselage-front-diameter');
+const fuselageRearDiameterInput = document.getElementById('fuselage-rear-diameter');
+const fuselageRectWidthGroup = document.getElementById('fuselage-rectangular-width-group');
+const fuselageRectHeightGroup = document.getElementById('fuselage-rectangular-height-group');
+const fuselageCylDiameterGroup = document.getElementById('fuselage-cylindrical-diameter-group');
+const fuselageTearFrontDiaGroup = document.getElementById('fuselage-teardrop-front-diameter-group');
+const fuselageTearRearDiaGroup = document.getElementById('fuselage-teardrop-rear-diameter-group');
 const structureMaterialInput = document.getElementById('structure-material');
 const propDiameterInput = document.getElementById('prop-diameter');
 const propBladesInput = document.getElementById('prop-blades');
@@ -232,6 +243,7 @@ const wingAreaResultEl = document.getElementById('wing-area-result');
 const wingWeightResultEl = document.getElementById('wing-weight-result');
 const tailAreaResultEl = document.getElementById('tail-area-result');
 const tailWeightResultEl = document.getElementById('tail-weight-result');
+const fuselageWeightResultEl = document.getElementById('fuselage-weight-result');
 const totalWeightResultEl = document.getElementById('total-weight-result');
 const propWeightResultEl = document.getElementById('prop-weight-result');
 
@@ -327,6 +339,10 @@ function updatePlaneModel() {
     const tailSweepAngle = getValidNumber(tailSweepAngleInput);
     const tailAirfoilType = tailAirfoilTypeInput.value;
     const tailTaperRatio = getValidNumber(tailTaperRatioInput);
+
+    // قراءة قيم جسم الطائرة
+    const fuselageShape = fuselageShapeInput.value;
+
     
     // قيم المروحة تبقى بالبوصة كما هي متعارف عليها
     const propDiameter = getValidNumber(propDiameterInput) * 0.0254; // to meters
@@ -358,6 +374,27 @@ function updatePlaneModel() {
     } else {
         aileronControls.style.display = 'none';
     }
+
+    // إظهار/إخفاء حقول أبعاد الجسم بناءً على الشكل
+    fuselageRectWidthGroup.style.display = 'none';
+    fuselageRectHeightGroup.style.display = 'none';
+    fuselageCylDiameterGroup.style.display = 'none';
+    fuselageTearFrontDiaGroup.style.display = 'none';
+    fuselageTearRearDiaGroup.style.display = 'none';
+
+    if (fuselageShape === 'rectangular') {
+        fuselageRectWidthGroup.style.display = 'flex';
+        fuselageRectHeightGroup.style.display = 'flex';
+    } else if (fuselageShape === 'cylindrical') {
+        fuselageCylDiameterGroup.style.display = 'flex';
+    } else if (fuselageShape === 'teardrop') {
+        fuselageTearFrontDiaGroup.style.display = 'flex';
+        fuselageTearRearDiaGroup.style.display = 'flex';
+    }
+
+
+
+
 
     // Tail Controls visibility
     const isVTail = tailType === 'v-tail';
@@ -815,7 +852,33 @@ const createPropellerBladeGeom = (radius, rootChord, tipChord, thickness, pitch,
     }
 
 
-    fuselage.scale.x = fuselageLength;
+    // --- تحديث جسم الطائرة ---
+    // إزالة الجسم القديم قبل إضافة الجديد
+    planeGroup.remove(fuselage);
+    let newFuselageGeom;
+    if (fuselageShape === 'rectangular') {
+        const fuselageWidth = getValidNumber(fuselageWidthInput) * conversionFactor;
+        const fuselageHeight = getValidNumber(fuselageHeightInput) * conversionFactor;
+        newFuselageGeom = new THREE.BoxGeometry(fuselageLength, fuselageHeight, fuselageWidth);
+    } else if (fuselageShape === 'cylindrical') {
+        const fuselageDiameter = getValidNumber(fuselageDiameterInput) * conversionFactor;
+        newFuselageGeom = new THREE.CylinderGeometry(fuselageDiameter / 2, fuselageDiameter / 2, fuselageLength, 32);
+        newFuselageGeom.rotateZ(Math.PI / 2); // تدوير الأسطوانة لتكون أفقية
+    } else if (fuselageShape === 'teardrop') {
+        const frontDiameter = getValidNumber(fuselageFrontDiameterInput) * conversionFactor;
+        const rearDiameter = getValidNumber(fuselageRearDiameterInput) * conversionFactor;
+        newFuselageGeom = new THREE.CylinderGeometry(frontDiameter / 2, rearDiameter / 2, fuselageLength, 32);
+        newFuselageGeom.rotateZ(Math.PI / 2); // تدوير الأسطوانة لتكون أفقية
+    } else {
+        // شكل افتراضي في حالة وجود خطأ
+        newFuselageGeom = new THREE.BoxGeometry(fuselageLength, 0.15, 0.15);
+    }
+
+    // استبدال الهندسة والمادة في الكائن الحالي بدلاً من إنشاء كائن جديد
+    fuselage.geometry.dispose(); // التخلص من الهندسة القديمة
+    fuselage.geometry = newFuselageGeom;
+    planeGroup.add(fuselage); // إعادة إضافة الجسم المحدث
+
 
     // تحديث المواقع
     propellerGroup.position.x = fuselageLength / 2 + 0.05;
@@ -865,6 +928,12 @@ function calculateAerodynamics() {
     const propRpm = getValidNumber(propRpmInput);
     const planeComponentsWeightGrams = getValidNumber(planeWeightInput);
     const structureMaterial = structureMaterialInput.value;
+    const fuselageShape = fuselageShapeInput.value;
+    const fuselageLength = getValidNumber(fuselageLengthInput) * conversionFactor;
+
+
+
+
 
     // --- حسابات محدثة ---
     const tipChord = wingChord * taperRatio;
@@ -928,17 +997,34 @@ function calculateAerodynamics() {
     const tailVolume = totalTailArea * tailThickness;
     const tailWeightKg = tailVolume * structureMaterialDensity;
 
+    // حساب وزن الجسم
+    let fuselageVolume = 0;
+    if (fuselageShape === 'rectangular') {
+        const fuselageWidth = getValidNumber(fuselageWidthInput) * conversionFactor;
+        const fuselageHeight = getValidNumber(fuselageHeightInput) * conversionFactor;
+        fuselageVolume = fuselageLength * fuselageWidth * fuselageHeight;
+    } else if (fuselageShape === 'cylindrical') {
+        const fuselageDiameter = getValidNumber(fuselageDiameterInput) * conversionFactor;
+        fuselageVolume = Math.PI * Math.pow(fuselageDiameter / 2, 2) * fuselageLength;
+    } else if (fuselageShape === 'teardrop') {
+        const frontDiameter = getValidNumber(fuselageFrontDiameterInput) * conversionFactor;
+        const rearDiameter = getValidNumber(fuselageRearDiameterInput) * conversionFactor;
+        // حجم المخروط الناقص
+        fuselageVolume = (1/3) * Math.PI * fuselageLength * (Math.pow(frontDiameter/2, 2) + (frontDiameter/2)*(rearDiameter/2) + Math.pow(rearDiameter/2, 2));
+    }
+    const fuselageWeightKg = fuselageVolume * structureMaterialDensity;
+
     // حساب وزن المروحة
     const bladeRadius = (propDiameter / 2) - (spinnerDiameter / 2);
     const avgBladeChord = propChord * 0.75; // تقدير متوسط عرض الشفرة
-    const singleBladeVolume = bladeRadius > 0 ? bladeRadius * avgBladeChord * propThickness : 0;
+    const singleBladeVolume = bladeRadius > 0 ? bladeRadius * avgBladeChord * propThickness : 0; // حجم شفرة واحدة
     const spinnerVolume = (4/3) * Math.PI * Math.pow(spinnerDiameter / 2, 3);
     const propVolume = (singleBladeVolume * propBlades) + spinnerVolume;
     const propMaterialDensity = MATERIAL_DENSITIES[propMaterial];
     const propWeightKg = propVolume * propMaterialDensity;
 
     const planeComponentsWeightKg = planeComponentsWeightGrams / 1000;
-    const totalWeightKg = wingWeightKg + tailWeightKg + propWeightKg + planeComponentsWeightKg;
+    const totalWeightKg = wingWeightKg + tailWeightKg + fuselageWeightKg + propWeightKg + planeComponentsWeightKg;
 
     // 5. نسبة الدفع إلى الوزن (Thrust-to-Weight Ratio)
     const weightInNewtons = totalWeightKg * 9.81;
@@ -952,6 +1038,7 @@ function calculateAerodynamics() {
     wingWeightResultEl.textContent = (wingWeightKg * 1000).toFixed(0);
     tailAreaResultEl.textContent = totalTailArea > 0 ? totalTailArea.toFixed(2) : '0.00';
     tailWeightResultEl.textContent = (tailWeightKg * 1000).toFixed(0);
+    fuselageWeightResultEl.textContent = (fuselageWeightKg * 1000).toFixed(0);
     propWeightResultEl.textContent = (propWeightKg * 1000).toFixed(0);
     totalWeightResultEl.textContent = (totalWeightKg * 1000).toFixed(0);
     twrResultEl.textContent = twr > 0 ? twr.toFixed(2) : '0.00';
@@ -1148,6 +1235,7 @@ hasAileronInput.addEventListener('change', updateAll);
 hasWingtipInput.addEventListener('change', updateAll);
 tailTypeInput.addEventListener('change', updateAll);
 hasElevatorInput.addEventListener('change', updateAll);
+fuselageShapeInput.addEventListener('change', updateAll);
 hasRudderInput.addEventListener('change', updateAll);
 
 
