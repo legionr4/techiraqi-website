@@ -1938,13 +1938,10 @@ function calculateAerodynamics() {
     // 2. المركز الهوائي (AC) - يقع عند 25% من الـ MAC
     const ac_x = wingPositionX + mac_x_le + (0.25 * mac);
 
-    // الذراع هو المسافة من نقطة مرجعية (سنستخدم مقدمة الطائرة = fuselageLength / 2)
-    const datum = fuselageLength / 2;
-
     // دالة مساعدة لحساب العزم
     const addMoment = (weightKg, positionX) => {
         if (weightKg > 0) {
-            totalMoment += weightKg * (positionX - datum);
+            totalMoment += weightKg * positionX; // حساب العزم حول نقطة الأصل (0,0,0)
         }
     };
 
@@ -2043,8 +2040,7 @@ function calculateAerodynamics() {
 
 
     // 4. حساب الموضع النهائي لمركز الجاذبية
-    const cg_x_from_datum = totalWeightKg > 0 ? totalMoment / totalWeightKg : 0;
-    const cg_x = datum + cg_x_from_datum;
+    const cg_x = totalWeightKg > 0 ? totalMoment / totalWeightKg : 0;
 
     // 5. حساب الهامش الثابت
     const staticMargin = mac > 0 ? ((ac_x - cg_x) / mac) * 100 : 0;
@@ -2087,9 +2083,13 @@ function calculateAerodynamics() {
     totalWeightResultEl.textContent = (totalWeightKg * 1000).toFixed(0);
     twrResultEl.textContent = twr > 0 ? twr.toFixed(2) : '0.00';
 
-    // عرض نتائج CG و AC
-    cgPositionResultEl.textContent = (cg_x * conversionFactorToDisplay).toFixed(1);
-    acPositionResultEl.textContent = (ac_x * conversionFactorToDisplay).toFixed(1);
+    // عرض نتائج CG و AC (محسوبة من مقدمة الطائرة)
+    const datum = fuselageLength / 2; // مقدمة الطائرة هي نقطة الصفر للمستخدم
+    const cg_from_nose = cg_x - datum;
+    const ac_from_nose = ac_x - datum;
+
+    cgPositionResultEl.textContent = (cg_from_nose * conversionFactorToDisplay).toFixed(1);
+    acPositionResultEl.textContent = (ac_from_nose * conversionFactorToDisplay).toFixed(1);
     staticMarginResultEl.textContent = `${staticMargin.toFixed(1)}%`;
 }
 
@@ -2474,7 +2474,7 @@ function animate() {
                         prop.rotation.x -= rotationPerSecond * deltaTime;
                     }
                 } else { // 'same'
-                    child.rotation.x += rotationPerSecond * deltaTime;
+                    prop.rotation.x += rotationPerSecond * deltaTime;
                 }
             });
 
@@ -2542,8 +2542,17 @@ function animate() {
                 const wingPropRotation = wingPropRotationInput.value;
                 const props = wingEnginesGroup.children.filter(c => c.type === 'Group');
                 if (props.length === 2) {
-                    const rightPropPos = props[0].position;
-                    const leftPropPos = props[1].position;
+                    // تحديد المروحة اليمنى واليسرى بشكل دقيق بناءً على موضعها
+                    let rightProp, leftProp;
+                    if (props[0].position.z > 0) {
+                        rightProp = props[0];
+                        leftProp = props[1];
+                    } else {
+                        rightProp = props[1];
+                        leftProp = props[0];
+                    }
+                    const rightPropPos = rightProp.position;
+                    const leftPropPos = leftProp.position;
 
                     for (let i = 0; i < propParticleCount; i++) {
                         const i2 = i * 2;
