@@ -375,6 +375,9 @@ const batteryWeightInput = document.getElementById('battery-weight');
 const batteryPositionInput = document.getElementById('battery-position');
 const fuelTankCapacityInput = document.getElementById('fuel-tank-capacity');
 const fuelTankWeightInput = document.getElementById('fuel-tank-weight');
+const fuelTankLengthInput = document.getElementById('fuel-tank-length');
+const fuelTankWidthInput = document.getElementById('fuel-tank-width');
+const fuelTankHeightInput = document.getElementById('fuel-tank-height');
 const fuelTankPositionInput = document.getElementById('fuel-tank-position');
 
 
@@ -1542,15 +1545,17 @@ function updatePlaneModel() {
     if (engineType === 'electric') {
         energySourceGroup.visible = true;
 
-        // حساب الحجم بناءً على الوزن (تقديري ومعدل ليكون أصغر)
+        // حساب الحجم بناءً على الوزن والكثافة التقديرية للبطارية
         const batteryWeightGrams = getValidNumber(batteryWeightInput);
-        const scalingFactor = 0.0005; // معامل تصغير لجعل الحجم مناسبًا
-        const baseDim = Math.cbrt(batteryWeightGrams) * scalingFactor;
+        const batteryDensityG_cm3 = 1.5; // كثافة تقديرية للبطارية مع الغلاف (جرام/سم^3)
+        const volume_cm3 = batteryWeightGrams / batteryDensityG_cm3;
+        const volume_m3 = volume_cm3 / 1e6;
 
-        // الأبعاد النسبية (L:W:H = 4:2:1)
-        const height = baseDim * 1;
-        const width = baseDim * 2;
-        const length = baseDim * 4;
+        // حساب الأبعاد من الحجم مع الحفاظ على نسبة أبعاد تقديرية (L:W:H = 4:2:1)
+        const x_dim = Math.cbrt(volume_m3 / (4 * 2 * 1));
+        const height = x_dim * 1;
+        const width = x_dim * 2;
+        const length = x_dim * 4;
 
         // تحديث حجم الصندوق
         energySourceMesh.scale.set(length, height, width);
@@ -1562,15 +1567,10 @@ function updatePlaneModel() {
     } else if (engineType === 'ic') {
         energySourceGroup.visible = true;
 
-        // حساب الحجم بناءً على السعة (تقديري ومعدل)
-        const tankCapacity_ml = getValidNumber(fuelTankCapacityInput);
-        const scalingFactor = 0.001; // معامل تصغير
-        const baseDim = Math.cbrt(tankCapacity_ml) * scalingFactor;
-
-        // الأبعاد النسبية (L:W:H = 4:2:1)
-        const height = baseDim * 1;
-        const width = baseDim * 2;
-        const length = baseDim * 4;
+        // قراءة الأبعاد مباشرة من المدخلات
+        const length = getValidNumber(fuelTankLengthInput) * conversionFactor;
+        const width = getValidNumber(fuelTankWidthInput) * conversionFactor;
+        const height = getValidNumber(fuelTankHeightInput) * conversionFactor;
 
         // تحديث حجم الصندوق
         energySourceMesh.scale.set(length, height, width);
