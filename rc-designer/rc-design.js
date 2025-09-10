@@ -164,7 +164,13 @@ const MATERIAL_DENSITIES = {
     'balsa': 160, // خشب البلسا
     'plastic': 1150, // بلاستيك Nylon/ABS
     'carbon_fiber': 1600,
-    'wood': 700
+    'wood': 700,
+    'polycarbonate': 1200 // كثافة البولي كربونات
+};
+
+const FUEL_DENSITIES = {
+    'methanol_nitro': 850, // kg/m³ for typical glow fuel
+    'gasoline': 750 // kg/m³ for gasoline
 };
 
 const ENGINE_SPECS = {
@@ -280,6 +286,8 @@ const cockpitWidthInput = document.getElementById('cockpit-width');
 const cockpitHeightInput = document.getElementById('cockpit-height');
 const cockpitPositionInput = document.getElementById('cockpit-position');
 const cockpitOpacityInput = document.getElementById('cockpit-opacity');
+const fuelTankMaterialInput = document.getElementById('fuel-tank-material');
+const cockpitMaterialInput = document.getElementById('cockpit-material');
 const propDiameterInput = document.getElementById('prop-diameter');
 const propBladesInput = document.getElementById('prop-blades');
 const propPitchInput = document.getElementById('prop-pitch');
@@ -293,7 +301,6 @@ const togglePropSpinBtn = document.getElementById('toggle-prop-spin');
 const angleOfAttackInput = document.getElementById('angle-of-attack');
 const airSpeedInput = document.getElementById('air-speed');
 const airDensityInput = document.getElementById('air-density');
-const planeWeightInput = document.getElementById('plane-weight');
 const particleDensityInput = document.getElementById('particle-density');
 const particleSizeInput = document.getElementById('particle-size');
 const showAmbientWindInput = document.getElementById('show-ambient-wind');
@@ -374,11 +381,17 @@ const batteryCRatingInput = document.getElementById('battery-c-rating');
 const batteryWeightInput = document.getElementById('battery-weight');
 const batteryPositionInput = document.getElementById('battery-position');
 const fuelTankCapacityInput = document.getElementById('fuel-tank-capacity');
-const fuelTankWeightInput = document.getElementById('fuel-tank-weight');
 const fuelTankLengthInput = document.getElementById('fuel-tank-length');
 const fuelTankWidthInput = document.getElementById('fuel-tank-width');
 const fuelTankHeightInput = document.getElementById('fuel-tank-height');
 const fuelTankPositionInput = document.getElementById('fuel-tank-position');
+
+// Accessories Inputs
+const receiverWeightInput = document.getElementById('receiver-weight');
+const servoWeightInput = document.getElementById('servo-weight');
+const servoCountInput = document.getElementById('servo-count');
+const cameraWeightInput = document.getElementById('camera-weight');
+const otherAccessoriesWeightInput = document.getElementById('other-accessories-weight');
 
 
 
@@ -393,6 +406,9 @@ const tailAreaResultEl = document.getElementById('tail-area-result');
 const tailWeightResultEl = document.getElementById('tail-weight-result');
 const fuselageWeightResultEl = document.getElementById('fuselage-weight-result');
 const fuselageAreaResultEl = document.getElementById('fuselage-area-result');
+const cockpitWeightResultEl = document.getElementById('cockpit-weight-result');
+const fuelTankWeightResultEl = document.getElementById('fuel-tank-weight-result');
+const accessoriesWeightResultEl = document.getElementById('accessories-weight-result');
 const wheelWeightResultEl = document.getElementById('wheel-weight-result');
 const strutWeightResultEl = document.getElementById('strut-weight-result');
 const engineWeightResultEl = document.getElementById('engine-weight-result');
@@ -1602,7 +1618,6 @@ function calculateAerodynamics() {
     const propMaterial = propMaterialInput.value;
     const propPitch = getValidNumber(propPitchInput); // inches
     const propRpm = getValidNumber(propRpmInput);
-    const planeComponentsWeightGrams = getValidNumber(planeWeightInput);
     const structureMaterial = structureMaterialInput.value;
     const fuselageMaterialValue = fuselageMaterialInput.value;
     const fuselageShape = fuselageShapeInput.value;
@@ -1702,6 +1717,20 @@ function calculateAerodynamics() {
     }
     const fuselageWeightKg = fuselageVolume * fuselageMaterialDensity;
 
+    // حساب وزن القمرة
+    let cockpitWeightKg = 0;
+    if (hasCockpitInput.checked) {
+        const cockpitLength = getValidNumber(cockpitLengthInput) * conversionFactor;
+        const cockpitWidth = getValidNumber(cockpitWidthInput) * conversionFactor;
+        const cockpitHeight = getValidNumber(cockpitHeightInput) * conversionFactor;
+        const cockpitMaterial = cockpitMaterialInput.value;
+        const cockpitMaterialDensity = MATERIAL_DENSITIES[cockpitMaterial];
+
+        // Volume of a half-ellipsoid: (2/3) * PI * a * b * c
+        const cockpitVolume = (2 / 3) * Math.PI * (cockpitLength / 2) * cockpitHeight * (cockpitWidth / 2);
+        cockpitWeightKg = cockpitVolume * cockpitMaterialDensity;
+    }
+
     // حساب مساحة سطح الجسم
     if (fuselageShape === 'rectangular') {
         const frontWidth = getValidNumber(fuselageWidthInput) * conversionFactor; const fuselageLength = getValidNumber(fuselageLengthInput) * conversionFactor;
@@ -1783,12 +1812,41 @@ function calculateAerodynamics() {
     let energySourceWeightKg = 0;
     if (engineType === 'electric') {
         energySourceWeightKg = getValidNumber(batteryWeightInput) / 1000;
+        fuelTankWeightResultEl.parentElement.style.display = 'none'; // إخفاء نتيجة وزن الخزان
     } else { // ic
-        energySourceWeightKg = getValidNumber(fuelTankWeightInput) / 1000;
+        // حساب وزن خزان الوقود الممتلئ
+        const tankLength = getValidNumber(fuelTankLengthInput) * conversionFactor;
+        const tankWidth = getValidNumber(fuelTankWidthInput) * conversionFactor;
+        const tankHeight = getValidNumber(fuelTankHeightInput) * conversionFactor;
+        const tankCapacityMl = getValidNumber(fuelTankCapacityInput);
+        const tankMaterial = fuelTankMaterialInput.value;
+        const tankMaterialDensity = MATERIAL_DENSITIES[tankMaterial];
+        const fuelDensity = FUEL_DENSITIES['methanol_nitro']; // افتراض وقود الميثانول
+
+        // حساب وزن الوقود
+        const fuelVolumeM3 = tankCapacityMl / 1e6; // تحويل من مل (سم^3) إلى م^3
+        const fuelWeightKg = fuelVolumeM3 * fuelDensity;
+
+        // حساب وزن هيكل الخزان (تقريبي بناءً على المساحة السطحية وسمك الجدار)
+        const surfaceArea = 2 * ((tankLength * tankWidth) + (tankLength * tankHeight) + (tankWidth * tankHeight));
+        const wallThickness = 0.002; // افتراض سمك جدار 2 مم
+        const shellVolume = surfaceArea * wallThickness;
+        const shellWeightKg = shellVolume * tankMaterialDensity;
+
+        energySourceWeightKg = fuelWeightKg + shellWeightKg;
+        fuelTankWeightResultEl.textContent = (energySourceWeightKg * 1000).toFixed(0);
+        fuelTankWeightResultEl.parentElement.style.display = 'flex'; // إظهار نتيجة وزن الخزان
     }
 
-    const planeComponentsWeightKg = planeComponentsWeightGrams / 1000;
-    const totalWeightKg = wingWeightKg + tailWeightKg + fuselageWeightKg + propWeightKg + landingGearWeightKg + engineWeightKg + energySourceWeightKg + planeComponentsWeightKg;
+    // حساب وزن الملحقات الإضافية
+    const receiverWeightGrams = getValidNumber(receiverWeightInput);
+    const servoWeightGrams = getValidNumber(servoWeightInput) * getValidNumber(servoCountInput);
+    const cameraWeightGrams = getValidNumber(cameraWeightInput);
+    const otherAccessoriesWeightGrams = getValidNumber(otherAccessoriesWeightInput);
+    const totalAccessoriesWeightGrams = receiverWeightGrams + servoWeightGrams + cameraWeightGrams + otherAccessoriesWeightGrams;
+    const totalAccessoriesWeightKg = totalAccessoriesWeightGrams / 1000;
+
+    const totalWeightKg = wingWeightKg + tailWeightKg + fuselageWeightKg + propWeightKg + landingGearWeightKg + engineWeightKg + energySourceWeightKg + cockpitWeightKg + totalAccessoriesWeightKg;
 
     // 5. نسبة الدفع إلى الوزن (Thrust-to-Weight Ratio)
     const weightInNewtons = totalWeightKg * 9.81;
@@ -1804,6 +1862,10 @@ function calculateAerodynamics() {
     tailWeightResultEl.textContent = (tailWeightKg * 1000).toFixed(0);
     fuselageAreaResultEl.textContent = fuselageSurfaceArea > 0 ? fuselageSurfaceArea.toFixed(2) : '0.00';
     fuselageWeightResultEl.textContent = (fuselageWeightKg * 1000).toFixed(0);
+    cockpitWeightResultEl.textContent = (cockpitWeightKg * 1000).toFixed(0);
+    cockpitWeightResultEl.parentElement.style.display = hasCockpitInput.checked ? 'flex' : 'none';
+    accessoriesWeightResultEl.textContent = totalAccessoriesWeightGrams.toFixed(0);
+    // إظهار/إخفاء نتيجة وزن الخزان تم نقله إلى كتلة if/else أعلاه
     if (hasLandingGearInput.checked) {
         wheelWeightResultEl.parentElement.style.display = 'flex';
         strutWeightResultEl.parentElement.style.display = 'flex';
@@ -2020,6 +2082,7 @@ engineTypeInput.addEventListener('change', updateEngineUI);
 fuselageNoseShapeInput.addEventListener('change', updateAll);
 fuselageTailShapeInput.addEventListener('change', updateAll);
 hasCockpitInput.addEventListener('change', updateAll);
+fuelTankMaterialInput.addEventListener('change', updateAll);
 electricMotorTypeInput.addEventListener('change', updateEngineUI);
 icEngineTypeInput.addEventListener('change', updateEngineUI);
 enginePlacementInput.addEventListener('change', updateAll);
@@ -2027,6 +2090,13 @@ engineWingVerticalPosInput.addEventListener('change', updateAll);
 engineWingForeAftInput.addEventListener('change', updateAll);
 wingPropRotationInput.addEventListener('change', updateAll); // لا يؤثر على النموذج ولكنه جزء من الحالة
 engineWingDistanceInput.addEventListener('input', debouncedUpdate);
+
+// Accessories Listeners
+receiverWeightInput.addEventListener('input', debouncedUpdate);
+servoWeightInput.addEventListener('input', debouncedUpdate);
+servoCountInput.addEventListener('input', debouncedUpdate);
+cameraWeightInput.addEventListener('input', debouncedUpdate);
+otherAccessoriesWeightInput.addEventListener('input', debouncedUpdate);
 enginePylonLengthInput.addEventListener('input', debouncedUpdate);
 
 

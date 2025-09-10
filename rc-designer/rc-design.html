@@ -474,6 +474,20 @@
                             <option value="plastic">بلاستيك (Plastic - ABS)</option>
                         </select>
                     </div>
+                    <div class="input-group">
+                        <label for="cockpit-material">مادة صنع القمرة</label>
+                        <select id="cockpit-material">
+                            <option value="polycarbonate" selected>بولي كربونات (Polycarbonate)</option>
+                            <option value="plastic">بلاستيك (Plastic - ABS)</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="fuel-tank-material">مادة صنع خزان الوقود</label>
+                        <select id="fuel-tank-material">
+                            <option value="plastic" selected>بلاستيك (HDPE)</option>
+                            <option value="carbon_fiber">ألياف الكربون (Carbon Fiber)</option>
+                        </select>
+                    </div>
                 </fieldset>
 
                 <fieldset>
@@ -654,10 +668,6 @@
                             <input type="number" id="fuel-tank-height" value="5" step="0.5">
                         </div>
                         <div class="input-group">
-                            <label for="fuel-tank-weight">الوزن (ممتلئ) (جرام)</label>
-                            <input type="number" id="fuel-tank-weight" value="300" step="10">
-                        </div>
-                        <div class="input-group">
                             <label for="fuel-tank-position">الموضع من مركز الطائرة (<span class="unit-label">سم</span>)</label>
                             <input type="number" id="fuel-tank-position" value="5" step="1" title="قيمة موجبة للأمام، سالبة للخلف">
                         </div>
@@ -777,10 +787,6 @@
                         <input type="number" id="pressure" value="101325" step="100">
                     </div>
                     <div class="input-group">
-                        <label for="plane-weight">وزن الجسم والمكونات (جرام)</label>
-                        <input type="number" id="plane-weight" value="800" step="50">
-                    </div>
-                    <div class="input-group">
                         <label for="show-ambient-wind">إظهار رياح المحيط</label>
                         <input type="checkbox" id="show-ambient-wind" checked style="flex-basis: auto; margin-left: auto;">
                     </div>
@@ -799,6 +805,30 @@
                     <div class="input-group">
                         <label for="airflow-transparency">شفافية تدفق الهواء: <span id="airflow-transparency-value">100</span>%</label>
                         <input type="range" id="airflow-transparency" min="0" max="1" value="1" step="0.01">
+                    </div>
+                </fieldset>
+
+                <fieldset>
+                    <legend>ملحقات وأوزان إضافية</legend>
+                    <div class="input-group">
+                        <label for="receiver-weight">وزن جهاز الاستقبال (جرام)</label>
+                        <input type="number" id="receiver-weight" value="15" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="servo-weight">وزن السيرفو الواحد (جرام)</label>
+                        <input type="number" id="servo-weight" value="9" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="servo-count">عدد السيرفوهات</label>
+                        <input type="number" id="servo-count" value="4" step="1" min="0">
+                    </div>
+                    <div class="input-group">
+                        <label for="camera-weight">وزن الكاميرا (إن وجدت) (جرام)</label>
+                        <input type="number" id="camera-weight" value="0" step="5">
+                    </div>
+                    <div class="input-group">
+                        <label for="other-accessories-weight">أوزان أخرى (هيكل، غراء...) (جرام)</label>
+                        <input type="number" id="other-accessories-weight" value="250" step="10">
                     </div>
                 </fieldset>
 
@@ -883,6 +913,10 @@
                     <span id="fuselage-weight-result">0</span>
                 </div>
                 <div class="result-item">
+                    <p>وزن القمرة التقديري (جرام):</p>
+                    <span id="cockpit-weight-result">0</span>
+                </div>
+                <div class="result-item">
                     <p>مساحة سطح الجسم (م²):</p>
                     <span id="fuselage-area-result">0.00</span>
                 </div>
@@ -891,8 +925,16 @@
                     <span id="prop-weight-result">0</span>
                 </div>
                 <div class="result-item">
+                    <p>وزن خزان الوقود (ممتلئ) (جرام):</p>
+                    <span id="fuel-tank-weight-result">0</span>
+                </div>
+                <div class="result-item">
                     <p>وزن المحرك (جرام):</p>
                     <span id="engine-weight-result">0</span>
+                </div>
+                <div class="result-item">
+                    <p>وزن الملحقات الإضافية (جرام):</p>
+                    <span id="accessories-weight-result">0</span>
                 </div>
                 <div class="result-item">
                     <p>وزن العجلة الواحدة (جرام):</p>
