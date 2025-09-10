@@ -1247,12 +1247,39 @@ window.addEventListener('click', onMouseClick, false);
 function animate() {
     requestAnimationFrame(animate);
 
-    const deltaTime = clock.getDelta(); // الوقت المنقضي منذ الإطار الأخير
+    const deltaTime = clock.getDelta(); // الوقت المنقضي منذ الإطار الأخير (بالثواني)
+
+    // إعادة تعيين موضع ودوران planeGroup إلى قيمتها الأساسية في كل إطار.
+    // هذا يمنع أي اهتزازات متراكمة قد تؤدي إلى انجراف الطائرة.
+    planeGroup.position.set(0, 0, 0);
+    planeGroup.rotation.set(0, 0, 0);
 
     if (isPropSpinning) {
         // --- دوران المروحة ---
         const rotationPerSecond = (getValidNumber(propRpmInput) / 60) * Math.PI * 2;
         propellerGroup.rotation.x += rotationPerSecond * deltaTime;
+
+        // --- تأثير اهتزاز الطائرة ---
+        const propRpm = getValidNumber(propRpmInput);
+        const minVibrationRpm = 4000; // RPM التي يبدأ عندها الاهتزاز
+        const maxVibrationRpm = 8000; // RPM التي يكون عندها الاهتزاز في أقصى شدته
+
+        let vibrationMagnitude = 0;
+        if (propRpm > minVibrationRpm) {
+            vibrationMagnitude = (propRpm - minVibrationRpm) / (maxVibrationRpm - minVibrationRpm);
+            vibrationMagnitude = Math.min(1, Math.max(0, vibrationMagnitude)); // حصر القيمة بين 0 و 1
+        }
+
+        const maxPosOffset = 0.002; // أقصى إزاحة للموضع بالمتر (مثلاً 2 ملم)
+        const maxRotOffset = 0.005; // أقصى إزاحة للدوران بالراديان (مثلاً حوالي 0.3 درجة)
+
+        planeGroup.position.x += (Math.random() * 2 - 1) * maxPosOffset * vibrationMagnitude;
+        planeGroup.position.y += (Math.random() * 2 - 1) * maxPosOffset * vibrationMagnitude;
+        planeGroup.position.z += (Math.random() * 2 - 1) * maxPosOffset * vibrationMagnitude;
+
+        planeGroup.rotation.x += (Math.random() * 2 - 1) * maxRotOffset * vibrationMagnitude;
+        planeGroup.rotation.y += (Math.random() * 2 - 1) * maxRotOffset * vibrationMagnitude;
+        planeGroup.rotation.z += (Math.random() * 2 - 1) * maxRotOffset * vibrationMagnitude;
 
         // --- كل تحديثات الجزيئات تحدث فقط عند تشغيل المروحة ---
         // --- تحديث جزيئات تدفق هواء المروحة ---
@@ -1282,8 +1309,8 @@ function animate() {
                 const ageRatio = Math.max(0, Math.min(1, currentTravel / travelDistance));
                 const effectStrength = Math.sin(ageRatio * Math.PI); // Smooth fade-in and fade-out
 
-                opacities[i] = effectStrength * 0.7; // Prop particles are more dense
-                scales[i] = effectStrength * 4.0;   // and slightly larger
+                opacities[i] = effectStrength * 0.6; // Prop particles are more dense
+                scales[i] = effectStrength * 1.8;   // and slightly larger
 
                 if (positions[i3] < endX || positions[i3] > startX) {
                     const r = emissionRadius * Math.sqrt(Math.random()); // توزيع متساوٍ داخل الدائرة
@@ -1386,8 +1413,8 @@ function animate() {
                 const ageRatio = Math.max(0, Math.min(1, currentTravel / travelDistance));
                 const effectStrength = Math.sin(ageRatio * Math.PI); // Smooth fade-in and fade-out
 
-                opacities[i] = effectStrength * 0.4;
-                scales[i] = effectStrength * 2.5;
+                opacities[i] = effectStrength * 0.35;
+                scales[i] = effectStrength * 1.0;
 
                 // Reset particle if it goes too far behind
                 if (positions[i3] < endX) {
@@ -1450,8 +1477,8 @@ function animate() {
                 const ageRatio = Math.min(1, age / travelLength);
                 const effectStrength = Math.sin(ageRatio * Math.PI);
 
-                opacities[i] = effectStrength * Math.min(1, vortexStrength * 5); // Opacity also depends on strength
-                scales[i] = effectStrength * 2.0;
+                opacities[i] = effectStrength * Math.min(1, vortexStrength * 4); // Opacity also depends on strength
+                scales[i] = effectStrength * 1.2;
 
                 // Reset particle
                 if (age > travelLength || age < 0) {
