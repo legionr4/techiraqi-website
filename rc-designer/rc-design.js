@@ -31,6 +31,7 @@ const fuselageMaterial = new THREE.MeshStandardMaterial({ color: 0x0056b3, side:
 const wingMaterial = new THREE.MeshStandardMaterial({ color: 0xcccccc, side: THREE.DoubleSide });
 const tailMaterial = new THREE.MeshStandardMaterial({ color: 0xdddddd, side: THREE.DoubleSide });
 const aileronMaterial = new THREE.MeshStandardMaterial({ color: 0xffc107, side: THREE.DoubleSide });
+const cockpitMaterial = new THREE.MeshStandardMaterial({ color: 0x6ab0de, transparent: true, opacity: 0.7, side: THREE.DoubleSide });
 
 // مجموعة المحرك
 const engineGroup = new THREE.Group();
@@ -63,6 +64,10 @@ planeGroup.add(tailGroup);
 // مجموعة أسطح التحكم في الذيل
 const tailControlsGroup = new THREE.Group();
 planeGroup.add(tailControlsGroup);
+
+// مجموعة قمرة القيادة
+const cockpitGroup = new THREE.Group();
+planeGroup.add(cockpitGroup);
 
 
 // المروحة
@@ -244,6 +249,13 @@ const fuselageTearFrontDiaGroup = document.getElementById('fuselage-teardrop-fro
 const fuselageTaperRatioInput = document.getElementById('fuselage-taper-ratio');
 const fuselageTaperValueEl = document.getElementById('fuselage-taper-value');
 const fuselageTaperGroup = document.getElementById('fuselage-taper-group');
+const hasCockpitInput = document.getElementById('has-cockpit');
+const cockpitControls = document.getElementById('cockpit-controls');
+const cockpitShapeInput = document.getElementById('cockpit-shape');
+const cockpitLengthInput = document.getElementById('cockpit-length');
+const cockpitWidthInput = document.getElementById('cockpit-width');
+const cockpitHeightInput = document.getElementById('cockpit-height');
+const cockpitPositionInput = document.getElementById('cockpit-position');
 const fuselageTearRearDiaGroup = document.getElementById('fuselage-teardrop-rear-diameter-group');
 const wingPropDistanceInput = document.getElementById('wing-prop-distance');
 const wingTailDistanceInput = document.getElementById('wing-tail-distance');
@@ -275,6 +287,7 @@ const tailColorInput = document.getElementById('tail-color');
 const aileronColorInput = document.getElementById('aileron-color');
 const propColorInput = document.getElementById('prop-color');
 const engineColorInput = document.getElementById('engine-color');
+const cockpitColorInput = document.getElementById('cockpit-color');
 const strutColorInput = document.getElementById('strut-color');
 const wheelColorInput = document.getElementById('wheel-color');
 const backgroundColorInput = document.getElementById('background-color');
@@ -699,6 +712,7 @@ function updatePlaneModel() {
     wingMaterial.color.set(wingColor);
     tailMaterial.color.set(tailColor);
     aileronMaterial.color.set(aileronColorInput.value);
+    cockpitMaterial.color.set(cockpitColorInput.value);
     engineMaterial.color.set(engineColorInput.value);
     propMaterial.color.set(propColorInput.value);
     strutMaterial.color.set(strutColorInput.value);
@@ -1170,6 +1184,40 @@ function updatePlaneModel() {
     fuselage.geometry.dispose(); // التخلص من الهندسة القديمة
     fuselage.geometry = newFuselageGeom;
     planeGroup.add(fuselage); // إعادة إضافة الجسم المحدث
+
+    // --- قمرة القيادة (Cockpit) ---
+    while(cockpitGroup.children.length > 0) cockpitGroup.remove(cockpitGroup.children[0]);
+
+    cockpitControls.style.display = hasCockpitInput.checked ? 'block' : 'none';
+
+    if (hasCockpitInput.checked) {
+        const cockpitLength = getValidNumber(cockpitLengthInput) * conversionFactor;
+        const cockpitWidth = getValidNumber(cockpitWidthInput) * conversionFactor;
+        const cockpitHeight = getValidNumber(cockpitHeightInput) * conversionFactor;
+        const cockpitPosition = getValidNumber(cockpitPositionInput) * conversionFactor;
+        const cockpitShape = cockpitShapeInput.value;
+
+        let cockpitGeom;
+
+        if (cockpitShape === 'bubble') {
+            // استخدام نصف كرة ممتد
+            cockpitGeom = new THREE.SphereGeometry(1, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+            cockpitGeom.rotateX(-Math.PI / 2); // تدوير القاعدة لتكون على مستوى XZ
+        } else { // streamlined
+            // استخدام مخروط ممتد لتمثيل الشكل الانسيابي
+            cockpitGeom = new THREE.CylinderGeometry(0, 1, 1, 32, 1); // مخروط بوحدة قياس واحدة
+            cockpitGeom.translate(0, 0.5, 0); // رفع القاعدة لتكون عند y=0
+            cockpitGeom.rotateZ(-Math.PI / 2); // توجيه المخروط للخلف على طول المحور X
+        }
+
+        const cockpit = new THREE.Mesh(cockpitGeom, cockpitMaterial);
+        cockpit.scale.set(cockpitLength, cockpitHeight, cockpitWidth);
+
+        // تحديد الموضع فوق جسم الطائرة
+        const cockpitX = (fuselageLength / 2) - cockpitPosition - (cockpitShape === 'bubble' ? cockpitLength / 2 : 0);
+        cockpit.position.set(cockpitX, currentFuselageHeight / 2, 0);
+        cockpitGroup.add(cockpit);
+    }
 
     // --- إنشاء وتحديد موضع المحرك والمروحة ---
     // 1. إزالة النماذج القديمة
@@ -1817,6 +1865,7 @@ hasRetractableGearInput.addEventListener('change', updateAll);
 hasLandingGearInput.addEventListener('change', updateAll);
 fuselageShapeInput.addEventListener('change', updateAll);
 hasRudderInput.addEventListener('change', updateAll);
+hasCockpitInput.addEventListener('change', updateAll);
 engineTypeInput.addEventListener('change', updateEngineUI);
 electricMotorTypeInput.addEventListener('change', updateEngineUI);
 icEngineTypeInput.addEventListener('change', updateEngineUI);
