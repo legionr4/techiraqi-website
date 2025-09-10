@@ -348,10 +348,8 @@ function updatePlaneModel() {
     // قراءة قيم جسم الطائرة
     const fuselageShape = fuselageShapeInput.value;
 
-    // New: Read fuselage taper ratio
-    const fuselageTaperRatio = getValidNumber(fuselageTaperRatioInput);
-
     // تحديد الأبعاد الفعلية لجسم الطائرة (الارتفاع والعرض) بناءً على الشكل المختار
+    // تم نقل هذا الجزء للأعلى لضمان أن الأبعاد الحالية متاحة لجميع حسابات المواضع التالية
     let currentFuselageHeight;
     let currentFuselageWidth;
 
@@ -373,7 +371,10 @@ function updatePlaneModel() {
         currentFuselageHeight = 0.15; // Default values
     }
 
-    
+
+    // New: Read fuselage taper ratio
+    const fuselageTaperRatio = getValidNumber(fuselageTaperRatioInput);
+
     // قيم المروحة تبقى بالبوصة كما هي متعارف عليها
     const propDiameter = getValidNumber(propDiameterInput) * 0.0254; // to meters
     const propChord = getValidNumber(propChordInput) * conversionFactor;
