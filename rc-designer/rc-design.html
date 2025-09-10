@@ -852,6 +852,14 @@
                 </fieldset>
 
                 <fieldset>
+                    <legend>مركز الجاذبية والاستقرار (Center of Gravity & Stability)</legend>
+                    <div class="input-group">
+                        <label for="show-cg-ac">إظهار CG (أحمر) و AC (أزرق)</label>
+                        <input type="checkbox" id="show-cg-ac" checked style="flex-basis: auto; margin-left: auto;">
+                    </div>
+                </fieldset>
+
+                <fieldset>
                     <legend>الألوان</legend>
                     <div class="input-group">
                         <label for="fuselage-color">لون جسم الطائرة</label>
@@ -975,15 +983,15 @@
                     <p>نسبة الدفع إلى الوزن:</p>
                     <span id="twr-result">0.00</span>
                 </div>
-                <div class="result-item" style="border-top: 2px solid #90caf9; padding-top: 10px; margin-top: 10px;">
+                <div class="result-item" style="border-top: 2px solid #90caf9; padding-top: 10px; margin-top: 10px;" title="موضع مركز الجاذبية من مقدمة الطائرة">
                     <p>موضع مركز الجاذبية (CG) (سم):</p>
                     <span id="cg-position-result">0.0</span>
                 </div>
-                <div class="result-item">
+                <div class="result-item" title="موضع المركز الهوائي من مقدمة الطائرة">
                     <p>موضع المركز الهوائي (AC) (سم):</p>
                     <span id="ac-position-result">0.0</span>
                 </div>
-                <div class="result-item">
+                <div class="result-item" title="مقياس استقرار الطائرة. يجب أن تكون القيمة موجبة (عادة بين 5% و 15%) لتكون الطائرة مستقرة.">
                     <p><strong>الهامش الثابت (Static Margin):</strong></p>
                     <span id="static-margin-result">0.0%</span>
                 </div>
