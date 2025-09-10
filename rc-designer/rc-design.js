@@ -1,15 +1,13 @@
 // --- إعداد المشهد ثلاثي الأبعاد ---
 const canvas = document.getElementById('viewer-canvas');
 const scene = new THREE.Scene();
-const viewerContainer = document.querySelector('.viewer'); // الحصول على الحاوية الأب
-
 scene.background = new THREE.Color(0xeeeeee);
-const camera = new THREE.PerspectiveCamera(75, viewerContainer.clientWidth / viewerContainer.clientHeight, 0.1, 1000);
+const camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
 const clock = new THREE.Clock(); // لتتبع الوقت بين الإطارات
 camera.position.set(1.5, 1, 2);
 
 const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
-renderer.setSize(viewerContainer.clientWidth, viewerContainer.clientHeight);
+renderer.setSize(canvas.clientWidth, canvas.clientHeight);
 
 // --- إضافة عناصر التحكم بالكاميرا ---
 const controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -120,10 +118,6 @@ planeGroup.add(cgAcGroup);
 // متغير لتخزين اهتزاز الدوران من الإطار السابق لإزالته في الإطار التالي
 let lastVibrationRotation = new THREE.Euler();
 // --- دوال التحديث والحساب ---
-
-// متغيرات عامة لموضع الجناح والذيل لتكون متاحة في كل الدوال
-let wingPositionX = 0;
-let tailPositionX = 0;
 
 /**
  * يقرأ قيمة رقمية من حقل الإدخال، ويتحقق من صحتها (ضد القيم غير الرقمية، والحد الأدنى/الأقصى)،
@@ -851,8 +845,8 @@ function updatePlaneModel() {
     const wingTailDistance = getValidNumber(wingTailDistanceInput) * conversionFactor;
 
     // Calculate X positions for components
-    wingPositionX = (fuselageLength / 2) - wingPropDistance;
-    tailPositionX = wingPositionX - wingTailDistance;
+    const wingPositionX = (fuselageLength / 2) - wingPropDistance;
+    const tailPositionX = wingPositionX - wingTailDistance;
 
     // قيم المروحة تبقى بالبوصة كما هي متعارف عليها
     const propDiameter = getValidNumber(propDiameterInput) * 0.0254; // to meters
@@ -2012,6 +2006,14 @@ function calculateAerodynamics() {
     const sweepRad = (getValidNumber(sweepAngleInput) * Math.PI / 180);
     const mac_x_le = mac_y * Math.tan(sweepRad); // موضع الحافة الأمامية للـ MAC
 
+    // موضع الجناح على المحور X (من updatePlaneModel)
+    const wingPropDistance = getValidNumber(wingPropDistanceInput) * conversionFactor;
+    const wingPositionX = (fuselageLength / 2) - wingPropDistance;
+
+    // حساب موضع الذيل (الحافة الأمامية)
+    const wingTailDistance = getValidNumber(wingTailDistanceInput) * conversionFactor;
+    const tailPositionX = wingPositionX - wingTailDistance;
+
     // 2. المركز الهوائي (AC) - يقع عند 25% من الـ MAC
     const ac_x = wingPositionX + mac_x_le + (0.25 * mac);
 
@@ -2116,7 +2118,11 @@ function calculateAerodynamics() {
 
 
     // 4. حساب الموضع النهائي لمركز الجاذبية
-    const cg_x = totalWeightKg > 0 ? totalMoment / totalWeightKg : 0;
+    // إضافة تحقق إضافي لمنع القسمة على صفر التي قد تسبب NaN وتوقف العارض
+    let cg_x = 0;
+    if (totalWeightKg > 0.0001) { // استخدام قيمة صغيرة لتجنب أخطاء الفاصلة العائمة
+        cg_x = totalMoment / totalWeightKg;
+    }
 
     // 5. حساب الهامش الثابت
     const staticMargin = mac > 0 ? ((ac_x - cg_x) / mac) * 100 : 0;
@@ -2340,8 +2346,11 @@ function setAirflowVisibility(isSpinning) {
 }
 
 function updateAll() {
+    // الاستدعاء الأول: لحساب القيم الأولية التي قد تحتاجها updatePlaneModel
+    calculateAerodynamics();
     updatePlaneModel();
-    calculateAerodynamics(); // استدعاء دالة الحسابات الرئيسية لتحديث لوحة النتائج
+    // الاستدعاء الثاني: لإعادة الحساب بالكامل بعد تحديث النموذج وضمان دقة جميع الأوزان والأبعاد
+    calculateAerodynamics();
     updatePlaneParameters(); // Cache the latest parameters
     if (liftChart && dragChart) {
         updateCharts();
