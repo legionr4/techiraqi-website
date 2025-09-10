@@ -1538,7 +1538,6 @@ function updatePlaneModel() {
 
     // --- مصدر الطاقة (بطارية/خزان وقود) - تم نقل هذا الجزء إلى هنا لضمان عمله ---
     energySourceGroup.visible = false; // إخفاؤه افتراضيًا
-    const engineType = engineTypeInput.value; // قراءة نوع المحرك
 
     if (engineType === 'electric') {
         energySourceGroup.visible = true;
@@ -1608,7 +1607,6 @@ function calculateAerodynamics() {
     const fuselageMaterialValue = fuselageMaterialInput.value;
     const fuselageShape = fuselageShapeInput.value;
     const fuselageTaperRatio = getValidNumber(fuselageTaperRatioInput); // New: Read taper ratio
-    const fuselageLength = getValidNumber(fuselageLengthInput) * conversionFactor;
 
 
 
@@ -1705,9 +1703,8 @@ function calculateAerodynamics() {
     const fuselageWeightKg = fuselageVolume * fuselageMaterialDensity;
 
     // حساب مساحة سطح الجسم
-    let fuselageSurfaceArea = 0;
     if (fuselageShape === 'rectangular') {
-        const frontWidth = getValidNumber(fuselageWidthInput) * conversionFactor;
+        const frontWidth = getValidNumber(fuselageWidthInput) * conversionFactor; const fuselageLength = getValidNumber(fuselageLengthInput) * conversionFactor;
         const frontHeight = getValidNumber(fuselageHeightInput) * conversionFactor;
         const rearWidth = frontWidth * fuselageTaperRatio;
         const rearHeight = frontHeight * fuselageTaperRatio;
@@ -1722,21 +1719,21 @@ function calculateAerodynamics() {
         fuselageSurfaceArea = frontArea + rearArea + topBottomArea + leftRightArea;
 
     } else if (fuselageShape === 'cylindrical') {
-        const fuselageDiameter = getValidNumber(fuselageDiameterInput) * conversionFactor;
+        const fuselageDiameter = getValidNumber(fuselageDiameterInput) * conversionFactor; const fuselageLength = getValidNumber(fuselageLengthInput) * conversionFactor;
         const r1 = fuselageDiameter / 2; // radiusTop
         const r2 = r1 * fuselageTaperRatio; // radiusBottom
         const slantHeight = Math.sqrt(Math.pow(fuselageLength, 2) + Math.pow(r1 - r2, 2));
         fuselageSurfaceArea = Math.PI * Math.pow(r1, 2) + Math.PI * Math.pow(r2, 2) + Math.PI * (r1 + r2) * slantHeight;
 
     } else if (fuselageShape === 'teardrop') {
-        const r1 = (getValidNumber(fuselageFrontDiameterInput) * conversionFactor) / 2;
+        const r1 = (getValidNumber(fuselageFrontDiameterInput) * conversionFactor) / 2; const fuselageLength = getValidNumber(fuselageLengthInput) * conversionFactor;
         const r2 = (getValidNumber(fuselageRearDiameterInput) * conversionFactor) / 2;
         const slantHeight = Math.sqrt(Math.pow(fuselageLength, 2) + Math.pow(r1 - r2, 2));
         fuselageSurfaceArea = Math.PI * Math.pow(r1, 2) + Math.PI * Math.pow(r2, 2) + Math.PI * (r1 + r2) * slantHeight;
     }
 
     // حساب وزن المروحة
-    const bladeRadius = (propDiameter / 2) - (spinnerDiameter / 2);
+    let fuselageSurfaceArea = 0;const bladeRadius = (propDiameter / 2) - (spinnerDiameter / 2);
     const avgBladeChord = propChord * 0.75; // تقدير متوسط عرض الشفرة
     const singleBladeVolume = bladeRadius > 0 ? bladeRadius * avgBladeChord * propThickness : 0; // حجم شفرة واحدة
     const spinnerVolume = (4/3) * Math.PI * Math.pow(spinnerDiameter / 2, 3);
@@ -1745,7 +1742,6 @@ function calculateAerodynamics() {
     const propWeightKg = propVolume * propMaterialDensity;
 
     // Engine Weight Calculation
-    const engineType = engineTypeInput.value;
     let engineWeightKg = 0;
 
     if (engineType === 'electric') {
