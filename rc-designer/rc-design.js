@@ -520,14 +520,14 @@ function updatePlaneModel() {
         leftAileronPivot.add(leftAileron);
 
         // Calculate the position for the pivot (the hinge line)
-        const aileronAvgZ = halfSpan - aileronPosition - (aileronLength / 2);
+        const aileronAvgZ = halfSpan - aileronPosition - (aileronLength / 2) - (fuselage.geometry.parameters.depth / 2);
         const chordAtHinge = rootChord + (rootChord * taperRatio - rootChord) * (aileronAvgZ / halfSpan);
         const sweepAtHinge = (aileronAvgZ > 0 ? aileronAvgZ : 0) * Math.tan(sweepRad);
         // The wing's new trailing edge (the hinge line) is at the original trailing edge position, moved forward by the aileron width.
         const hingeX = sweepAtHinge - (chordAtHinge / 2) + aileronWidth;
 
         // Position and rotate the PIVOTS
-        rightAileronPivot.position.set(hingeX, 0, aileronAvgZ);
+        rightAileronPivot.position.set(hingeX, 0, aileronAvgZ + (fuselage.geometry.parameters.depth / 2));
         rightAileronPivot.rotation.y = sweepRad;
 
         leftAileronPivot.position.set(hingeX, 0, aileronAvgZ);
