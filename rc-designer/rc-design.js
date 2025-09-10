@@ -320,6 +320,7 @@ const backgroundColorInput = document.getElementById('background-color');
 // عناصر عرض قيم شريط التمرير
 const sweepValueEl = document.getElementById('sweep-value');
 const taperValueEl = document.getElementById('taper-value');
+const fuelLevelValueEl = document.getElementById('fuel-level-value');
 const tailSweepValueEl = document.getElementById('tail-sweep-value');
 const tailTaperValueEl = document.getElementById('tail-taper-value');
 const particleDensityValueEl = document.getElementById('particle-density-value');
@@ -408,6 +409,8 @@ const fuselageWeightResultEl = document.getElementById('fuselage-weight-result')
 const fuselageAreaResultEl = document.getElementById('fuselage-area-result');
 const cockpitWeightResultEl = document.getElementById('cockpit-weight-result');
 const fuelTankWeightResultEl = document.getElementById('fuel-tank-weight-result');
+const fuelLevelInput = document.getElementById('fuel-level');
+const fuelTypeInput = document.getElementById('fuel-type');
 const accessoriesWeightResultEl = document.getElementById('accessories-weight-result');
 const wheelWeightResultEl = document.getElementById('wheel-weight-result');
 const strutWeightResultEl = document.getElementById('strut-weight-result');
@@ -1822,18 +1825,21 @@ function calculateAerodynamics() {
         energySourceWeightKg = getValidNumber(batteryWeightInput) / 1000;
         fuelTankWeightResultEl.parentElement.style.display = 'none'; // إخفاء نتيجة وزن الخزان
     } else { // ic
-        // حساب وزن خزان الوقود الممتلئ
+        // حساب وزن خزان الوقود بناءً على المستوى والنوع
         const tankLength = getValidNumber(fuelTankLengthInput) * conversionFactor;
         const tankWidth = getValidNumber(fuelTankWidthInput) * conversionFactor;
         const tankHeight = getValidNumber(fuelTankHeightInput) * conversionFactor;
         const tankCapacityMl = getValidNumber(fuelTankCapacityInput);
         const tankMaterial = fuelTankMaterialInput.value;
         const tankMaterialDensity = MATERIAL_DENSITIES[tankMaterial];
-        const fuelDensity = FUEL_DENSITIES['methanol_nitro']; // افتراض وقود الميثانول
+        const fuelType = fuelTypeInput.value;
+        const fuelLevel = getValidNumber(fuelLevelInput); // 0 to 1
+        const fuelDensity = FUEL_DENSITIES[fuelType] || FUEL_DENSITIES['methanol_nitro'];
 
-        // حساب وزن الوقود
-        const fuelVolumeM3 = tankCapacityMl / 1e6; // تحويل من مل (سم^3) إلى م^3
-        const fuelWeightKg = fuelVolumeM3 * fuelDensity;
+        // حساب وزن الوقود الحالي
+        const currentFuelVolumeMl = tankCapacityMl * fuelLevel;
+        const currentFuelVolumeM3 = currentFuelVolumeMl / 1e6; // تحويل من مل (سم^3) إلى م^3
+        const fuelWeightKg = currentFuelVolumeM3 * fuelDensity;
 
         // حساب وزن هيكل الخزان (تقريبي بناءً على المساحة السطحية وسمك الجدار)
         const surfaceArea = 2 * ((tankLength * tankWidth) + (tankLength * tankHeight) + (tankWidth * tankHeight));
@@ -2092,6 +2098,8 @@ batteryVoltageInput.addEventListener('input', debouncedUpdate); // إعادة ا
 fuselageTailShapeInput.addEventListener('change', updateAll);
 hasCockpitInput.addEventListener('change', updateAll);
 fuelTankMaterialInput.addEventListener('change', updateAll);
+fuelTypeInput.addEventListener('change', updateAll);
+fuelLevelInput.addEventListener('input', debouncedUpdate);
 electricMotorTypeInput.addEventListener('change', updateEngineUI);
 icEngineTypeInput.addEventListener('change', updateEngineUI);
 enginePlacementInput.addEventListener('change', updateAll);
@@ -2113,6 +2121,7 @@ enginePylonLengthInput.addEventListener('input', debouncedUpdate);
 // تحديث عرض قيم شريط التمرير
 sweepAngleInput.addEventListener('input', () => sweepValueEl.textContent = sweepAngleInput.value);
 taperRatioInput.addEventListener('input', () => taperValueEl.textContent = parseFloat(taperRatioInput.value).toFixed(2));
+fuelLevelInput.addEventListener('input', () => fuelLevelValueEl.textContent = Math.round(fuelLevelInput.value * 100));
 tailSweepAngleInput.addEventListener('input', () => tailSweepValueEl.textContent = tailSweepAngleInput.value);
 tailTaperRatioInput.addEventListener('input', () => tailTaperValueEl.textContent = parseFloat(tailTaperRatioInput.value).toFixed(2));
 particleDensityInput.addEventListener('input', () => particleDensityValueEl.textContent = Math.round(particleDensityInput.value * 100));
