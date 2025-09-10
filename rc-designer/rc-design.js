@@ -1359,8 +1359,8 @@ function animate() {
                 const ageRatio = Math.max(0, Math.min(1, currentTravel / travelDistance));
                 const effectStrength = Math.sin(ageRatio * Math.PI); // Smooth fade-in and fade-out
 
-                opacities[i] = effectStrength * 0.4; // تقليل الشفافية
-                scales[i] = effectStrength * 0.8;   // تقليل الحجم
+                opacities[i] = effectStrength * 0.25; // تقليل الشفافية بشكل كبير
+                scales[i] = effectStrength * 0.5;   // تقليل الحجم بشكل كبير
             }
             propParticleSystem.geometry.attributes.position.needsUpdate = true;
             propParticleSystem.geometry.attributes.customOpacity.needsUpdate = true;
@@ -1455,8 +1455,8 @@ function animate() {
                 const ageRatio = Math.max(0, Math.min(1, currentTravel / travelDistance));
                 const effectStrength = Math.sin(ageRatio * Math.PI); // Smooth fade-in and fade-out
 
-                opacities[i] = effectStrength * 0.25; // تقليل الشفافية بشكل كبير
-                scales[i] = effectStrength * 0.7;    // تقليل الحجم
+                opacities[i] = effectStrength * 0.15; // جعلها شفافة جداً
+                scales[i] = effectStrength * 0.4;    // جعلها دقيقة جداً
 
                 // Reset particle if it goes too far behind
                 if (positions[i3] < endX) {
@@ -1518,8 +1518,8 @@ function animate() {
                 const ageRatio = Math.min(1, age / travelLength);
                 const effectStrength = Math.sin(ageRatio * Math.PI);
 
-                opacities[i] = effectStrength * Math.min(1, vortexStrength * 3); // تقليل الشفافية
-                scales[i] = effectStrength * 1.0;                               // تقليل الحجم
+                opacities[i] = effectStrength * Math.min(1, vortexStrength * 2.5); // تقليل الشفافية
+                scales[i] = effectStrength * 0.8;                                // تقليل الحجم
 
                 // Reset particle
                 if (age > travelLength || age < 0) {
