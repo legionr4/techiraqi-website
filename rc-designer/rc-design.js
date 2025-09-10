@@ -1003,6 +1003,12 @@ unitSelector.addEventListener('change', updateUnitLabels);
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 
+// متغيرات لتتبع اتجاه حركة أسطح التحكم
+let aileronDirection = 1;
+let elevatorDirection = 1;
+let rudderDirection = 1;
+let ruddervatorDirection = 1;
+
 function onMouseClick(event) {
     // حساب إحداثيات الماوس في الفضاء الطبيعي (-1 إلى +1)
     const rect = renderer.domElement.getBoundingClientRect();
@@ -1035,19 +1041,33 @@ function onMouseClick(event) {
 
     if (intersects.length > 0) {
         const clickedObject = intersects[0].object;
-        if (clickedObject.name === 'rightElevator' || clickedObject.name === 'leftElevator') {
-            // يجب أن يتحرك نصفي الرافع معًا (للتحكم في الانحدار)
-            if (rightElevator) rightElevator.parent.rotation.z += 0.2;
-            if (leftElevator) leftElevator.parent.rotation.z += 0.2;
-        }
-        if (clickedObject.name === 'rudder') clickedObject.parent.rotation.y += 0.2; // الدفة تتحكم في الانعراج
-        if (clickedObject.name === 'rightRuddervator' || clickedObject.name === 'leftRuddervator') clickedObject.parent.rotation.z += 0.2;
+        const deflectionAngle = 0.3; // زاوية الانحراف بالراديان (تقريبا 17 درجة)
 
-        // تحريك الجنيحات بشكل معاكس عند النقر
+        if (clickedObject.name === 'rightElevator' || clickedObject.name === 'leftElevator') {
+            // تحريك نصفي الرافع معًا (للتحكم في الانحدار)
+            const rotationAmount = deflectionAngle * elevatorDirection;
+            if (rightElevator) rightElevator.parent.rotation.z = rotationAmount;
+            if (leftElevator) leftElevator.parent.rotation.z = rotationAmount;
+            elevatorDirection *= -1; // عكس الاتجاه للنقرة التالية
+        }
+        if (clickedObject.name === 'rudder') {
+            rudder.parent.rotation.y = deflectionAngle * rudderDirection; // الدفة تتحكم في الانعراج
+            rudderDirection *= -1; // عكس الاتجاه
+        }
+        if (clickedObject.name === 'rightRuddervator' || clickedObject.name === 'leftRuddervator') {
+            const rotationAmount = deflectionAngle * ruddervatorDirection;
+            if (rightRuddervator) rightRuddervator.parent.rotation.z = rotationAmount;
+            if (leftRuddervator) leftRuddervator.parent.rotation.z = rotationAmount;
+            ruddervatorDirection *= -1;
+        }
+
+        // تحريك الجنيحات بشكل معاكس
         if (rightAileron && leftAileron) {
             if (clickedObject.name === 'rightAileron' || clickedObject.name === 'leftAileron') {
-                rightAileron.parent.rotation.z += 0.2; // Rotate the PIVOT, not the aileron itself
-                leftAileron.parent.rotation.z -= 0.2;
+                const rotationAmount = deflectionAngle * aileronDirection;
+                rightAileron.parent.rotation.z = rotationAmount;
+                leftAileron.parent.rotation.z = -rotationAmount;
+                aileronDirection *= -1; // عكس الاتجاه
             }
         }
     }
