@@ -1020,8 +1020,8 @@ function updatePlaneModel() {
         const leftHStab = rightHStab.clone();
         leftHStab.scale.z = -1;
 
-        const vStabGeom = createSurface(vStabHeight, vStabChordEffective, tailTaperRatio, tailSweepAngle, tailThickness, tailAirfoilType, true, true); // Add root cap
-        const vStab = new THREE.Mesh(vStabGeom, tailMaterial); // Bug Fix: Use tailMaterial instead of fuselageMaterial
+        const vStabGeom = createSurface(vStabHeight, vStabChordEffective, tailTaperRatio, tailSweepAngle, tailThickness, tailAirfoilType, true);
+        const vStab = new THREE.Mesh(vStabGeom, fuselageMaterial); // Reverted to original working material
         vStab.position.x = tailPositionX - vStabChordEffective / 2; // Corrected incomplete line
         vStab.position.y = currentFuselageHeight / 2;
 
@@ -1040,8 +1040,8 @@ function updatePlaneModel() {
         const leftHStab = rightHStab.clone(); // Corrected: leftHStab was not defined
         leftHStab.scale.z = -1;
 
-        const vStabGeom = createSurface(vStabHeight, vStabChordEffective, tailTaperRatio, tailSweepAngle, tailThickness, tailAirfoilType, true, true); // Add root cap
-        const vStab = new THREE.Mesh(vStabGeom, tailMaterial); // Bug Fix: Use tailMaterial instead of fuselageMaterial
+        const vStabGeom = createSurface(vStabHeight, vStabChordEffective, tailTaperRatio, tailSweepAngle, tailThickness, tailAirfoilType, true);
+        const vStab = new THREE.Mesh(vStabGeom, fuselageMaterial); // Reverted to original working material
         vStab.position.x = tailPositionX - vStabChordEffective / 2;
         // رفع المثبت العمودي ليجلس فوق جسم الطائرة
         vStab.position.y = currentFuselageHeight / 2;
@@ -1073,7 +1073,7 @@ function updatePlaneModel() {
     if (hasElevator && tailType !== 'v-tail') {
         // إنشاء سطح مائل ومستدق لنصف الرافع
         const elevatorLength = getValidNumber(elevatorLengthInput) * conversionFactor;
-        const elevatorHalfGeom = createSurface(elevatorLength * 2, elevatorWidth, tailTaperRatio, tailSweepAngle, tailThickness, 'rectangular', false, true);
+        const elevatorHalfGeom = createSurface(elevatorLength * 2, elevatorWidth, tailTaperRatio, tailSweepAngle, tailThickness, 'rectangular', false);
         elevatorHalfGeom.translate(-elevatorWidth / 2, 0, 0); // تمدد للخلف من نقطة المفصل
         // إزاحة الرافع ليبدأ من جانب جسم الطائرة، مما يخلق فجوة في المنتصف
         elevatorHalfGeom.translate(0, 0, currentFuselageWidth / 2);
@@ -1102,7 +1102,7 @@ function updatePlaneModel() {
     if (hasRudder && tailType !== 'v-tail') {
         // إنشاء سطح مائل ومستدق للدفة
         const rudderLength = getValidNumber(rudderLengthInput) * conversionFactor;
-        const rudderGeom = createSurface(rudderLength, rudderWidth, tailTaperRatio, tailSweepAngle, tailThickness, 'rectangular', true, true);
+        const rudderGeom = createSurface(rudderLength, rudderWidth, tailTaperRatio, tailSweepAngle, tailThickness, 'rectangular', true);
         rudderGeom.translate(-rudderWidth / 2, 0, 0); // تمدد للخلف من نقطة المفصل
 
         const rudder = new THREE.Mesh(rudderGeom, aileronMaterial);
