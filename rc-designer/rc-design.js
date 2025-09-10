@@ -32,6 +32,11 @@ const wingMaterial = new THREE.MeshStandardMaterial({ color: 0xcccccc, side: THR
 const tailMaterial = new THREE.MeshStandardMaterial({ color: 0xdddddd, side: THREE.DoubleSide });
 const aileronMaterial = new THREE.MeshStandardMaterial({ color: 0xffc107, side: THREE.DoubleSide });
 
+// مجموعة عجلات الهبوط
+const landingGearGroup = new THREE.Group();
+planeGroup.add(landingGearGroup);
+const gearMaterial = new THREE.MeshStandardMaterial({ color: 0x555555, side: THREE.DoubleSide });
+
 // جسم الطائرة
 const fuselageGeom = new THREE.BoxGeometry(1, 0.15, 0.15);
 const fuselage = new THREE.Mesh(fuselageGeom, fuselageMaterial);
@@ -137,6 +142,7 @@ const MATERIAL_DENSITIES = {
 
 // تخزين عناصر الإدخال والنتائج لتحسين الأداء
 const unitSelector = document.getElementById('unit-selector');
+const showAxesCheckbox = document.getElementById('show-axes-checkbox');
 const wingSpanInput = document.getElementById('wing-span');
 const wingChordInput = document.getElementById('wing-chord');
 const tailSpanInput = document.getElementById('tail-span');
@@ -228,6 +234,7 @@ const fuselageColorInput = document.getElementById('fuselage-color');
 const wingColorInput = document.getElementById('wing-color');
 const tailColorInput = document.getElementById('tail-color');
 const aileronColorInput = document.getElementById('aileron-color');
+const gearColorInput = document.getElementById('gear-color');
 
 // عناصر عرض قيم شريط التمرير
 const sweepValueEl = document.getElementById('sweep-value');
@@ -238,6 +245,17 @@ const particleDensityValueEl = document.getElementById('particle-density-value')
 const particleSizeValueEl = document.getElementById('particle-size-value');
 const vibrationValueEl = document.getElementById('vibration-value');
 const unitLabels = document.querySelectorAll('.unit-label');
+
+// Landing Gear Inputs
+const hasLandingGearInput = document.getElementById('has-landing-gear');
+const landingGearControls = document.getElementById('landing-gear-controls');
+const gearTypeInput = document.getElementById('gear-type');
+const wheelDiameterInput = document.getElementById('wheel-diameter');
+const wheelThicknessInput = document.getElementById('wheel-thickness');
+const strutLengthInput = document.getElementById('strut-length');
+const strutThicknessInput = document.getElementById('strut-thickness');
+const mainGearPositionInput = document.getElementById('main-gear-position');
+const mainGearWidthInput = document.getElementById('main-gear-width');
 
 
 
@@ -251,6 +269,7 @@ const tailAreaResultEl = document.getElementById('tail-area-result');
 const tailWeightResultEl = document.getElementById('tail-weight-result');
 const fuselageWeightResultEl = document.getElementById('fuselage-weight-result');
 const fuselageAreaResultEl = document.getElementById('fuselage-area-result');
+const landingGearWeightResultEl = document.getElementById('landing-gear-weight-result');
 const totalWeightResultEl = document.getElementById('total-weight-result');
 const propWeightResultEl = document.getElementById('prop-weight-result');
 
@@ -562,6 +581,7 @@ function updatePlaneModel() {
     wingMaterial.color.set(wingColor);
     tailMaterial.color.set(tailColor);
     aileronMaterial.color.set(aileronColorInput.value);
+    gearMaterial.color.set(gearColorInput.value);
 
      // Wingtip Controls visibility
     if(hasWingtipInput.checked){
@@ -593,6 +613,9 @@ function updatePlaneModel() {
         fuselageTearFrontDiaGroup.style.display = 'flex';
         fuselageTearRearDiaGroup.style.display = 'flex';
     }
+
+    // Landing Gear Controls visibility
+    landingGearControls.style.display = hasLandingGearInput.checked ? 'block' : 'none';
 
     // New: Show/hide fuselage taper ratio input based on shape
     if (fuselageShape === 'rectangular' || fuselageShape === 'cylindrical') {
@@ -1046,6 +1069,69 @@ function updatePlaneModel() {
         propellerGroup.add(blade);
     }
 }
+    // --- Landing Gear ---
+    while(landingGearGroup.children.length > 0) {
+        landingGearGroup.remove(landingGearGroup.children[0]);
+    }
+
+    if (hasLandingGearInput.checked) {
+        const gearType = gearTypeInput.value;
+        const wheelDiameter = getValidNumber(wheelDiameterInput) * conversionFactor;
+        const wheelThickness = getValidNumber(wheelThicknessInput) * conversionFactor;
+        const strutLength = getValidNumber(strutLengthInput) * conversionFactor;
+        const strutThickness = getValidNumber(strutThicknessInput) * conversionFactor;
+        const mainGearPosition = getValidNumber(mainGearPositionInput) * conversionFactor;
+        const mainGearWidth = getValidNumber(mainGearWidthInput) * conversionFactor;
+
+        // Create reusable geometries
+        const wheelGeom = new THREE.CylinderGeometry(wheelDiameter / 2, wheelDiameter / 2, wheelThickness, 24);
+        wheelGeom.rotateX(Math.PI / 2); // Make the wheel stand upright
+        const strutGeom = new THREE.CylinderGeometry(strutThickness / 2, strutThickness / 2, strutLength, 12);
+
+        // --- Main Gear ---
+        const createMainGear = (side) => {
+            const gearAssembly = new THREE.Group();
+            const strut = new THREE.Mesh(strutGeom, gearMaterial);
+            const wheel = new THREE.Mesh(wheelGeom, gearMaterial);
+
+            // Position strut relative to assembly origin (top of strut)
+            strut.position.y = -strutLength / 2;
+
+            // Position wheel at the bottom of the strut
+            wheel.position.y = -strutLength;
+
+            gearAssembly.add(strut, wheel);
+
+            // Position the whole assembly
+            gearAssembly.position.x = (fuselageLength / 2) - mainGearPosition;
+            gearAssembly.position.y = -currentFuselageHeight / 2;
+            gearAssembly.position.z = (mainGearWidth / 2) * side;
+
+            return gearAssembly;
+        };
+
+        if (gearType === 'tricycle' || gearType === 'taildragger' || gearType === 'main-only') {
+            const rightMainGear = createMainGear(1);
+            const leftMainGear = createMainGear(-1);
+            landingGearGroup.add(rightMainGear, leftMainGear);
+        }
+
+        // --- Nose/Tail Gear ---
+        if (gearType === 'tricycle') {
+            const noseGearAssembly = createMainGear(0); // Create a central gear
+            noseGearAssembly.position.x = fuselageLength / 2 - (wheelDiameter); // Position it near the front
+            landingGearGroup.add(noseGearAssembly);
+        } else if (gearType === 'taildragger') {
+            const tailWheelGeom = new THREE.CylinderGeometry(wheelDiameter / 3, wheelDiameter / 3, wheelThickness * 0.8, 16);
+            tailWheelGeom.rotateX(Math.PI / 2);
+            const tailWheel = new THREE.Mesh(tailWheelGeom, gearMaterial);
+
+            tailWheel.position.x = tailPositionX; // Position it near the tail assembly
+            tailWheel.position.y = -currentFuselageHeight / 2 + (wheelDiameter / 3); // Simplified position
+            tailWheel.position.z = 0;
+            landingGearGroup.add(tailWheel);
+        }
+    }
 
 function calculateAerodynamics() {
     // قراءة القيم
@@ -1208,9 +1294,34 @@ function calculateAerodynamics() {
     const propVolume = (singleBladeVolume * propBlades) + spinnerVolume;
     const propMaterialDensity = MATERIAL_DENSITIES[propMaterial];
     const propWeightKg = propVolume * propMaterialDensity;
+    
+    let landingGearWeightKg = 0;
+    if (hasLandingGearInput.checked) {
+        const wheelDiameter = getValidNumber(wheelDiameterInput) * conversionFactor;
+        const wheelThickness = getValidNumber(wheelThicknessInput) * conversionFactor;
+        const strutLength = getValidNumber(strutLengthInput) * conversionFactor;
+        const strutThickness = getValidNumber(strutThicknessInput) * conversionFactor;
+        const gearType = gearTypeInput.value;
+
+        const mainWheelVolume = Math.PI * Math.pow(wheelDiameter / 2, 2) * wheelThickness;
+        const strutVolume = Math.PI * Math.pow(strutThickness / 2, 2) * strutLength;
+
+        let totalGearVolume = 0;
+        if (gearType === 'tricycle' || gearType === 'taildragger' || gearType === 'main-only') {
+            totalGearVolume += 2 * (mainWheelVolume + strutVolume); // Two main gears
+        }
+        if (gearType === 'tricycle') {
+            totalGearVolume += mainWheelVolume + strutVolume; // Add nose gear
+        } else if (gearType === 'taildragger') {
+            const tailWheelVolume = Math.PI * Math.pow(wheelDiameter / 3 / 2, 2) * (wheelThickness * 0.8);
+            totalGearVolume += tailWheelVolume; // Add tail wheel (no strut for simplicity)
+        }
+        const gearMaterialDensity = MATERIAL_DENSITIES['plastic']; // Assuming plastic/nylon for gear
+        landingGearWeightKg = totalGearVolume * gearMaterialDensity;
+    }
 
     const planeComponentsWeightKg = planeComponentsWeightGrams / 1000;
-    const totalWeightKg = wingWeightKg + tailWeightKg + fuselageWeightKg + propWeightKg + planeComponentsWeightKg;
+    const totalWeightKg = wingWeightKg + tailWeightKg + fuselageWeightKg + propWeightKg + landingGearWeightKg + planeComponentsWeightKg;
 
     // 5. نسبة الدفع إلى الوزن (Thrust-to-Weight Ratio)
     const weightInNewtons = totalWeightKg * 9.81;
@@ -1226,6 +1337,7 @@ function calculateAerodynamics() {
     tailWeightResultEl.textContent = (tailWeightKg * 1000).toFixed(0);
     fuselageAreaResultEl.textContent = fuselageSurfaceArea > 0 ? fuselageSurfaceArea.toFixed(2) : '0.00';
     fuselageWeightResultEl.textContent = (fuselageWeightKg * 1000).toFixed(0);
+    landingGearWeightResultEl.textContent = (landingGearWeightKg * 1000).toFixed(0);
     propWeightResultEl.textContent = (propWeightKg * 1000).toFixed(0);
     totalWeightResultEl.textContent = (totalWeightKg * 1000).toFixed(0);
     twrResultEl.textContent = twr > 0 ? twr.toFixed(2) : '0.00';
@@ -1423,6 +1535,7 @@ hasAileronInput.addEventListener('change', updateAll);
 hasWingtipInput.addEventListener('change', updateAll);
 tailTypeInput.addEventListener('change', updateAll);
 hasElevatorInput.addEventListener('change', updateAll);
+hasLandingGearInput.addEventListener('change', updateAll);
 fuselageShapeInput.addEventListener('change', updateAll);
 hasRudderInput.addEventListener('change', updateAll);
 
@@ -1438,6 +1551,10 @@ fuselageTaperRatioInput.addEventListener('input', () => fuselageTaperValueEl.tex
 particleSizeInput.addEventListener('input', () => particleSizeValueEl.textContent = Math.round(particleSizeInput.value * 100));
 vibrationIntensityInput.addEventListener('input', () => vibrationValueEl.textContent = Math.round(vibrationIntensityInput.value * 100));
 unitSelector.addEventListener('change', updateUnitLabels);
+
+showAxesCheckbox.addEventListener('change', () => {
+    axesHelper.visible = showAxesCheckbox.checked;
+});
 
 togglePropSpinBtn.addEventListener('click', () => {
     isPropSpinning = !isPropSpinning;

@@ -156,6 +156,10 @@
                             <option value="in" data-label="بوصة">بوصة (in)</option>
                         </select>
                     </div>
+                    <div class="input-group">
+                        <label for="show-axes-checkbox">إظهار المحاور (XYZ)</label>
+                        <input type="checkbox" id="show-axes-checkbox" checked style="flex-basis: auto; margin-left: auto;">
+                    </div>
                 </fieldset>
                 <fieldset>
                     <legend>تصميم الجناح</legend>
@@ -468,6 +472,48 @@
                 </fieldset>
 
                 <fieldset>
+                    <legend>عجلات الهبوط (Landing Gear)</legend>
+                    <div class="input-group">
+                        <label for="has-landing-gear">إضافة عجلات هبوط؟</label>
+                        <input type="checkbox" id="has-landing-gear" style="flex-basis: auto; margin-left: auto;">
+                    </div>
+                    <div id="landing-gear-controls" style="display:none;">
+                        <div class="input-group">
+                            <label for="gear-type">نوع العجلات</label>
+                            <select id="gear-type">
+                                <option value="tricycle" selected>ثلاثية (Tricycle)</option>
+                                <option value="taildragger">ذيلية (Taildragger)</option>
+                                <option value="main-only">رئيسية فقط (Main Only)</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="wheel-diameter">قطر العجلة (<span class="unit-label">سم</span>)</label>
+                            <input type="number" id="wheel-diameter" value="8" step="0.5">
+                        </div>
+                        <div class="input-group">
+                            <label for="wheel-thickness">سمك العجلة (<span class="unit-label">سم</span>)</label>
+                            <input type="number" id="wheel-thickness" value="2" step="0.2">
+                        </div>
+                        <div class="input-group">
+                            <label for="strut-length">طول الدعامة (<span class="unit-label">سم</span>)</label>
+                            <input type="number" id="strut-length" value="12" step="1">
+                        </div>
+                        <div class="input-group">
+                            <label for="strut-thickness">سمك الدعامة (<span class="unit-label">سم</span>)</label>
+                            <input type="number" id="strut-thickness" value="1" step="0.1">
+                        </div>
+                        <div class="input-group">
+                            <label for="main-gear-position">موضع العجلات الرئيسية (من المقدمة) (<span class="unit-label">سم</span>)</label>
+                            <input type="number" id="main-gear-position" value="25" step="1">
+                        </div>
+                        <div class="input-group">
+                            <label for="main-gear-width">المسافة بين العجلات الرئيسية (<span class="unit-label">سم</span>)</label>
+                            <input type="number" id="main-gear-width" value="30" step="1">
+                        </div>
+                    </div>
+                </fieldset>
+
+                <fieldset>
                     <legend>الديناميكا الهوائية والبيئة</legend>
                     <div class="input-group">
                         <label for="angle-of-attack">زاوية الهجوم (°)</label>
@@ -525,6 +571,10 @@
                         <label for="aileron-color">لون الجنيح</label>
                         <input type="color" id="aileron-color" value="#ffc107">
                     </div>
+                    <div class="input-group">
+                        <label for="gear-color">لون عجلات الهبوط</label>
+                        <input type="color" id="gear-color" value="#555555">
+                    </div>
                 </fieldset>
             </form>
 
@@ -570,6 +620,10 @@
                 <div class="result-item">
                     <p>وزن المروحة التقديري (جرام):</p>
                     <span id="prop-weight-result">0</span>
+                </div>
+                <div class="result-item">
+                    <p>وزن عجلات الهبوط (جرام):</p>
+                    <span id="landing-gear-weight-result">0</span>
                 </div>
                 <div class="result-item">
                     <p>الوزن الكلي التقديري (جرام):</p>
