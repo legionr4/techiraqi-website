@@ -2057,26 +2057,60 @@ function calculateAerodynamics() {
     addMoment(totalAccessoriesWeightKg, wingPositionX);
 
     // عزم المحرك ومصدر الطاقة
+    const engineType = engineTypeInput.value;
     const enginePlacement = enginePlacementInput.value;
+    let engineLengthMeters = 0;
+
     if (engineType === 'electric') {
+        engineLengthMeters = getValidNumber(electricMotorLengthInput) * conversionFactor;
         const batteryPosition = getValidNumber(batteryPositionInput) * conversionFactor;
         addMoment(getValidNumber(batteryWeightInput) / 1000, batteryPosition);
     } else { // ic
+        engineLengthMeters = getValidNumber(icEngineLengthInput) * conversionFactor;
         const tankPosition = getValidNumber(fuelTankPositionInput) * conversionFactor;
         addMoment(energySourceWeightKg, tankPosition);
     }
 
-    // عزم المحرك والمروحة بناءً على الموضع
+    // --- حساب عزم المحرك والمروحة بشكل مستقل عن النموذج ثلاثي الأبعاد ---
     if (enginePlacement === 'front' || enginePlacement === 'rear') {
-        addMoment(engineWeightKg, engineGroup.position.x);
-        addMoment(propWeightKg, propellerGroup.position.x);
+        const sign = (enginePlacement === 'front') ? 1 : -1;
+        const engineX = sign * (fuselageLength / 2 + engineLengthMeters / 2);
+        const propX = sign * (fuselageLength / 2 + engineLengthMeters + 0.01);
+        addMoment(engineWeightKg, engineX);
+        addMoment(propWeightKg, propX);
     } else if (enginePlacement === 'wing') {
-        // لمحركات الجناح، العزم هو مجموع عزمي المحركين
-        // بما أن المحركين متماثلين حول المحور الطولي، فإن عزمهم الجانبي (Z) يلغي بعضه البعض
-        // نحتاج فقط إلى الموضع على المحور X
-        if (wingEnginesGroup.children.length > 0) {
-            // جميع المحركات والمراوح على الجناح لها نفس الموضع X
-            const wingEngineX = wingEnginesGroup.children[0].position.x;
+        // إعادة حساب موضع محرك الجناح بدلاً من قراءته من النموذج
+        const wingEngineDistMeters = getValidNumber(engineWingDistanceInput) * conversionFactor;
+        const wingEngineForeAft = engineWingForeAftInput.value;
+        const pylonLengthMeters = getValidNumber(enginePylonLengthInput) * conversionFactor;
+        const halfSpan = wingSpan / 2;
+        
+        // تحديد عرض الجسم الحالي لتحديد نقطة بداية الجناح
+        let currentFuselageWidth = 0;
+        if (fuselageShape === 'rectangular') {
+            currentFuselageWidth = getValidNumber(fuselageWidthInput) * conversionFactor;
+        } else if (fuselageShape === 'cylindrical') {
+            currentFuselageWidth = getValidNumber(fuselageDiameterInput) * conversionFactor;
+        } else if (fuselageShape === 'teardrop') {
+            currentFuselageWidth = Math.max(getValidNumber(fuselageFrontDiameterInput) * conversionFactor, getValidNumber(fuselageRearDiameterInput) * conversionFactor);
+        }
+
+        const posOnWingZ = wingEngineDistMeters + (currentFuselageWidth / 2);
+        const spanProgress = (posOnWingZ - currentFuselageWidth / 2) / halfSpan;
+        
+        if (spanProgress >= 0 && spanProgress <= 1) {
+            const chordAtPylon = wingChord + (wingChord * taperRatio - wingChord) * spanProgress;
+            const sweepAtPylon = (posOnWingZ - currentFuselageWidth / 2) * Math.tan(sweepRad);
+            const leadingEdgeX = wingPositionX + sweepAtPylon + chordAtPylon / 2;
+            const trailingEdgeX = wingPositionX + sweepAtPylon - chordAtPylon / 2;
+
+            let engineCenterX;
+            if (wingEngineForeAft === 'leading') {
+                engineCenterX = leadingEdgeX + pylonLengthMeters + (engineLengthMeters / 2);
+            } else { // 'trailing'
+                engineCenterX = trailingEdgeX - pylonLengthMeters - (engineLengthMeters / 2);
+            }
+
             // وزن المحركين + وزن المروحتين
             const totalWingPropulsionWeight = (engineWeightKg * 2) + (propWeightKg * 2);
             addMoment(totalWingPropulsionWeight, wingEngineX);
@@ -2346,12 +2380,10 @@ function setAirflowVisibility(isSpinning) {
 }
 
 function updateAll() {
-    // الاستدعاء الأول: لحساب القيم الأولية التي قد تحتاجها updatePlaneModel
-    calculateAerodynamics();
+    // الترتيب الصحيح: أولاً تحديث النموذج ثلاثي الأبعاد، ثم إجراء الحسابات بناءً عليه
     updatePlaneModel();
-    // الاستدعاء الثاني: لإعادة الحساب بالكامل بعد تحديث النموذج وضمان دقة جميع الأوزان والأبعاد
     calculateAerodynamics();
-    updatePlaneParameters(); // Cache the latest parameters
+    updatePlaneParameters(); // تخزين المعلمات المؤقتة لحلقة الرسوم المتحركة
     if (liftChart && dragChart) {
         updateCharts();
     }
