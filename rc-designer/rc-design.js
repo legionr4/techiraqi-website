@@ -2343,6 +2343,7 @@ function setAirflowVisibility(isSpinning) {
 
 function updateAll() {
     updatePlaneModel();
+    calculateAerodynamics(); // استدعاء دالة الحسابات الرئيسية لتحديث لوحة النتائج
     updatePlaneParameters(); // Cache the latest parameters
     if (liftChart && dragChart) {
         updateCharts();
