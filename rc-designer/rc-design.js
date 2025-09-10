@@ -232,7 +232,7 @@ const propWeightResultEl = document.getElementById('prop-weight-result');
 
 let liftChart, dragChart;
 let isPropSpinning = false; // متغير لتتبع حالة دوران المروحة
-let propParticleSystem, propParticleCount = 500; // لتدفق هواء المروحة
+let propParticleSystem, propParticleCount = 400; // لتدفق هواء المروحة (تم تقليل العدد)
 let wingAirflowParticleSystem, wingAirflowParticleCount = 2500; // لتدفق الهواء العام
 let vortexParticleSystem, vortexParticleCount = 1000; // لدوامات أطراف الجناح
 
@@ -1315,40 +1315,49 @@ function animate() {
             const propRpm = getValidNumber(propRpmInput);
             const propPitch = getValidNumber(propPitchInput) * 0.0254; // to meters
 
-            const airSpeed = (propRpm / 60) * propPitch; // m/s
-            const particleSpeed = airSpeed * 1.5; // أسرع قليلاً للتأثير البصري
+            // السرعة المحورية (للخلف) تعتمد على الخطوة والسرعة الدورانية
+            const axialSpeed = ((propRpm / 60) * propPitch) * 1.5; // أسرع قليلاً للتأثير البصري
+            // السرعة الدورانية (الحلزونية) تعتمد على السرعة الدورانية للمروحة
+            const rotationalSpeed = (propRpm / 60) * Math.PI * 2 * 0.5; // عامل 0.5 لتقليل سرعة الدوران البصري
 
             const positions = propParticleSystem.geometry.attributes.position.array;
             const opacities = propParticleSystem.geometry.attributes.customOpacity.array;
             const scales = propParticleSystem.geometry.attributes.scale.array;
+            const spiralData = propParticleSystem.geometry.attributes.spiralData.array;
             const emissionRadius = propDiameter / 2;
             const startX = propellerGroup.position.x - 0.1; // البدء خلف المروحة مباشرة
             const endX = -fuselageLength / 2 - 0.5; // الانتهاء بعد الذيل
             const travelDistance = startX - endX;
 
             for (let i = 0; i < propParticleCount; i++) {
+                const i2 = i * 2;
                 const i3 = i * 3;
-                positions[i3] -= particleSpeed * deltaTime;
+
+                // إذا كان الجسيم خارج الحدود، أعد تعيينه
+                if (positions[i3] < endX || positions[i3] === 0) { // الشرط === 0 للتهيئة الأولية
+                    positions[i3] = startX;
+                    spiralData[i2] = emissionRadius * Math.sqrt(Math.random()); // نصف قطر عشوائي جديد
+                    spiralData[i2 + 1] = Math.random() * 2 * Math.PI; // زاوية عشوائية جديدة
+                }
+
+                // تحديث الحركة المحورية واللولبية
+                positions[i3] -= axialSpeed * deltaTime;
+                spiralData[i2 + 1] += rotationalSpeed * deltaTime; // تحديث الزاوية
+                positions[i3 + 1] = spiralData[i2] * Math.cos(spiralData[i2 + 1]); // y
+                positions[i3 + 2] = spiralData[i2] * Math.sin(spiralData[i2 + 1]); // z
 
                 // Calculate age based on position for fade effect
                 const currentTravel = startX - positions[i3];
                 const ageRatio = Math.max(0, Math.min(1, currentTravel / travelDistance));
                 const effectStrength = Math.sin(ageRatio * Math.PI); // Smooth fade-in and fade-out
 
-                opacities[i] = effectStrength * 0.7; // Prop particles are more dense
-                scales[i] = effectStrength * 1.5;   // and slightly larger
-
-                if (positions[i3] < endX || positions[i3] > startX) {
-                    const r = emissionRadius * Math.sqrt(Math.random()); // توزيع متساوٍ داخل الدائرة
-                    const theta = Math.random() * 2 * Math.PI;
-                    positions[i3] = startX;
-                    positions[i3 + 1] = r * Math.cos(theta); // y
-                    positions[i3 + 2] = r * Math.sin(theta); // z
-                }
+                opacities[i] = effectStrength * 0.6;
+                scales[i] = effectStrength * 1.2;
             }
             propParticleSystem.geometry.attributes.position.needsUpdate = true;
             propParticleSystem.geometry.attributes.customOpacity.needsUpdate = true;
             propParticleSystem.geometry.attributes.scale.needsUpdate = true;
+            propParticleSystem.geometry.attributes.spiralData.needsUpdate = true;
         }
 
         // --- تحديث تدفق الهواء العام وتأثير أسطح التحكم ---
@@ -1530,10 +1539,19 @@ function initPropAirflowParticles() {
     const positions = new Float32Array(propParticleCount * 3);
     const opacities = new Float32Array(propParticleCount).fill(0);
     const scales = new Float32Array(propParticleCount).fill(0);
+    // بيانات مخصصة لكل جسيم: [نصف القطر، الزاوية]
+    const spiralData = new Float32Array(propParticleCount * 2);
+
+    for (let i = 0; i < propParticleCount; i++) {
+        // سيتم تهيئة القيم الأولية عند إعادة تعيين الجسيم لأول مرة
+        spiralData[i * 2] = 0; // نصف القطر
+        spiralData[i * 2 + 1] = 0; // الزاوية
+    }
 
     particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     particleGeometry.setAttribute('customOpacity', new THREE.BufferAttribute(opacities, 1));
     particleGeometry.setAttribute('scale', new THREE.BufferAttribute(scales, 1));
+    particleGeometry.setAttribute('spiralData', new THREE.BufferAttribute(spiralData, 2));
 
     const particleMaterial = createAirflowMaterial(0x4488ff); // لون أزرق أكثر وضوحًا
 
