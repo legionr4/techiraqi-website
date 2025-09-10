@@ -172,6 +172,27 @@ function debounce(func, wait) {
     };
 }
 
+/**
+ * Calculates and updates the air density input field based on temperature and pressure
+ * using the Ideal Gas Law (ρ = P / (R * T)).
+ */
+function updateAirDensity() {
+    const temperatureC = getValidNumber(temperatureInput);
+    const pressurePa = getValidNumber(pressureInput);
+
+    // Convert temperature to Kelvin
+    const temperatureK = temperatureC + 273.15;
+    
+    // Specific gas constant for dry air in J/(kg·K)
+    const R_specific = 287.058;
+
+    if (temperatureK > 0) {
+        const calculatedDensity = pressurePa / (R_specific * temperatureK);
+        // Update the input field, which will be read by calculateAerodynamics
+        airDensityInput.value = calculatedDensity.toFixed(4);
+    }
+}
+
 const form = document.getElementById('plane-form');
 const allControls = form.querySelectorAll('input, select');
 
@@ -328,6 +349,8 @@ const togglePropSpinBtn = document.getElementById('toggle-prop-spin');
 const angleOfAttackInput = document.getElementById('angle-of-attack');
 const airSpeedInput = document.getElementById('air-speed');
 const airDensityInput = document.getElementById('air-density');
+const temperatureInput = document.getElementById('temperature');
+const pressureInput = document.getElementById('pressure');
 const particleDensityInput = document.getElementById('particle-density');
 const particleSizeInput = document.getElementById('particle-size');
 const showAmbientWindInput = document.getElementById('show-ambient-wind');
@@ -2330,6 +2353,15 @@ allControls.forEach(control => {
     }
 });
 
+temperatureInput.addEventListener('input', () => {
+    updateAirDensity();
+    debouncedUpdate();
+});
+pressureInput.addEventListener('input', () => {
+    updateAirDensity();
+    debouncedUpdate();
+});
+
 hasAileronInput.addEventListener('change', updateAll);
 hasWingtipInput.addEventListener('change', updateAll);
 tailTypeInput.addEventListener('change', updateAll);
@@ -2935,6 +2967,7 @@ initCharts();
 updateUnitLabels();
 // استدعاء updateEngineUI أولاً لملء حقول المحرك بالقيم الافتراضية.
 // هذه الدالة ستقوم بدورها باستدعاء updateAll() لضمان تحديث كل شيء.
+updateAirDensity(); // Calculate initial density based on default temp/pressure
 updateEngineUI();
 animate();
 
