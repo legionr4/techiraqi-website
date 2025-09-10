@@ -844,6 +844,14 @@
                 </fieldset>
 
                 <fieldset>
+                    <legend>مركز الجاذبية والاستقرار (Center of Gravity & Stability)</legend>
+                    <div class="input-group">
+                        <label for="show-cg-ac">إظهار CG (أحمر) و AC (أزرق)</label>
+                        <input type="checkbox" id="show-cg-ac" checked style="flex-basis: auto; margin-left: auto;">
+                    </div>
+                </fieldset>
+
+                <fieldset>
                     <legend>الألوان</legend>
                     <div class="input-group">
                         <label for="fuselage-color">لون جسم الطائرة</label>
@@ -966,6 +974,18 @@
                 <div class="result-item">
                     <p>نسبة الدفع إلى الوزن:</p>
                     <span id="twr-result">0.00</span>
+                </div>
+                <div class="result-item" style="border-top: 2px solid #90caf9; padding-top: 10px; margin-top: 10px;">
+                    <p>موضع مركز الجاذبية (CG) (سم):</p>
+                    <span id="cg-position-result">0.0</span>
+                </div>
+                <div class="result-item">
+                    <p>موضع المركز الهوائي (AC) (سم):</p>
+                    <span id="ac-position-result">0.0</span>
+                </div>
+                <div class="result-item">
+                    <p><strong>الهامش الثابت (Static Margin):</strong></p>
+                    <span id="static-margin-result">0.0%</span>
                 </div>
             </div>
         </div>
