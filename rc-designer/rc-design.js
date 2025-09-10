@@ -74,6 +74,13 @@ planeGroup.add(tailControlsGroup);
 const cockpitGroup = new THREE.Group();
 planeGroup.add(cockpitGroup);
 
+// مجموعة مصدر الطاقة (بطارية/خزان)
+const energySourceGroup = new THREE.Group();
+planeGroup.add(energySourceGroup);
+const energySourceMaterial = new THREE.MeshStandardMaterial({ color: 0xf39c12, side: THREE.DoubleSide });
+const energySourceGeom = new THREE.BoxGeometry(1, 1, 1); // صندوق بوحدة قياس 1x1x1 سيتم تغيير حجمه
+const energySourceMesh = new THREE.Mesh(energySourceGeom, energySourceMaterial);
+energySourceGroup.add(energySourceMesh);
 
 // المروحة
 const propellerGroup = new THREE.Group();
@@ -355,6 +362,20 @@ const icEngineWeightInput = document.getElementById('ic-engine-weight-input');
 const icEngineTorqueInput = document.getElementById('ic-engine-torque-input');
 const icEngineLengthInput = document.getElementById('ic-engine-length-input');
 const icEngineDiameterInput = document.getElementById('ic-engine-diameter-input');
+
+// Energy Source Inputs
+const energySourceColorInput = document.getElementById('energy-source-color');
+const batteryOptions = document.getElementById('battery-options');
+const fuelTankOptions = document.getElementById('fuel-tank-options');
+const batteryTypeInput = document.getElementById('battery-type');
+const batteryCapacityInput = document.getElementById('battery-capacity');
+const batteryVoltageInput = document.getElementById('battery-voltage');
+const batteryCRatingInput = document.getElementById('battery-c-rating');
+const batteryWeightInput = document.getElementById('battery-weight');
+const batteryPositionInput = document.getElementById('battery-position');
+const fuelTankCapacityInput = document.getElementById('fuel-tank-capacity');
+const fuelTankWeightInput = document.getElementById('fuel-tank-weight');
+const fuelTankPositionInput = document.getElementById('fuel-tank-position');
 
 
 
@@ -651,12 +672,16 @@ function updateEngineUI() {
     // Show/hide option blocks
     electricEngineOptions.style.display = engineType === 'electric' ? 'block' : 'none';
     icEngineOptions.style.display = engineType === 'ic' ? 'block' : 'none';
+    batteryOptions.style.display = engineType === 'electric' ? 'block' : 'none';
+    fuelTankOptions.style.display = engineType === 'ic' ? 'block' : 'none';
 
     let selectedEngineSpec;
 
     if (engineType === 'electric') {
         const motorType = electricMotorTypeInput.value;
         selectedEngineSpec = ENGINE_SPECS.electric[motorType];
+        // Set default battery voltage based on engine if not already set by user
+        batteryVoltageInput.value = batteryVoltageInput.value || selectedEngineSpec.voltage;
         updateEngineInputs(selectedEngineSpec, 'electric');
     } else { // ic
         const motorType = icEngineTypeInput.value;
@@ -742,6 +767,7 @@ function updatePlaneModel() {
     const tailColor = tailColorInput.value;
     const backgroundColor = backgroundColorInput.value;
 
+
     // تحديث الألوان
     fuselageMaterial.color.set(fuselageColor);
     wingMaterial.color.set(wingColor);
@@ -752,6 +778,7 @@ function updatePlaneModel() {
     propMaterial.color.set(propColorInput.value);
     strutMaterial.color.set(strutColorInput.value);
     wheelMaterial.color.set(wheelColorInput.value);
+    energySourceMaterial.color.set(energySourceColorInput.value);
     scene.background.set(backgroundColor);
 
      // Wingtip Controls visibility
@@ -1510,6 +1537,54 @@ function updatePlaneModel() {
 
         cockpitGroup.add(cockpitMesh);
     }
+
+    // --- مصدر الطاقة (بطارية/خزان وقود) ---
+    energySourceGroup.visible = false; // إخفاؤه افتراضيًا
+
+    if (engineType === 'electric') {
+        energySourceGroup.visible = true;
+
+        // حساب الحجم بناءً على الوزن (تقديري)
+        const batteryWeightGrams = getValidNumber(batteryWeightInput);
+        const batteryDensityG_cm3 = 1.5; // كثافة تقديرية للبطارية مع الغلاف (جرام/سم^3)
+        const volume_cm3 = batteryWeightGrams / batteryDensityG_cm3;
+        const volume_m3 = volume_cm3 / 1e6;
+
+        // حساب الأبعاد من الحجم مع الحفاظ على نسبة العرض إلى الارتفاع
+        // نفترض أن الأبعاد L:W:H هي 4:2:1
+        const x_dim = Math.cbrt(volume_m3 / 8);
+        const height = x_dim;
+        const width = 2 * x_dim;
+        const length = 4 * x_dim;
+
+        // تحديث حجم الصندوق
+        energySourceMesh.scale.set(length, height, width);
+
+        // تحديث الموضع
+        const batteryPosition = getValidNumber(batteryPositionInput) * conversionFactor;
+        energySourceGroup.position.x = batteryPosition;
+
+    } else if (engineType === 'ic') {
+        energySourceGroup.visible = true;
+
+        // حساب الحجم بناءً على السعة
+        const tankCapacity_ml = getValidNumber(fuelTankCapacityInput);
+        const volume_cm3 = tankCapacity_ml; // 1 مل = 1 سم^3
+        const volume_m3 = volume_cm3 / 1e6;
+
+        // حساب الأبعاد من الحجم
+        const x_dim = Math.cbrt(volume_m3 / 8);
+        const height = x_dim;
+        const width = 2 * x_dim;
+        const length = 4 * x_dim;
+
+        // تحديث حجم الصندوق
+        energySourceMesh.scale.set(length, height, width);
+
+        // تحديث الموضع
+        const tankPosition = getValidNumber(fuelTankPositionInput) * conversionFactor;
+        energySourceGroup.position.x = tankPosition;
+    }
 }
 
 function calculateAerodynamics() {
@@ -1714,8 +1789,16 @@ function calculateAerodynamics() {
         singleStrutWeightKg = strutVolume * gearMaterialDensity;
     }
 
+    let energySourceWeightKg = 0;
+    if (engineType === 'electric') {
+        energySourceWeightKg = getValidNumber(batteryWeightInput) / 1000;
+    } else { // ic
+        energySourceWeightKg = getValidNumber(fuelTankWeightInput) / 1000;
+    }
+
+
     const planeComponentsWeightKg = planeComponentsWeightGrams / 1000;
-    const totalWeightKg = wingWeightKg + tailWeightKg + fuselageWeightKg + propWeightKg + landingGearWeightKg + engineWeightKg + planeComponentsWeightKg;
+    const totalWeightKg = wingWeightKg + tailWeightKg + fuselageWeightKg + propWeightKg + landingGearWeightKg + engineWeightKg + energySourceWeightKg + planeComponentsWeightKg;
 
     // 5. نسبة الدفع إلى الوزن (Thrust-to-Weight Ratio)
     const weightInNewtons = totalWeightKg * 9.81;

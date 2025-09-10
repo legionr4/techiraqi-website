@@ -594,6 +594,65 @@
                 </fieldset>
 
                 <fieldset>
+                    <legend>الطاقة (Energy Source)</legend>
+
+                    <div class="input-group">
+                        <label for="energy-source-color">لون مصدر الطاقة</label>
+                        <input type="color" id="energy-source-color" value="#f39c12">
+                    </div>
+
+                    <!-- Battery Options (for Electric Engines) -->
+                    <div id="battery-options" style="display:none;">
+                        <h4>خصائص البطارية</h4>
+                        <div class="input-group">
+                            <label for="battery-type">نوع البطارية</label>
+                            <select id="battery-type">
+                                <option value="lipo" selected>Li-Po</option>
+                                <option value="liion">Li-Ion</option>
+                                <option value="nimh">NiMH</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="battery-capacity">السعة (mAh)</label>
+                            <input type="number" id="battery-capacity" value="2200" step="100">
+                        </div>
+                        <div class="input-group">
+                            <label for="battery-voltage">الفولتية (V)</label>
+                            <input type="number" id="battery-voltage" value="11.1" step="0.1">
+                        </div>
+                        <div class="input-group">
+                            <label for="battery-c-rating">معدل التفريغ (C)</label>
+                            <input type="number" id="battery-c-rating" value="25" step="5">
+                        </div>
+                        <div class="input-group">
+                            <label for="battery-weight">الوزن (جرام)</label>
+                            <input type="number" id="battery-weight" value="180" step="10">
+                        </div>
+                        <div class="input-group">
+                            <label for="battery-position">الموضع من مركز الطائرة (<span class="unit-label">سم</span>)</label>
+                            <input type="number" id="battery-position" value="10" step="1" title="قيمة موجبة للأمام، سالبة للخلف">
+                        </div>
+                    </div>
+
+                    <!-- Fuel Tank Options (for IC Engines) -->
+                    <div id="fuel-tank-options" style="display:none;">
+                        <h4>خصائص خزان الوقود</h4>
+                        <div class="input-group">
+                            <label for="fuel-tank-capacity">سعة الخزان (ml)</label>
+                            <input type="number" id="fuel-tank-capacity" value="250" step="10">
+                        </div>
+                        <div class="input-group">
+                            <label for="fuel-tank-weight">الوزن (ممتلئ) (جرام)</label>
+                            <input type="number" id="fuel-tank-weight" value="300" step="10">
+                        </div>
+                        <div class="input-group">
+                            <label for="fuel-tank-position">الموضع من مركز الطائرة (<span class="unit-label">سم</span>)</label>
+                            <input type="number" id="fuel-tank-position" value="5" step="1" title="قيمة موجبة للأمام، سالبة للخلف">
+                        </div>
+                    </div>
+                </fieldset>
+
+                <fieldset>
                     <legend>المروحة</legend>
                     <div class="input-group">
                         <label for="prop-diameter">قطر المروحة (بوصة)</label>
