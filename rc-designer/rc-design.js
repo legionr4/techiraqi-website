@@ -114,6 +114,9 @@ const cgSphere = new THREE.Mesh(cgGeom, cgMaterial);
 const acSphere = new THREE.Mesh(acGeom, acMaterial);
 cgAcGroup.add(cgSphere, acSphere);
 planeGroup.add(cgAcGroup);
+
+// متغير لتخزين اهتزاز الدوران من الإطار السابق لإزالته في الإطار التالي
+let lastVibrationRotation = new THREE.Euler();
 // --- دوال التحديث والحساب ---
 
 /**
@@ -1714,9 +1717,9 @@ function calculateAerodynamics() {
     // 2. قوة السحب (Drag)
     // D = 0.5 * Cd * rho * V^2 * A
     // Cd = Cdp + Cdi (سحب طفيلي + سحب مستحث)
-    const aspectRatio = Math.pow(wingSpan, 2) / wingArea;
+    const aspectRatio = wingArea > 0 ? Math.pow(wingSpan, 2) / wingArea : 0;
     const oswaldEfficiency = 0.8; // كفاءة أوزوالد (قيمة مفترضة)
-    const cdi = Math.pow(cl, 2) / (Math.PI * aspectRatio * oswaldEfficiency);
+    const cdi = (aspectRatio > 0) ? (Math.pow(cl, 2) / (Math.PI * aspectRatio * oswaldEfficiency)) : 0;
     const cdp = 0.025; // معامل سحب طفيلي مفترض (لجسم الطائرة والذيل وغيرها)
     const cd = cdp + cdi;
     const aeroDrag = 0.5 * cd * airDensity * Math.pow(airSpeed, 2) * mainWingArea;
@@ -2090,6 +2093,9 @@ function calculateAerodynamics() {
     cgSphere.position.z = 0;
     acSphere.position.y = 0;
     acSphere.position.z = 0;
+
+    // تحديث حالة إظهار مجموعة CG/AC الخارجية
+    cgAcGroup.visible = showCgAcCheckbox.checked;
 
     // تحديث موضع علامة مركز الثقل على جسم الطائرة
     cgOnFuselageSphere.position.x = cg_x;
@@ -2481,10 +2487,8 @@ function animate() {
 
     const deltaTime = clock.getDelta(); // الوقت المنقضي منذ الإطار الأخير (بالثواني)
 
-    // إعادة تعيين موضع ودوران planeGroup إلى قيمتها الأساسية في كل إطار.
-    // هذا يمنع أي اهتزازات متراكمة قد تؤدي إلى انجراف الطائرة.
+    // إعادة تعيين موضع الطائرة فقط، للحفاظ على الدوران التراكمي للمحاكاة
     planeGroup.position.set(0, 0, 0);
-    planeGroup.rotation.set(0, 0, 0);
 
     if (isPropSpinning) {
         // All parameters are now read from the cached planeParams object for performance
@@ -2539,35 +2543,42 @@ function animate() {
         // تطبيق شدة الاهتزاز التي يحددها المستخدم
         vibrationMagnitude *= userVibrationIntensity;
 
+        // اهتزاز الموضع (يتم إعادة تعيينه كل إطار لذا نستخدم `+=`)
         const maxPosOffset = 0.002;
-        const maxRotOffset = 0.005;
-
         planeGroup.position.x += (Math.random() * 2 - 1) * maxPosOffset * vibrationMagnitude;
         planeGroup.position.y += (Math.random() * 2 - 1) * maxPosOffset * vibrationMagnitude;
         planeGroup.position.z += (Math.random() * 2 - 1) * maxPosOffset * vibrationMagnitude;
 
-        planeGroup.rotation.x += (Math.random() * 2 - 1) * maxRotOffset * vibrationMagnitude;
-        planeGroup.rotation.y += (Math.random() * 2 - 1) * maxRotOffset * vibrationMagnitude;
-        planeGroup.rotation.z += (Math.random() * 2 - 1) * maxRotOffset * vibrationMagnitude;
+        // --- تحديث الدوران (التحكم والاهتزاز) ---
+        // 1. إزالة اهتزاز الدوران من الإطار السابق للعودة إلى الدوران "النظيف" الناتج عن التحكم
+        planeGroup.rotation.x -= lastVibrationRotation.x;
+        planeGroup.rotation.y -= lastVibrationRotation.y;
+        planeGroup.rotation.z -= lastVibrationRotation.z;
 
-        // --- محاكاة توجيه الطائرة بناءً على أسطح التحكم ---
+        // 2. تطبيق الدوران التراكمي الجديد من أسطح التحكم لهذا الإطار
         const rightAileronRot = scene.getObjectByName('rightAileron')?.parent.rotation.z || 0;
         const elevatorRot = scene.getObjectByName('rightElevator')?.parent.rotation.z || 0;
         const rudderRot = scene.getObjectByName('rudder')?.parent.rotation.y || 0;
-
         const maneuverFactor = 0.5; // معامل لتحديد مدى قوة استجابة الطائرة
+        const maneuverSpeed = maneuverFactor * deltaTime; // جعل الحركة معتمدة على الوقت وليس على معدل الإطارات
 
-        // الانحدار (Pitch) - الرافع
-        // دوران الرافع لأسفل (موجب) يسبب انحدار مقدمة الطائرة لأسفل (دوران سالب حول المحور Z للطائرة).
-        planeGroup.rotation.z -= elevatorRot * maneuverFactor;
+        planeGroup.rotation.z -= elevatorRot * maneuverSpeed; // الانحدار (Pitch)
+        planeGroup.rotation.x += rightAileronRot * maneuverSpeed; // الدوران (Roll)
+        planeGroup.rotation.y += rudderRot * maneuverSpeed; // الانعراج (Yaw)
 
-        // الدوران (Roll) - الجنيحات
-        // دوران الجنيح الأيمن لأسفل (موجب) يسبب دوران الطائرة لليسار (دوران موجب حول المحور X للطائرة).
-        planeGroup.rotation.x += rightAileronRot * maneuverFactor;
+        // 3. حساب وتطبيق اهتزاز الدوران الجديد لهذا الإطار
+        const maxRotOffset = 0.005;
+        const currentVibration = new THREE.Euler(
+            (Math.random() * 2 - 1) * maxRotOffset * vibrationMagnitude,
+            (Math.random() * 2 - 1) * maxRotOffset * vibrationMagnitude,
+            (Math.random() * 2 - 1) * maxRotOffset * vibrationMagnitude
+        );
+        planeGroup.rotation.x += currentVibration.x;
+        planeGroup.rotation.y += currentVibration.y;
+        planeGroup.rotation.z += currentVibration.z;
 
-        // الانعراج (Yaw) - الدفة
-        // دوران الدفة لليسار (موجب) يسبب انعراج مقدمة الطائرة لليسار (دوران موجب حول المحور Y للطائرة).
-        planeGroup.rotation.y += rudderRot * maneuverFactor;
+        // 4. تخزين اهتزاز الدوران الحالي لإزالته في الإطار التالي
+        lastVibrationRotation.copy(currentVibration);
 
         // --- كل تحديثات الجزيئات تحدث فقط عند تشغيل المروحة ---
         // --- تحديث جزيئات تدفق هواء المروحة ---
@@ -2816,6 +2827,9 @@ function animate() {
             vortexParticleSystem.geometry.attributes.scale.needsUpdate = true;
             vortexParticleSystem.geometry.attributes.spiralData.needsUpdate = true;
         }
+    }
+    else {
+        lastVibrationRotation.set(0, 0, 0);
     }
 
     controls.update(); // ضروري إذا تم تفعيل enableDamping
