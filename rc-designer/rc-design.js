@@ -1288,6 +1288,25 @@ function animate() {
         planeGroup.rotation.y += (Math.random() * 2 - 1) * maxRotOffset * vibrationMagnitude;
         planeGroup.rotation.z += (Math.random() * 2 - 1) * maxRotOffset * vibrationMagnitude;
 
+        // --- محاكاة توجيه الطائرة بناءً على أسطح التحكم ---
+        const rightAileronRot = scene.getObjectByName('rightAileron')?.parent.rotation.z || 0;
+        const elevatorRot = scene.getObjectByName('rightElevator')?.parent.rotation.z || 0;
+        const rudderRot = scene.getObjectByName('rudder')?.parent.rotation.y || 0;
+
+        const maneuverFactor = 0.5; // معامل لتحديد مدى قوة استجابة الطائرة
+
+        // الانحدار (Pitch) - الرافع
+        // دوران الرافع لأسفل (موجب) يسبب انحدار مقدمة الطائرة لأسفل (دوران سالب حول المحور Z للطائرة).
+        planeGroup.rotation.z -= elevatorRot * maneuverFactor;
+
+        // الدوران (Roll) - الجنيحات
+        // دوران الجنيح الأيمن لأسفل (موجب) يسبب دوران الطائرة لليسار (دوران موجب حول المحور X للطائرة).
+        planeGroup.rotation.x += rightAileronRot * maneuverFactor;
+
+        // الانعراج (Yaw) - الدفة
+        // دوران الدفة لليسار (موجب) يسبب انعراج مقدمة الطائرة لليسار (دوران موجب حول المحور Y للطائرة).
+        planeGroup.rotation.y += rudderRot * maneuverFactor;
+
         // --- كل تحديثات الجزيئات تحدث فقط عند تشغيل المروحة ---
         // --- تحديث جزيئات تدفق هواء المروحة ---
         if (propParticleSystem && propParticleSystem.visible) {
