@@ -1652,10 +1652,6 @@ function calculateAerodynamics() {
     const fuselageShape = fuselageShapeInput.value;
     const fuselageTaperRatio = getValidNumber(fuselageTaperRatioInput); // New: Read taper ratio
 
-    const componentPositions = []; // لتخزين مواضع المكونات لحساب CG
-
-
-
 
     // --- حسابات محدثة ---
     const tipChord = wingChord * taperRatio;
@@ -1715,6 +1711,19 @@ function calculateAerodynamics() {
     const structureMaterialDensity = MATERIAL_DENSITIES[structureMaterial]; // Density in kg/m³
     const fuselageMaterialDensity = MATERIAL_DENSITIES[fuselageMaterialValue];
     const wingWeightKg = wingVolume * structureMaterialDensity; // Weight in kg
+
+    // حساب وزن أطراف الجناح (Wingtips)
+    let wingtipWeightKg = 0;
+    if (hasWingtipInput.checked) {
+        const wingtipLength = getValidNumber(wingtipLengthInput) * conversionFactor;
+        const wingtipWidth = getValidNumber(wingtipWidthInput) * conversionFactor;
+        const wingtipThickness = getValidNumber(wingtipThicknessInput) * conversionFactor;
+        // حساب حجم طرفي الجناح (مستطيلين)
+        const singleWingtipVolume = wingtipLength * wingtipWidth * wingtipThickness;
+        wingtipWeightKg = 2 * singleWingtipVolume * structureMaterialDensity; // لليمين واليسار
+    }
+
+
 
     const tailThickness = getValidNumber(tailThicknessInput) * conversionFactor;
     const tailVolume = totalTailArea * tailThickness;
@@ -1922,10 +1931,13 @@ function calculateAerodynamics() {
     const wingPropDistance = getValidNumber(wingPropDistanceInput) * conversionFactor;
     const wingPositionX = (fuselageLength / 2) - wingPropDistance;
 
+    // حساب موضع الذيل (الحافة الأمامية)
+    const wingTailDistance = getValidNumber(wingTailDistanceInput) * conversionFactor;
+    const tailPositionX = wingPositionX - wingTailDistance;
+
     // 2. المركز الهوائي (AC) - يقع عند 25% من الـ MAC
     const ac_x = wingPositionX + mac_x_le + (0.25 * mac);
 
-    // 3. حساب العزم لكل مكون (الوزن * الذراع)
     // الذراع هو المسافة من نقطة مرجعية (سنستخدم مقدمة الطائرة = fuselageLength / 2)
     const datum = fuselageLength / 2;
 
@@ -1936,25 +1948,99 @@ function calculateAerodynamics() {
         }
     };
 
+    // 3. حساب العزم لكل مكون (الوزن * الذراع)
     // إضافة عزم كل مكون
-    addMoment(fuselageWeightKg, 0); // مركز الجسم عند 0
-    addMoment(wingWeightKg, wingPositionX + mac_x_le + (0.35 * mac)); // مركز الجناح عند ~35% MAC
-    addMoment(tailWeightKg, tailGroup.position.x); // مركز الذيل
-    addMoment(cockpitWeightKg, cockpitGroup.position.x); // مركز القمرة
-    addMoment(propWeightKg, propellerGroup.position.x); // مركز المروحة
-    addMoment(landingGearWeightKg, landingGearGroup.position.x); // مركز عجلات الهبوط
-    addMoment(totalAccessoriesWeightKg, 0); // افترض أن الملحقات موزعة حول المركز
+    addMoment(fuselageWeightKg, 0); // مركز الجسم عند نقطة الأصل (0)
+    addMoment(wingWeightKg, wingPositionX + mac_x_le + (0.4 * mac)); // مركز الجناح عند ~40% MAC (تقدير أكثر تحفظًا)
+    addMoment(tailWeightKg, tailPositionX - (getValidNumber(tailChordInput) * conversionFactor * 0.4)); // مركز الذيل عند ~40% من وتره
+
+    // عزم أطراف الجناح (Wingtips)
+    if (wingtipWeightKg > 0) {
+        // يقع مركز ثقل طرف الجناح عند طرف الجناح الرئيسي
+        const tipChord = wingChord * taperRatio;
+        const tipX = wingPositionX + (wingSpan / 2) * Math.tan(sweepRad) - (tipChord / 4); // تقدير الموضع X
+        addMoment(wingtipWeightKg, tipX);
+    }
+
+    // عزم القمرة
+    if (hasCockpitInput.checked) {
+        const cockpitPosition = getValidNumber(cockpitPositionInput) * conversionFactor;
+        const cockpitLength = getValidNumber(cockpitLengthInput) * conversionFactor;
+        const cockpitCenterX = (fuselageLength / 2) - cockpitPosition - (cockpitLength / 2);
+        addMoment(cockpitWeightKg, cockpitCenterX);
+    }
+
+    // عزم عجلات الهبوط
+    if (hasLandingGearInput.checked) {
+        const mainGearPosition = getValidNumber(mainGearPositionInput) * conversionFactor;
+        const mainGearX = (fuselageLength / 2) - mainGearPosition;
+        // تقدير مركز ثقل مجموعة الهبوط بناءً على موضع العجلات الرئيسية (الأثقل)
+        addMoment(landingGearWeightKg, mainGearX);
+    }
+
+    // افترض أن الملحقات موزعة حول مركز الجناح (افتراض أكثر واقعية)
+    addMoment(totalAccessoriesWeightKg, wingPositionX);
 
     // عزم المحرك ومصدر الطاقة
+    const enginePlacement = enginePlacementInput.value;
     if (engineType === 'electric') {
         const batteryPosition = getValidNumber(batteryPositionInput) * conversionFactor;
         addMoment(getValidNumber(batteryWeightInput) / 1000, batteryPosition);
-        addMoment(engineWeightKg, engineGroup.children.length > 0 ? engineGroup.position.x : wingEnginesGroup.position.x);
     } else { // ic
         const tankPosition = getValidNumber(fuelTankPositionInput) * conversionFactor;
         addMoment(energySourceWeightKg, tankPosition);
-        addMoment(engineWeightKg, engineGroup.children.length > 0 ? engineGroup.position.x : wingEnginesGroup.position.x);
     }
+
+    // عزم المحرك والمروحة بناءً على الموضع
+    if (enginePlacement === 'front' || enginePlacement === 'rear') {
+        addMoment(engineWeightKg, engineGroup.position.x);
+        addMoment(propWeightKg, propellerGroup.position.x);
+    } else if (enginePlacement === 'wing') {
+        // لمحركات الجناح، العزم هو مجموع عزمي المحركين
+        // بما أن المحركين متماثلين حول المحور الطولي، فإن عزمهم الجانبي (Z) يلغي بعضه البعض
+        // نحتاج فقط إلى الموضع على المحور X
+        if (wingEnginesGroup.children.length > 0) {
+            // جميع المحركات والمراوح على الجناح لها نفس الموضع X
+            const wingEngineX = wingEnginesGroup.children[0].position.x;
+            // وزن المحركين + وزن المروحتين
+            const totalWingPropulsionWeight = (engineWeightKg * 2) + (propWeightKg * 2);
+            addMoment(totalWingPropulsionWeight, wingEngineX);
+
+            // --- حساب وزن وعزم حوامل المحركات (Pylons) ---
+            const pylonLengthMeters = getValidNumber(enginePylonLengthInput) * conversionFactor;
+            const engineDiameterMeters = (engineType === 'electric') 
+                ? getValidNumber(electricMotorDiameterInput) * conversionFactor 
+                : getValidNumber(icEngineDiameterInput) * conversionFactor;
+            const wingEngineVerticalPos = engineWingVerticalPosInput.value;
+            const wingCenterY = wingGroup.position.y;
+            const engineYOffset = (wingEngineVerticalPos === 'above')
+                ? wingCenterY + (wingThickness / 2) + (engineDiameterMeters / 2)
+                : wingCenterY - (wingThickness / 2) - (engineDiameterMeters / 2);
+
+            const pylonHeight = Math.abs(engineYOffset - wingCenterY) - (wingThickness / 2) - (engineDiameterMeters / 2);
+            
+            if (pylonHeight > 0.001 && pylonLengthMeters > 0.001) {
+                const pylonWidth = engineDiameterMeters * 0.4;
+                const singlePylonVolume = pylonLengthMeters * pylonHeight * pylonWidth;
+                const pylonMaterialDensity = MATERIAL_DENSITIES['plastic']; // افتراض مادة للحامل
+                const singlePylonWeightKg = singlePylonVolume * pylonMaterialDensity;
+                const totalPylonWeightKg = singlePylonWeightKg * 2;
+
+                // إضافة الوزن إلى الإجمالي
+                totalWeightKg += totalPylonWeightKg;
+
+                // إضافة العزم
+                const wingEngineForeAft = engineWingForeAftInput.value;
+                const leadingEdgeX = wingEnginesGroup.children[0].position.x - (pylonLengthMeters / 2) - (engineWeightKg > 0 ? (getValidNumber(electricMotorLengthInput) * conversionFactor / 2) : 0); // تقدير
+                const pylonX = (wingEngineForeAft === 'leading')
+                    ? leadingEdgeX + pylonLengthMeters / 2
+                    : leadingEdgeX - pylonLengthMeters / 2; // تقدير مبسط
+
+                addMoment(totalPylonWeightKg, pylonX);
+            }
+        }
+    }
+
 
     // 4. حساب الموضع النهائي لمركز الجاذبية
     const cg_x_from_datum = totalWeightKg > 0 ? totalMoment / totalWeightKg : 0;
