@@ -913,9 +913,9 @@ const createPropellerBladeGeom = (radius, rootChord, tipChord, thickness, pitch,
 
             // Rear face (x = -halfLength)
             -halfLength, halfRearHeight, halfRearWidth,    // 4: Rear Top Right
-            -halfLength, -halfRearHeight, rearWidth,   // 5: Rear Bottom Right
-            -halfLength, -halfRearHeight, -rearWidth,  // 6: Rear Bottom Left
-            -halfLength, halfRearHeight, -rearWidth    // 7: Rear Top Left
+            -halfLength, -halfRearHeight, halfRearWidth,   // 5: Rear Bottom Right
+            -halfLength, -halfRearHeight, -halfRearWidth,  // 6: Rear Bottom Left
+            -halfLength, halfRearHeight, -halfRearWidth    // 7: Rear Top Left
         ]);
 
         const indices = new Uint16Array([
@@ -939,9 +939,11 @@ const createPropellerBladeGeom = (radius, rootChord, tipChord, thickness, pitch,
         newFuselageGeom.computeVertexNormals();
     } else if (fuselageShape === 'cylindrical') {
         const fuselageDiameter = getValidNumber(fuselageDiameterInput) * conversionFactor;
-        const radiusTop = fuselageDiameter / 2;
-        const radiusBottom = (fuselageDiameter / 2) * fuselageTaperRatio; // Apply taper
-        newFuselageGeom = new THREE.CylinderGeometry(radiusTop, radiusBottom, fuselageLength, 32);
+        const radiusFront = fuselageDiameter / 2;
+        const radiusRear = (fuselageDiameter / 2) * fuselageTaperRatio; // تطبيق الاستدقاق على الجزء الخلفي
+        // ملاحظة: في CylinderGeometry، يكون radiusTop عند +y و radiusBottom عند -y.
+        // بعد التدوير 90 درجة حول Z، يصبح +y الأصلي هو -x (الخلف) و -y يصبح +x (الأمام).
+        newFuselageGeom = new THREE.CylinderGeometry(radiusRear, radiusFront, fuselageLength, 32);
         newFuselageGeom.rotateZ(Math.PI / 2); // تدوير الأسطوانة لتكون أفقية
     } else if (fuselageShape === 'teardrop') {
         const frontDiameter = getValidNumber(fuselageFrontDiameterInput) * conversionFactor;
