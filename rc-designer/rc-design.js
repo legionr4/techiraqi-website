@@ -1347,10 +1347,10 @@ function updatePlaneModel() {
                 noseGeom.rotateZ(-Math.PI / 2); // توجيه الجزء المسطح نحو الجسم
             } else { // ogival
                 noseGeom = createOgiveGeometry(radiusFront, noseLength, 32);
-                noseGeom.rotateZ(Math.PI / 2); // توجيه الجزء المدبب للأمام
+                noseGeom.rotateZ(-Math.PI / 2); // تصحيح: توجيه الجزء المدبب للأمام
             }
             const noseCone = new THREE.Mesh(noseGeom, fuselageMaterial);
-            noseCone.position.x = (fuselageLength / 2) - (noseLength / 2); // وضع مركز المقدمة عند مقدمة الجسم
+            noseCone.position.x = (fuselageLength / 2) - noseLength; // وضع قاعدة المقدمة بحيث يتطابق طرفها مع مقدمة الجسم
             fuselageGroup.add(noseCone);
         }
 
