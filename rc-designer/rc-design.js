@@ -519,18 +519,23 @@ function updatePlaneModel() {
         const leftAileronPivot = new THREE.Group();
         leftAileronPivot.add(leftAileron);
 
-        // Calculate the position for the pivot (the hinge line)
-        const aileronAvgZ = halfSpan - aileronPosition - (aileronLength / 2) - (fuselage.geometry.parameters.depth / 2);
-        const chordAtHinge = rootChord + (rootChord * taperRatio - rootChord) * (aileronAvgZ / halfSpan);
-        const sweepAtHinge = (aileronAvgZ > 0 ? aileronAvgZ : 0) * Math.tan(sweepRad);
-        // The wing's new trailing edge (the hinge line) is at the original trailing edge position, moved forward by the aileron width.
+        // --- حساب موضع محور دوران الجنيح ---
+        // 1. حساب الموضع المركزي للجنيح على طول امتداد الجناح (قبل إزاحته عن جسم الطائرة)
+        const aileronCenterZ = halfSpan - aileronPosition - (aileronLength / 2);
+
+        // 2. حساب عرض الجناح ومقدار الانحناء عند مركز الجنيح لتحديد موضع المفصل على المحور X
+        const chordAtHinge = rootChord + (rootChord * taperRatio - rootChord) * (aileronCenterZ / halfSpan);
+        const sweepAtHinge = (aileronCenterZ >= 0 ? aileronCenterZ : 0) * Math.tan(sweepRad);
         const hingeX = sweepAtHinge - (chordAtHinge / 2) + aileronWidth;
 
-        // Position and rotate the PIVOTS
-        rightAileronPivot.position.set(hingeX, 0, aileronAvgZ + (fuselage.geometry.parameters.depth / 2));
+        // 3. تمت إزاحة هندسة الجناح للخارج بمقدار نصف عرض جسم الطائرة. يجب تطبيق نفس الإزاحة على محور الجنيح.
+        const finalPivotZ = aileronCenterZ + (fuselage.geometry.parameters.depth / 2);
+
+        // 4. تحديد موضع ودوران المحاور. يستخدم المحور الأيسر نفس القيم لأن الجناح الأيسر هو نسخة معكوسة.
+        rightAileronPivot.position.set(hingeX, 0, finalPivotZ);
         rightAileronPivot.rotation.y = sweepRad;
 
-        leftAileronPivot.position.set(hingeX, 0, aileronAvgZ);
+        leftAileronPivot.position.set(hingeX, 0, finalPivotZ);
         leftAileronPivot.rotation.y = sweepRad;
 
         // Add pivots to the wings
