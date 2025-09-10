@@ -393,17 +393,18 @@
                         <label for="fuselage-taper-ratio">نسبة الاستدقاق (Taper): <span id="fuselage-taper-value">1.00</span></label>
                         <input type="range" id="fuselage-taper-ratio" min="0.2" max="1.0" value="1.0" step="0.05">
                     </div>
-                    <!-- Fuselage Ends Controls -->
-                    <div id="fuselage-ends-controls">
+                    <!-- New Fuselage Ends Controls (conditionally visible) -->
+                    <div id="fuselage-ends-controls" style="display:none; margin-top: 10px; border-top: 1px solid #eee; padding-top: 10px;">
                         <div class="input-group">
-                            <label for="fuselage-nose-shape">شكل المقدمة</label>
+                            <label for="fuselage-nose-shape">شكل المقدمة الانسيابي</label>
                             <select id="fuselage-nose-shape">
-                                <option value="flat">مسطح (Flat)</option>
+                                <option value="flat" selected>مسطح (Flat)</option>
                                 <option value="rounded">مستدير (Rounded)</option>
+                                <option value="ogival">بيضوي (Ogival)</option>
                             </select>
                         </div>
                         <div class="input-group">
-                            <label for="fuselage-tail-shape">شكل المؤخرة</label>
+                            <label for="fuselage-tail-shape">شكل المؤخرة الانسيابي</label>
                             <select id="fuselage-tail-shape">
                                 <option value="flat" selected>مسطح (Flat)</option>
                                 <option value="rounded">مستدير (Rounded)</option>

@@ -54,9 +54,9 @@ const strutMaterial = new THREE.MeshStandardMaterial({ color: 0x888888, side: TH
 const wheelMaterial = new THREE.MeshStandardMaterial({ color: 0x333333, side: THREE.DoubleSide });
 
 // جسم الطائرة
-const fuselageGeom = new THREE.BoxGeometry(1, 0.15, 0.15);
-const fuselage = new THREE.Mesh(fuselageGeom, fuselageMaterial);
-planeGroup.add(fuselage);
+// تم تغيير fuselage إلى Group لاستيعاب الأجزاء المتعددة (الجسم، المقدمة، المؤخرة)
+const fuselageGroup = new THREE.Group();
+planeGroup.add(fuselageGroup);
 
 // مجموعة الجناح (سيتم إنشاؤها ديناميكيًا)
 const wingGroup = new THREE.Group();
@@ -254,6 +254,9 @@ const fuselageTearFrontDiaGroup = document.getElementById('fuselage-teardrop-fro
 const fuselageTaperRatioInput = document.getElementById('fuselage-taper-ratio');
 const fuselageTaperValueEl = document.getElementById('fuselage-taper-value');
 const fuselageTaperGroup = document.getElementById('fuselage-taper-group');
+const fuselageEndsControls = document.getElementById('fuselage-ends-controls');
+const fuselageNoseShapeInput = document.getElementById('fuselage-nose-shape');
+const fuselageTailShapeInput = document.getElementById('fuselage-tail-shape');
 const fuselageTearRearDiaGroup = document.getElementById('fuselage-teardrop-rear-diameter-group');
 const wingPropDistanceInput = document.getElementById('wing-prop-distance');
 const wingTailDistanceInput = document.getElementById('wing-tail-distance');
@@ -497,6 +500,28 @@ const createSurface = (span, rootChord, taperRatio, sweepAngle, thickness, airfo
     geometry.computeVertexNormals();
     return geometry;
 };
+
+/**
+ * Creates an Ogive (bullet) shape geometry for the nose cone.
+ * @param {number} radius The base radius of the ogive.
+ * @param {number} length The length of the ogive.
+ * @param {number} segments The number of radial segments.
+ * @returns {THREE.BufferGeometry} The generated ogive geometry.
+ */
+function createOgiveGeometry(radius, length, segments) {
+    const points = [];
+    const numPoints = 16;
+    // Equation for a tangent ogive
+    const rho = (radius * radius + length * length) / (2 * radius);
+    for (let i = 0; i <= numPoints; i++) {
+        const x = (i / numPoints) * length;
+        const y = Math.sqrt(rho * rho - Math.pow(length - x, 2)) + radius - rho;
+        points.push(new THREE.Vector2(y, x));
+    }
+
+    const geometry = new THREE.LatheGeometry(points, segments);
+    return geometry;
+}
 
 /**
  * Creates a realistic propeller blade geometry with airfoil shape and twist.
@@ -755,15 +780,18 @@ function updatePlaneModel() {
     fuselageCylDiameterGroup.style.display = 'none';
     fuselageTearFrontDiaGroup.style.display = 'none';
     fuselageTearRearDiaGroup.style.display = 'none';
+    fuselageEndsControls.style.display = 'none'; // إخفاء عناصر التحكم الجديدة افتراضيًا
 
     if (fuselageShape === 'rectangular') {
         fuselageRectWidthGroup.style.display = 'flex';
         fuselageRectHeightGroup.style.display = 'flex';
     } else if (fuselageShape === 'cylindrical') {
         fuselageCylDiameterGroup.style.display = 'flex';
+        fuselageEndsControls.style.display = 'block'; // إظهارها للأسطواني
     } else if (fuselageShape === 'teardrop') {
         fuselageTearFrontDiaGroup.style.display = 'flex';
         fuselageTearRearDiaGroup.style.display = 'flex';
+        fuselageEndsControls.style.display = 'block'; // إظهارها لقطرة الدموع
     }
 
     // إظهار/إخفاء خيارات موضع محرك الجناح
@@ -1129,77 +1157,100 @@ function updatePlaneModel() {
     }
 
     // --- تحديث جسم الطائرة ---
-    // إزالة الجسم القديم قبل إضافة الجديد
-    planeGroup.remove(fuselage);
-    let newFuselageGeom;
+    // إزالة الأجزاء القديمة من مجموعة الجسم
+    while(fuselageGroup.children.length > 0) {
+        fuselageGroup.remove(fuselageGroup.children[0]);
+    }
+
     if (fuselageShape === 'rectangular') {
-        // Calculate tapered dimensions for the rear
         const rearWidth = currentFuselageWidth * fuselageTaperRatio;
         const rearHeight = currentFuselageHeight * fuselageTaperRatio;
-
-        // Create custom BufferGeometry for a tapered box
         const halfLength = fuselageLength / 2;
         const halfFrontWidth = currentFuselageWidth / 2;
         const halfFrontHeight = currentFuselageHeight / 2;
         const halfRearWidth = rearWidth / 2;
         const halfRearHeight = rearHeight / 2;
 
-        const vertices = new Float32Array([
-            // Front face (x = halfLength)
-            halfLength, halfFrontHeight, halfFrontWidth,   // 0: Front Top Right
-            halfLength, -halfFrontHeight, halfFrontWidth,  // 1: Front Bottom Right
-            halfLength, -halfFrontHeight, -halfFrontWidth, // 2: Front Bottom Left
-            halfLength, halfFrontHeight, -halfFrontWidth,  // 3: Front Top Left
-
-            // Rear face (x = -halfLength)
-            -halfLength, halfRearHeight, halfRearWidth,    // 4: Rear Top Right
-            -halfLength, -halfRearHeight, halfRearWidth,   // 5: Rear Bottom Right
-            -halfLength, -halfRearHeight, -halfRearWidth,  // 6: Rear Bottom Left
-            -halfLength, halfRearHeight, -halfRearWidth    // 7: Rear Top Left
+        const vertices = new Float32Array([ // ... (vertices definition)
+            halfLength,  halfFrontHeight,  halfFrontWidth, -halfLength,  halfRearHeight,  halfRearWidth,
+            halfLength, -halfFrontHeight,  halfFrontWidth, -halfLength, -halfRearHeight,  halfRearWidth,
+            halfLength, -halfFrontHeight, -halfFrontWidth, -halfLength, -halfRearHeight, -halfRearWidth,
+            halfLength,  halfFrontHeight, -halfFrontWidth, -halfLength,  halfRearHeight, -halfRearWidth,
         ]);
-
-        const indices = new Uint16Array([
-            // Front face
-            0, 1, 2, 0, 2, 3,
-            // Back face
-            4, 6, 5, 4, 7, 6,
-            // Top face
-            3, 7, 4, 3, 4, 0,
-            // Bottom face
-            1, 5, 6, 1, 6, 2,
-            // Right face
-            0, 4, 5, 0, 5, 1,
-            // Left face
-            3, 2, 6, 3, 6, 7
+        const indices = new Uint16Array([ // ... (indices definition)
+            0, 2, 1, 0, 3, 2, 4, 5, 6, 4, 6, 7,
+            0, 1, 5, 0, 5, 4, 2, 3, 7, 2, 7, 6,
+            0, 4, 7, 0, 7, 3, 1, 2, 6, 1, 6, 5
         ]);
+        const geom = new THREE.BufferGeometry();
+        geom.setAttribute('position', new THREE.BufferAttribute(new Float32Array([
+            halfLength, halfFrontHeight, halfFrontWidth, halfLength, -halfFrontHeight, halfFrontWidth, halfLength, -halfFrontHeight, -halfFrontWidth, halfLength, halfFrontHeight, -halfFrontWidth,
+           -halfLength, halfRearHeight, halfRearWidth, -halfLength, -halfRearHeight, halfRearWidth, -halfLength, -halfRearHeight, -halfRearWidth, -halfLength, halfRearHeight, -halfRearWidth
+        ]), 3));
+        geom.setIndex(new THREE.BufferAttribute(new Uint16Array([
+            0, 1, 2, 0, 2, 3, 4, 6, 5, 4, 7, 6, 3, 7, 4, 3, 4, 0, 1, 5, 6, 1, 6, 2, 0, 4, 5, 0, 5, 1, 3, 2, 6, 3, 6, 7
+        ]), 1));
+        geom.computeVertexNormals();
+        fuselageGroup.add(new THREE.Mesh(geom, fuselageMaterial));
 
-        newFuselageGeom = new THREE.BufferGeometry();
-        newFuselageGeom.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
-        newFuselageGeom.setIndex(new THREE.BufferAttribute(indices, 1));
-        newFuselageGeom.computeVertexNormals();
-    } else if (fuselageShape === 'cylindrical') {
-        const fuselageDiameter = getValidNumber(fuselageDiameterInput) * conversionFactor;
-        const radiusFront = fuselageDiameter / 2;
-        const radiusRear = (fuselageDiameter / 2) * fuselageTaperRatio; // تطبيق الاستدقاق على الجزء الخلفي
-        // ملاحظة: في CylinderGeometry، يكون radiusTop عند +y و radiusBottom عند -y.
-        // بعد التدوير 90 درجة حول Z، يصبح +y الأصلي هو -x (الخلف) و -y يصبح +x (الأمام).
-        newFuselageGeom = new THREE.CylinderGeometry(radiusRear, radiusFront, fuselageLength, 32);
-        newFuselageGeom.rotateZ(Math.PI / 2); // تدوير الأسطوانة لتكون أفقية
-    } else if (fuselageShape === 'teardrop') {
-        const frontDiameter = getValidNumber(fuselageFrontDiameterInput) * conversionFactor;
-        const rearDiameter = getValidNumber(fuselageRearDiameterInput) * conversionFactor;
-        // تم تبديل frontDiameter و rearDiameter هنا لتصحيح الاتجاه البصري
-        newFuselageGeom = new THREE.CylinderGeometry(rearDiameter / 2, frontDiameter / 2, fuselageLength, 32);
-        newFuselageGeom.rotateZ(Math.PI / 2); // تدوير الأسطوانة لتكون أفقية
     } else {
-        // شكل افتراضي في حالة وجود خطأ
-        newFuselageGeom = new THREE.BoxGeometry(fuselageLength, 0.15, 0.15);
-    }
+        // For Cylindrical and Teardrop shapes
+        const noseShape = fuselageNoseShapeInput.value;
+        const tailShape = fuselageTailShapeInput.value;
 
-    // استبدال الهندسة والمادة في الكائن الحالي بدلاً من إنشاء كائن جديد
-    fuselage.geometry.dispose(); // التخلص من الهندسة القديمة
-    fuselage.geometry = newFuselageGeom;
-    planeGroup.add(fuselage); // إعادة إضافة الجسم المحدث
+        let bodyLength = fuselageLength;
+        let bodyOffset = 0;
+        let radiusFront, radiusRear;
+
+        if (fuselageShape === 'cylindrical') {
+            const fuselageDiameter = getValidNumber(fuselageDiameterInput) * conversionFactor;
+            radiusFront = fuselageDiameter / 2;
+            radiusRear = radiusFront * fuselageTaperRatio;
+        } else { // teardrop
+            radiusFront = (getValidNumber(fuselageFrontDiameterInput) * conversionFactor) / 2;
+            radiusRear = (getValidNumber(fuselageRearDiameterInput) * conversionFactor) / 2;
+        }
+
+        // --- Nose Cone ---
+        if (noseShape !== 'flat') {
+            const noseLength = radiusFront * 1.5; // طول المقدمة يعتمد على قطرها
+            bodyLength -= noseLength;
+            bodyOffset -= noseLength / 2;
+
+            let noseGeom;
+            if (noseShape === 'rounded') {
+                noseGeom = new THREE.SphereGeometry(radiusFront, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+            } else { // ogival
+                noseGeom = createOgiveGeometry(radiusFront, noseLength, 32);
+            }
+            noseGeom.rotateZ(-Math.PI / 2);
+            const noseCone = new THREE.Mesh(noseGeom, fuselageMaterial);
+            noseCone.position.x = (fuselageLength / 2) - (noseLength / 2);
+            fuselageGroup.add(noseCone);
+        }
+
+        // --- Tail Cone ---
+        if (tailShape !== 'flat') {
+            const tailLength = radiusRear * 1.5;
+            bodyLength -= tailLength;
+            bodyOffset += tailLength / 2;
+
+            const tailGeom = new THREE.SphereGeometry(radiusRear, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+            tailGeom.rotateZ(Math.PI / 2);
+            const tailCone = new THREE.Mesh(tailGeom, fuselageMaterial);
+            tailCone.position.x = (-fuselageLength / 2) + (tailLength / 2);
+            fuselageGroup.add(tailCone);
+        }
+
+        // --- Main Body ---
+        if (bodyLength > 0) {
+            const bodyGeom = new THREE.CylinderGeometry(radiusRear, radiusFront, bodyLength, 32);
+            bodyGeom.rotateZ(Math.PI / 2);
+            const mainBody = new THREE.Mesh(bodyGeom, fuselageMaterial);
+            mainBody.position.x = bodyOffset;
+            fuselageGroup.add(mainBody);
+        }
+    }
 
     // --- إنشاء وتحديد موضع المحرك والمروحة ---
     // 1. إزالة النماذج القديمة
@@ -1446,7 +1497,7 @@ function updatePlaneModel() {
         // Y: On top of the fuselage.
         // Z: Centered.
         const cockpitX = (fuselageLength / 2) - cockpitPosition - (cockpitLength / 2);
-        const cockpitY = currentFuselageHeight / 2;
+        const cockpitY = fuselageGroup.position.y + currentFuselageHeight / 2;
         cockpitMesh.position.set(cockpitX, cockpitY, 0);
 
         cockpitGroup.add(cockpitMesh);
@@ -1885,6 +1936,8 @@ hasLandingGearInput.addEventListener('change', updateAll);
 fuselageShapeInput.addEventListener('change', updateAll);
 hasRudderInput.addEventListener('change', updateAll);
 engineTypeInput.addEventListener('change', updateEngineUI);
+fuselageNoseShapeInput.addEventListener('change', updateAll);
+fuselageTailShapeInput.addEventListener('change', updateAll);
 hasCockpitInput.addEventListener('change', updateAll);
 electricMotorTypeInput.addEventListener('change', updateEngineUI);
 icEngineTypeInput.addEventListener('change', updateEngineUI);
