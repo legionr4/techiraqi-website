@@ -595,6 +595,22 @@ footer {
         margin-top: 10px;
     }
 
+/* --- Engine Info Display --- */
+.info-group {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 8px;
+    background-color: var(--light-bg);
+    border-radius: 4px;
+    margin-bottom: 8px;
+    font-size: 0.9em;
+}
+
+.info-group span:last-child {
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
 /* ==========================================================================
    5. Page: Contact
    ========================================================================== */

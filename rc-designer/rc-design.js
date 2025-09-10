@@ -32,6 +32,11 @@ const wingMaterial = new THREE.MeshStandardMaterial({ color: 0xcccccc, side: THR
 const tailMaterial = new THREE.MeshStandardMaterial({ color: 0xdddddd, side: THREE.DoubleSide });
 const aileronMaterial = new THREE.MeshStandardMaterial({ color: 0xffc107, side: THREE.DoubleSide });
 
+// مجموعة المحرك
+const engineGroup = new THREE.Group();
+planeGroup.add(engineGroup);
+const engineMaterial = new THREE.MeshStandardMaterial({ color: 0x666666 }); // A metallic grey
+
 // مجموعة عجلات الهبوط
 const landingGearGroup = new THREE.Group();
 planeGroup.add(landingGearGroup);
@@ -141,6 +146,16 @@ const MATERIAL_DENSITIES = {
     'wood': 700
 };
 
+const ENGINE_SPECS = {
+    electric: {
+        'dc_180': { name: 'DC 180', weight: 50, size: '20x15x30mm', torque: 0.02, rpm: 12000, modelSize: { type: 'box', x: 0.03, y: 0.02, z: 0.015 } },
+        'brushless_1000kv': { name: 'Brushless 1000KV', weight: 70, size: '28x26mm', torque: 0.08, rpm: 11000, modelSize: { type: 'cylinder', length: 0.026, diameter: 0.028 } }
+    },
+    ic: {
+        'glow_15': { name: '.15 Glow Engine', weight: 200, displacement: '2.5cc', torque: 0.3, rpm: 15000, modelSize: { type: 'cylinder', length: 0.06, diameter: 0.05 } },
+        'glow_46': { name: '.46 Glow Engine', weight: 450, displacement: '7.5cc', torque: 1.2, rpm: 12000, modelSize: { type: 'cylinder', length: 0.08, diameter: 0.07 } }
+    }
+};
 // تخزين عناصر الإدخال والنتائج لتحسين الأداء
 const unitSelector = document.getElementById('unit-selector');
 const showAxesCheckbox = document.getElementById('show-axes-checkbox');
@@ -213,6 +228,7 @@ const fuselageTearRearDiaGroup = document.getElementById('fuselage-teardrop-rear
 const wingPropDistanceInput = document.getElementById('wing-prop-distance');
 const wingTailDistanceInput = document.getElementById('wing-tail-distance');
 const fuselageMaterialInput = document.getElementById('fuselage-material');
+
 const structureMaterialInput = document.getElementById('structure-material');
 const propDiameterInput = document.getElementById('prop-diameter');
 const propBladesInput = document.getElementById('prop-blades');
@@ -264,6 +280,21 @@ const mainGearPositionInput = document.getElementById('main-gear-position');
 const hasRetractableGearInput = document.getElementById('has-retractable-gear');
 const mainGearWidthInput = document.getElementById('main-gear-width');
 
+// Engine Inputs
+const engineTypeInput = document.getElementById('engine-type');
+const electricEngineOptions = document.getElementById('electric-engine-options');
+const icEngineOptions = document.getElementById('ic-engine-options');
+const electricMotorTypeInput = document.getElementById('electric-motor-type');
+const icEngineTypeInput = document.getElementById('ic-engine-type');
+
+// Engine Info Displays
+const electricMotorSizeEl = document.getElementById('electric-motor-size');
+const electricMotorWeightEl = document.getElementById('electric-motor-weight');
+const electricMotorTorqueEl = document.getElementById('electric-motor-torque');
+const icEngineDisplacementEl = document.getElementById('ic-engine-displacement');
+const icEngineWeightEl = document.getElementById('ic-engine-weight');
+const icEngineTorqueEl = document.getElementById('ic-engine-torque');
+
 
 
 const liftResultEl = document.getElementById('lift-result');
@@ -278,6 +309,7 @@ const fuselageWeightResultEl = document.getElementById('fuselage-weight-result')
 const fuselageAreaResultEl = document.getElementById('fuselage-area-result');
 const wheelWeightResultEl = document.getElementById('wheel-weight-result');
 const strutWeightResultEl = document.getElementById('strut-weight-result');
+const engineWeightResultEl = document.getElementById('engine-weight-result');
 const landingGearWeightResultEl = document.getElementById('landing-gear-weight-result');
 const totalWeightResultEl = document.getElementById('total-weight-result');
 const propWeightResultEl = document.getElementById('prop-weight-result');
@@ -512,6 +544,35 @@ function updatePlaneParameters() {
     planeParams.cl = cl;
 }
 
+function updateEngineUI() {
+    const engineType = engineTypeInput.value;
+
+    // Show/hide option blocks
+    electricEngineOptions.style.display = engineType === 'electric' ? 'block' : 'none';
+    icEngineOptions.style.display = engineType === 'ic' ? 'block' : 'none';
+
+    let selectedEngineSpec;
+    let selectedRpm;
+
+    if (engineType === 'electric') {
+        const motorType = electricMotorTypeInput.value;
+        selectedEngineSpec = ENGINE_SPECS.electric[motorType];
+        electricMotorSizeEl.textContent = selectedEngineSpec.size;
+        electricMotorWeightEl.textContent = selectedEngineSpec.weight;
+        electricMotorTorqueEl.textContent = selectedEngineSpec.torque;
+        selectedRpm = selectedEngineSpec.rpm;
+    } else { // ic
+        const motorType = icEngineTypeInput.value;
+        selectedEngineSpec = ENGINE_SPECS.ic[motorType];
+        icEngineDisplacementEl.textContent = selectedEngineSpec.displacement;
+        icEngineWeightEl.textContent = selectedEngineSpec.weight;
+        icEngineTorqueEl.textContent = selectedEngineSpec.torque;
+        selectedRpm = selectedEngineSpec.rpm;
+    }
+
+    propRpmInput.value = selectedRpm;
+}
+
 function updatePlaneModel() {
     const conversionFactor = UNIT_CONVERSIONS[unitSelector.value];
 
@@ -627,6 +688,9 @@ function updatePlaneModel() {
         fuselageTearFrontDiaGroup.style.display = 'flex';
         fuselageTearRearDiaGroup.style.display = 'flex';
     }
+
+    // Update engine UI elements
+    updateEngineUI();
 
     // Landing Gear Controls visibility
     landingGearControls.style.display = hasLandingGearInput.checked ? 'block' : 'none';
@@ -1060,8 +1124,39 @@ function updatePlaneModel() {
 
 
     // تحديث المواقع
-    propellerGroup.position.x = fuselageLength / 2 + 0.05;
+    // --- Engine ---
+    while(engineGroup.children.length > 0) {
+        engineGroup.remove(engineGroup.children[0]);
+    }
 
+    const engineType = engineTypeInput.value;
+    let selectedEngineSpec;
+    let engineModelGeom;
+
+    if (engineType === 'electric') {
+        const motorType = electricMotorTypeInput.value;
+        selectedEngineSpec = ENGINE_SPECS.electric[motorType];
+    } else { // ic
+        const motorType = icEngineTypeInput.value;
+        selectedEngineSpec = ENGINE_SPECS.ic[motorType];
+    }
+
+    if (selectedEngineSpec) {
+        const modelSize = selectedEngineSpec.modelSize;
+        if (modelSize.type === 'box') {
+            engineModelGeom = new THREE.BoxGeometry(modelSize.x, modelSize.y, modelSize.z);
+        } else { // cylinder
+            engineModelGeom = new THREE.CylinderGeometry(modelSize.diameter / 2, modelSize.diameter / 2, modelSize.length, 16);
+            engineModelGeom.rotateZ(Math.PI / 2); // Align with fuselage
+        }
+        const engineModel = new THREE.Mesh(engineModelGeom, engineMaterial);
+        const engineLength = modelSize.type === 'box' ? modelSize.x : modelSize.length;
+        engineModel.position.x = fuselageLength / 2 + engineLength / 2;
+        engineGroup.add(engineModel);
+        propellerGroup.position.x = fuselageLength / 2 + engineLength + 0.01; // Small gap
+    } else {
+        propellerGroup.position.x = fuselageLength / 2 + 0.05;
+    }
     // تحديث المروحة
     while(propellerGroup.children.length) propellerGroup.remove(propellerGroup.children[0]);
 
@@ -1318,6 +1413,17 @@ function calculateAerodynamics() {
     const propVolume = (singleBladeVolume * propBlades) + spinnerVolume;
     const propMaterialDensity = MATERIAL_DENSITIES[propMaterial];
     const propWeightKg = propVolume * propMaterialDensity;
+
+    // Engine Weight Calculation
+    const engineType = engineTypeInput.value;
+    let engineWeightKg = 0;
+    if (engineType === 'electric') {
+        const motorType = electricMotorTypeInput.value;
+        engineWeightKg = ENGINE_SPECS.electric[motorType].weight / 1000;
+    } else { // ic
+        const motorType = icEngineTypeInput.value;
+        engineWeightKg = ENGINE_SPECS.ic[motorType].weight / 1000;
+    }
     
     let landingGearWeightKg = 0;
     let singleWheelWeightKg = 0;
@@ -1350,7 +1456,7 @@ function calculateAerodynamics() {
     }
 
     const planeComponentsWeightKg = planeComponentsWeightGrams / 1000;
-    const totalWeightKg = wingWeightKg + tailWeightKg + fuselageWeightKg + propWeightKg + landingGearWeightKg + planeComponentsWeightKg;
+    const totalWeightKg = wingWeightKg + tailWeightKg + fuselageWeightKg + propWeightKg + landingGearWeightKg + engineWeightKg + planeComponentsWeightKg;
 
     // 5. نسبة الدفع إلى الوزن (Thrust-to-Weight Ratio)
     const weightInNewtons = totalWeightKg * 9.81;
@@ -1376,6 +1482,7 @@ function calculateAerodynamics() {
         strutWeightResultEl.parentElement.style.display = 'none';
     }
     landingGearWeightResultEl.textContent = (landingGearWeightKg * 1000).toFixed(0);
+    engineWeightResultEl.textContent = (engineWeightKg * 1000).toFixed(0);
     propWeightResultEl.textContent = (propWeightKg * 1000).toFixed(0);
     totalWeightResultEl.textContent = (totalWeightKg * 1000).toFixed(0);
     twrResultEl.textContent = twr > 0 ? twr.toFixed(2) : '0.00';
@@ -1577,6 +1684,9 @@ hasRetractableGearInput.addEventListener('change', updateAll);
 hasLandingGearInput.addEventListener('change', updateAll);
 fuselageShapeInput.addEventListener('change', updateAll);
 hasRudderInput.addEventListener('change', updateAll);
+engineTypeInput.addEventListener('change', updateAll);
+electricMotorTypeInput.addEventListener('change', updateAll);
+icEngineTypeInput.addEventListener('change', updateAll);
 
 
 

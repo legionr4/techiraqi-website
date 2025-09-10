@@ -424,6 +424,63 @@
                 </fieldset>
 
                 <fieldset>
+                    <legend>المحرك (Engine)</legend>
+                    <div class="input-group">
+                        <label for="engine-type">نوع المحرك</label>
+                        <select id="engine-type">
+                            <option value="electric" selected>كهربائي (Electric)</option>
+                            <option value="ic">ميكانيكي (IC)</option>
+                        </select>
+                    </div>
+
+                    <!-- Electric Engine Options -->
+                    <div id="electric-engine-options">
+                        <div class="input-group">
+                            <label for="electric-motor-type">نوع المحرك الكهربائي</label>
+                            <select id="electric-motor-type">
+                                <option value="dc_180" selected>DC 180</option>
+                                <option value="brushless_1000kv">Brushless 1000KV</option>
+                            </select>
+                        </div>
+                        <div class="info-group">
+                            <span>الحجم:</span>
+                            <span id="electric-motor-size">--</span>
+                        </div>
+                        <div class="info-group">
+                            <span>الوزن (جرام):</span>
+                            <span id="electric-motor-weight">--</span>
+                        </div>
+                        <div class="info-group">
+                            <span>العزم (N.m):</span>
+                            <span id="electric-motor-torque">--</span>
+                        </div>
+                    </div>
+
+                    <!-- IC Engine Options -->
+                    <div id="ic-engine-options" style="display:none;">
+                        <div class="input-group">
+                            <label for="ic-engine-type">نوع المحرك الميكانيكي</label>
+                            <select id="ic-engine-type">
+                                <option value="glow_15" selected>.15 Glow Engine</option>
+                                <option value="glow_46">.46 Glow Engine</option>
+                            </select>
+                        </div>
+                         <div class="info-group">
+                            <span>السعة (cc):</span>
+                            <span id="ic-engine-displacement">--</span>
+                        </div>
+                        <div class="info-group">
+                            <span>الوزن (جرام):</span>
+                            <span id="ic-engine-weight">--</span>
+                        </div>
+                        <div class="info-group">
+                            <span>العزم (N.m):</span>
+                            <span id="ic-engine-torque">--</span>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <fieldset>
                     <legend>المروحة</legend>
                     <div class="input-group">
                         <label for="prop-diameter">قطر المروحة (بوصة)</label>
@@ -640,6 +697,10 @@
                 <div class="result-item">
                     <p>وزن المروحة التقديري (جرام):</p>
                     <span id="prop-weight-result">0</span>
+                </div>
+                <div class="result-item">
+                    <p>وزن المحرك (جرام):</p>
+                    <span id="engine-weight-result">0</span>
                 </div>
                 <div class="result-item">
                     <p>وزن العجلة الواحدة (جرام):</p>
