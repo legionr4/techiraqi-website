@@ -447,6 +447,8 @@ const engineWeightResultEl = document.getElementById('engine-weight-result');
 const landingGearWeightResultEl = document.getElementById('landing-gear-weight-result');
 const totalWeightResultEl = document.getElementById('total-weight-result');
 const propWeightResultEl = document.getElementById('prop-weight-result');
+const propPowerResultEl = document.getElementById('prop-power-result');
+const propTorqueResultEl = document.getElementById('prop-torque-result');
 const cgPositionResultEl = document.getElementById('cg-position-result');
 const acPositionResultEl = document.getElementById('ac-position-result');
 const staticMarginResultEl = document.getElementById('static-margin-result');
@@ -1254,6 +1256,9 @@ function updatePlaneModel() {
         fuselageGroup.remove(fuselageGroup.children[0]);
     }
 
+    // إعادة إضافة علامة مركز الثقل بعد مسح المجموعة لضمان عدم حذفها
+    fuselageGroup.add(cgOnFuselageSphere);
+
     if (fuselageShape === 'rectangular') {
         const rearWidth = currentFuselageWidth * fuselageTaperRatio;
         const rearHeight = currentFuselageHeight * fuselageTaperRatio;
@@ -1662,7 +1667,7 @@ function calculateAerodynamics() {
     const propBlades = parseInt(getValidNumber(propBladesInput));
     const propMaterial = propMaterialInput.value;
     const propPitch = getValidNumber(propPitchInput); // inches
-    const propRpm = getValidNumber(propRpmInput);
+    const propRpm = getValidNumber(propRpmInput); // RPM
     const structureMaterial = structureMaterialInput.value;
     const fuselageMaterialValue = fuselageMaterialInput.value;
     const fuselageShape = fuselageShapeInput.value;
@@ -1714,14 +1719,33 @@ function calculateAerodynamics() {
     const cdi = Math.pow(cl, 2) / (Math.PI * aspectRatio * oswaldEfficiency);
     const cdp = 0.025; // معامل سحب طفيلي مفترض (لجسم الطائرة والذيل وغيرها)
     const cd = cdp + cdi;
-    const drag = 0.5 * cd * airDensity * Math.pow(airSpeed, 2) * mainWingArea;
-
-    // 3. قوة الدفع (Thrust)
-    // صيغة تجريبية مبسطة جداً للدفع الساكن (Static Thrust)
-    // لا تعكس الواقع بدقة ولكن تعطي فكرة عن علاقة المتغيرات
+    const aeroDrag = 0.5 * cd * airDensity * Math.pow(airSpeed, 2) * mainWingArea;
+    
+    // 3. قوة الدفع (Thrust) وأداء المروحة
+    const propDiameterMeters = propDiameter; // تم تحويله بالفعل
+    const propPitchMeters = propPitch * 0.0254;
     const n_rps = propRpm / 60; // revolutions per second
-    const thrust = 4.392399 * Math.pow(10, -8) * propRpm * Math.pow(propDiameter / 0.0254, 3.5) / Math.sqrt(propPitch) * (4.23333 * Math.pow(10, -4) * propRpm * propPitch - airSpeed * 0.5144);
 
+    // سرعة خطوة المروحة (السرعة النظرية للهواء)
+    const V_pitch = propPitchMeters * n_rps;
+
+    // حساب قوة الدفع باستخدام صيغة تعتمد على نظرية الزخم (Glauert's formula)
+    // T = (PI/8) * rho * D^2 * (V_pitch^2 - V_pitch * V_air)
+    let thrust = (Math.PI / 8) * airDensity * Math.pow(propDiameterMeters, 2) * (V_pitch * (V_pitch - airSpeed));
+    if (thrust < 0) {
+        thrust = 0; // لا يمكن أن يكون الدفع سالبًا، يصبح فرملة
+    }
+
+    // تقدير الطاقة والعزم المطلوبين للمروحة
+    // P = k * rho * n^3 * D^5, where k is a prop constant
+    const pitch_diameter_ratio = propDiameterMeters > 0 ? propPitchMeters / propDiameterMeters : 0;
+    const prop_constant_k = 0.5 + (pitch_diameter_ratio * 1.5); // صيغة تجريبية لمعامل المروحة k
+    const power_consumed_watts = prop_constant_k * airDensity * Math.pow(n_rps, 3) * Math.pow(propDiameterMeters, 5);
+    const torque_required_Nm = n_rps > 0 ? power_consumed_watts / (2 * Math.PI * n_rps) : 0;
+
+    // حساب سحب المروحة وإضافته إلى السحب الكلي
+    const prop_drag = airSpeed > 1 ? power_consumed_watts / airSpeed : 0; // تجنب القسمة على صفر
+    const totalDrag = aeroDrag + prop_drag;
     // 4. حساب الوزن (Weight Calculation)
     const wingVolume = mainWingArea * wingThickness; // Volume in m³
     const structureMaterialDensity = MATERIAL_DENSITIES[structureMaterial]; // Density in kg/m³
@@ -2073,7 +2097,7 @@ function calculateAerodynamics() {
 
     // عرض النتائج
     liftResultEl.textContent = lift > 0 ? lift.toFixed(2) : '0.00';
-    dragResultEl.textContent = drag > 0 ? drag.toFixed(2) : '0.00';
+    dragResultEl.textContent = totalDrag > 0 ? totalDrag.toFixed(2) : '0.00';
     thrustResultEl.textContent = thrust > 0 ? thrust.toFixed(2) : '0.00';
     wingAreaResultEl.textContent = mainWingArea > 0 ? `${mainWingArea.toFixed(2)}` : '0.00';
     wingWeightResultEl.textContent = (wingWeightKg * 1000).toFixed(0);
@@ -2097,6 +2121,8 @@ function calculateAerodynamics() {
     landingGearWeightResultEl.textContent = (landingGearWeightKg * 1000).toFixed(0);
     engineWeightResultEl.textContent = (engineWeightKg * 1000).toFixed(0);
     propWeightResultEl.textContent = (propWeightKg * 1000).toFixed(0);
+    propPowerResultEl.textContent = power_consumed_watts.toFixed(1);
+    propTorqueResultEl.textContent = torque_required_Nm.toFixed(3);
     totalWeightResultEl.textContent = (totalWeightKg * 1000).toFixed(0);
     twrResultEl.textContent = twr > 0 ? twr.toFixed(2) : '0.00';
 
