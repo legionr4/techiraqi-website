@@ -1602,12 +1602,12 @@ function updatePlaneModel() {
             const trailingEdgeX = wingPositionX + sweepAtPylon - chordAtPylon / 2;
 
             // حساب الموضع العمودي للمحرك (أعلى/أسفل) مع الأخذ في الاعتبار ارتفاع الحامل
-            const wingCenterY = wingGroup.position.y;
-            let engineYOffset;
+            let engineY_relative;
             if (wingEngineVerticalPos === 'above') {
-                engineYOffset = wingCenterY + (wingThickness / 2) + pylonHeightMeters + (engineDiameterMeters / 2);
+                // الموضع النسبي من مركز الجناح
+                engineY_relative = (wingThickness / 2) + pylonHeightMeters + (engineDiameterMeters / 2);
             } else { // 'below'
-                engineYOffset = wingCenterY - (wingThickness / 2) - pylonHeightMeters - (engineDiameterMeters / 2);
+                engineY_relative = -(wingThickness / 2) - pylonHeightMeters - (engineDiameterMeters / 2);
             }
 
             // حساب الموضع الأفقي (أمامي/خلفي) وإعداد المروحة
@@ -1625,19 +1625,19 @@ function updatePlaneModel() {
                 const pylonMaterial = new THREE.MeshStandardMaterial({ color: pylonColor, side: THREE.DoubleSide });
                 
                 // حساب موضع الحامل
-                let pylonY;
+                let pylonY_relative;
                 
                 if (wingEngineVerticalPos === 'above') {
-                    pylonY = wingCenterY + (wingThickness / 2) + (pylonHeightMeters / 2);
+                    pylonY_relative = (wingThickness / 2) + (pylonHeightMeters / 2);
                 } else { // below
-                    pylonY = wingCenterY - (wingThickness / 2) - (pylonHeightMeters / 2);
+                    pylonY_relative = -(wingThickness / 2) - (pylonHeightMeters / 2);
                 }
 
                 // تصحيح: حساب موضع الحامل بالنسبة لمجموعة الجناح وليس للمشهد العام
                 const pylonX_relative = ((wingEngineForeAft === 'leading') ? (leadingEdgeX + pylonForeAftLength / 2) : (trailingEdgeX - pylonForeAftLength / 2)) - wingGroup.position.x;
 
                 const rightPylon = new THREE.Mesh(pylonGeom, pylonMaterial);
-                rightPylon.position.set(pylonX_relative, pylonY, posOnWingZ);
+                rightPylon.position.set(pylonX_relative, pylonY_relative, posOnWingZ);
                 const leftPylon = rightPylon.clone();
                 leftPylon.position.z = -posOnWingZ;
                 wingEnginesGroup.add(rightPylon, leftPylon);
@@ -1664,11 +1664,11 @@ function updatePlaneModel() {
             const leftProp = propModel.clone();
 
             // تصحيح: تحديد الموضع بالنسبة لمجموعة الجناح (wingGroup)
-            rightEngine.position.set(engineCenterX - wingGroup.position.x, engineYOffset, posOnWingZ);
-            leftEngine.position.set(engineCenterX - wingGroup.position.x, engineYOffset, -posOnWingZ);
+            rightEngine.position.set(engineCenterX - wingGroup.position.x, engineY_relative, posOnWingZ);
+            leftEngine.position.set(engineCenterX - wingGroup.position.x, engineY_relative, -posOnWingZ);
 
-            rightProp.position.set(propCenterX - wingGroup.position.x, engineYOffset, posOnWingZ);
-            leftProp.position.set(propCenterX - wingGroup.position.x, engineYOffset, -posOnWingZ);
+            rightProp.position.set(propCenterX - wingGroup.position.x, engineY_relative, posOnWingZ);
+            leftProp.position.set(propCenterX - wingGroup.position.x, engineY_relative, -posOnWingZ);
 
             // Apply thrust angles to each component
             rightEngine.rotation.set(0, engineSideThrustAngle, engineThrustAngle);
