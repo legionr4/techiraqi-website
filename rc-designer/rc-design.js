@@ -3095,18 +3095,11 @@ window.addEventListener('click', onMouseClick, false);
 function animate() {
     requestAnimationFrame(animate);
 
-    const deltaTime = clock.getDelta(); // الوقت المنقضي منذ الإطار الأخير (بالثواني)
-
-    // Check for NaN in planeGroup.rotation and reset if found
-    if (isNaN(planeGroup.rotation.x) || isNaN(planeGroup.rotation.y) || isNaN(planeGroup.rotation.z)) {
-        console.warn("Detected NaN in planeGroup rotation. Resetting rotation.");
-        planeGroup.rotation.set(0, 0, 0);
-        lastVibrationRotation.set(0, 0, 0); // Also reset the vibration tracking
-    }
-
-    // إعادة تعيين موضع الطائرة فقط، للحفاظ على الدوران التراكمي للمحاكاة
+    // إعادة تعيين موضع ودوران الطائرة في كل إطار لمنع تراكم الأخطاء
     planeGroup.position.set(0, 0, 0);
+    planeGroup.rotation.set(0, 0, 0);
 
+    const deltaTime = clock.getDelta(); // الوقت المنقضي منذ الإطار الأخير (بالثواني)
     if (isPropSpinning) {
         
         // سرعة الهواء الرئيسية يتم حسابها الآن ديناميكيًا من المروحة
@@ -3152,44 +3145,30 @@ function animate() {
         }
 
         // تطبيق شدة الاهتزاز التي يحددها المستخدم
-        vibrationMagnitude *= planeParams.userVibrationIntensity;
+        vibrationMagnitude *= getValidNumber(vibrationIntensityInput);
 
-        // اهتزاز الموضع (يتم إعادة تعيينه كل إطار لذا نستخدم `+=`)
+        // تطبيق اهتزاز الموضع والدوران
         const maxPosOffset = 0.002;
+        const maxRotOffset = 0.005;
+
         planeGroup.position.x += (Math.random() * 2 - 1) * maxPosOffset * vibrationMagnitude;
         planeGroup.position.y += (Math.random() * 2 - 1) * maxPosOffset * vibrationMagnitude;
         planeGroup.position.z += (Math.random() * 2 - 1) * maxPosOffset * vibrationMagnitude;
 
-        // --- تحديث الدوران (التحكم والاهتزاز) ---
-        // 1. إزالة اهتزاز الدوران من الإطار السابق للعودة إلى الدوران "النظيف" الناتج عن التحكم
-        planeGroup.rotation.x -= lastVibrationRotation.x;
-        planeGroup.rotation.y -= lastVibrationRotation.y;
-        planeGroup.rotation.z -= lastVibrationRotation.z;
+        planeGroup.rotation.x += (Math.random() * 2 - 1) * maxRotOffset * vibrationMagnitude;
+        planeGroup.rotation.y += (Math.random() * 2 - 1) * maxRotOffset * vibrationMagnitude;
+        planeGroup.rotation.z += (Math.random() * 2 - 1) * maxRotOffset * vibrationMagnitude;
 
-        // 2. تطبيق الدوران التراكمي الجديد من أسطح التحكم لهذا الإطار
+        // --- محاكاة توجيه الطائرة بناءً على أسطح التحكم ---
         const rightAileronRot = scene.getObjectByName('rightAileron')?.parent.rotation.z || 0;
         const elevatorRot = scene.getObjectByName('rightElevator')?.parent.rotation.z || 0;
         const rudderRot = scene.getObjectByName('rudder')?.parent.rotation.y || 0;
         const maneuverFactor = 0.5; // معامل لتحديد مدى قوة استجابة الطائرة
-        const maneuverSpeed = maneuverFactor * deltaTime; // جعل الحركة معتمدة على الوقت وليس على معدل الإطارات
 
-        planeGroup.rotation.z -= elevatorRot * maneuverSpeed; // الانحدار (Pitch)
-        planeGroup.rotation.x += rightAileronRot * maneuverSpeed; // الدوران (Roll)
-        planeGroup.rotation.y += rudderRot * maneuverSpeed; // الانعراج (Yaw)
+        planeGroup.rotation.z -= elevatorRot * maneuverFactor; // الانحدار (Pitch)
+        planeGroup.rotation.x += rightAileronRot * maneuverFactor; // الدوران (Roll)
+        planeGroup.rotation.y += rudderRot * maneuverFactor; // الانعراج (Yaw)
 
-        // 3. حساب وتطبيق اهتزاز الدوران الجديد لهذا الإطار
-        const maxRotOffset = 0.005;
-        const currentVibration = new THREE.Euler(
-            (Math.random() * 2 - 1) * maxRotOffset * vibrationMagnitude,
-            (Math.random() * 2 - 1) * maxRotOffset * vibrationMagnitude,
-            (Math.random() * 2 - 1) * maxRotOffset * vibrationMagnitude
-        );
-        planeGroup.rotation.x += currentVibration.x;
-        planeGroup.rotation.y += currentVibration.y;
-        planeGroup.rotation.z += currentVibration.z;
-
-        // 4. تخزين اهتزاز الدوران الحالي لإزالته في الإطار التالي
-        lastVibrationRotation.copy(currentVibration);
 
         // --- كل تحديثات الجزيئات تحدث فقط عند تشغيل المروحة ---
         // --- تحديث جزيئات تدفق هواء المروحة ---
@@ -3438,9 +3417,6 @@ function animate() {
             vortexParticleSystem.geometry.attributes.scale.needsUpdate = true;
             vortexParticleSystem.geometry.attributes.spiralData.needsUpdate = true;
         }
-    }
-    else {
-        lastVibrationRotation.set(0, 0, 0);
     }
 
     controls.update(); // ضروري إذا تم تفعيل enableDamping
