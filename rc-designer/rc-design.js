@@ -2967,8 +2967,12 @@ function animate() {
 
     if (isPropSpinning) {
         
+        // --- قراءة قيم المحرك مباشرة من المدخلات للتحديث الفوري ---
+        const currentRpm = getValidNumber(propRpmInput);
+        const currentPitch = getValidNumber(propPitchInput) * 0.0254; // to meters
+
         // سرعة الهواء الرئيسية يتم حسابها الآن ديناميكيًا من المروحة
-        const mainAirSpeed = (planeParams.propRpm / 60) * planeParams.propPitch;
+        const mainAirSpeed = (currentRpm / 60) * currentPitch;
 
         // --- قراءة قيم التحكم في الجسيمات مباشرة من المدخلات للتحديث الفوري ---
         const userParticleDensity = getValidNumber(particleDensityInput);
@@ -2980,7 +2984,7 @@ function animate() {
         const sizeFactor = userParticleSize * 2;       // مضاعفة لجعل 50% هو الافتراضي
 
         const enginePlacement = enginePlacementInput.value;
-        const rotationPerSecond = (planeParams.propRpm / 60) * Math.PI * 2;
+        const rotationPerSecond = (currentRpm / 60) * Math.PI * 2;
 
         // --- دوران المروحة ---
         if (enginePlacement === 'wing') { // This logic was duplicated, removing the duplicate
@@ -3009,8 +3013,8 @@ function animate() {
         const maxVibrationRpm = 12000; // زيادة النطاق لتدرج أفضل
 
         let vibrationMagnitude = 0;
-        if (planeParams.propRpm > minVibrationRpm) {
-            vibrationMagnitude = (planeParams.propRpm - minVibrationRpm) / (maxVibrationRpm - minVibrationRpm);
+        if (currentRpm > minVibrationRpm) {
+            vibrationMagnitude = (currentRpm - minVibrationRpm) / (maxVibrationRpm - minVibrationRpm);
             vibrationMagnitude = Math.min(1, Math.max(0, vibrationMagnitude)); // حصر القيمة بين 0 و 1
         }
 
@@ -3047,7 +3051,7 @@ function animate() {
         // --- تحديث جزيئات تدفق هواء المروحة ---
         if (propParticleSystem && propParticleSystem.visible) {
             const axialSpeed = mainAirSpeed * 1.5; // أسرع قليلاً للتأثير البصري
-            const rotationalSpeed = (planeParams.propRpm / 60) * Math.PI * 2 * 0.5; // عامل 0.5 لتقليل سرعة الدوران البصري
+            const rotationalSpeed = (currentRpm / 60) * Math.PI * 2 * 0.5; // عامل 0.5 لتقليل سرعة الدوران البصري
 
             const positions = propParticleSystem.geometry.attributes.position.array;
             const opacities = propParticleSystem.geometry.attributes.customOpacity.array;
