@@ -1086,14 +1086,14 @@ function updatePlaneModel() {
         rightWingtip.position.copy(tipCentroid);
 
         // Apply the cant angle (up/down rotation)
-        rightWingtip.rotation.z = -wingtipAngle; // Use Z-axis for up/down rotation in this context
+        rightWingtip.rotation.x = wingtipAngle;
 
         const leftWingtip = rightWingtip.clone();
-        leftWingtip.scale.z = -1; // Mirror the geometry for the left side
+        leftWingtip.rotation.x = wingtipAngle; // Corrected: Both should have the same angle
 
-        // إضافة أطراف الجناح إلى مجموعة الجناح الرئيسية بدلاً من إضافتها إلى شبكة الجناح نفسها
-        // هذا يمنع حدوث حلقة لا نهائية ويحل مشكلة الشاشة السوداء
-        wingGroup.add(rightWingtip, leftWingtip);
+        rightWing.add(rightWingtip);
+        leftWing.add(leftWingtip);
+
     }
 
     // Ailerons (Added after wingtips to ensure correct positioning relative to the final wing)
