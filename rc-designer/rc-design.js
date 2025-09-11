@@ -2526,11 +2526,16 @@ function setAirflowVisibility(isSpinning) {
 }
 
 function updateAll() {
-    updatePlaneModel();
-    calculateAerodynamics(); // استدعاء دالة الحسابات التي تقرأ الآن القيم مباشرة
-    updatePlaneParameters(); // تخزين المعلمات المؤقتة للرسوم المتحركة
-    if (liftChart && dragChart) {
-        updateCharts();
+    try {
+        updatePlaneModel();
+        calculateAerodynamics(); // استدعاء دالة الحسابات التي تقرأ الآن القيم مباشرة
+        updatePlaneParameters(); // تخزين المعلمات المؤقتة للرسوم المتحركة
+        if (liftChart && dragChart) {
+            updateCharts();
+        }
+    } catch (error) {
+        console.error("Error in updateAll:", error);
+        // Optionally, display an error message to the user or log it more prominently
     }
 }
 
@@ -2721,16 +2726,17 @@ function animate() {
 
     const deltaTime = clock.getDelta(); // الوقت المنقضي منذ الإطار الأخير (بالثواني)
 
+    // Check for NaN in planeGroup.rotation and reset if found
+    if (isNaN(planeGroup.rotation.x) || isNaN(planeGroup.rotation.y) || isNaN(planeGroup.rotation.z)) {
+        console.warn("Detected NaN in planeGroup rotation. Resetting rotation.");
+        planeGroup.rotation.set(0, 0, 0);
+        lastVibrationRotation.set(0, 0, 0); // Also reset the vibration tracking
+    }
+
     // إعادة تعيين موضع الطائرة فقط، للحفاظ على الدوران التراكمي للمحاكاة
     planeGroup.position.set(0, 0, 0);
 
     if (isPropSpinning) {
-        // All parameters are now read from the cached planeParams object for performance
-        const {
-            propRpm, propPitch, userParticleDensity, userParticleSize, userVibrationIntensity,
-            propDiameter, fuselageLength, cl, wingSpan, fuselageWidth, fuselageHeight, aileronLength,
-            aileronPosition, elevatorLength, rudderLength, vStabHeight
-        } = planeParams;
         
         // سرعة الهواء الرئيسية يتم حسابها الآن ديناميكيًا من المروحة
         const mainAirSpeed = (propRpm / 60) * propPitch;

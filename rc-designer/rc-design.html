@@ -670,8 +670,8 @@
                             <input type="number" id="battery-weight" value="180" step="10">
                         </div>
                         <div class="input-group">
-                            <label for="battery-position">الموضع من مقدمة الطائرة (<span class="unit-label">سم</span>)</label>
-                            <input type="number" id="battery-position" value="20" step="1" title="المسافة للخلف من مقدمة الطائرة.">
+                            <label for="battery-position">موضع البطارية من المقدمة (<span class="unit-label">سم</span>)</label>
+                            <input type="number" id="battery-position" value="20" step="1" min="0" title="المسافة للخلف من مقدمة الطائرة. تغيير هذا الموضع يؤثر بشكل كبير على مركز الجاذبية (CG).">
                         </div>
                     </div>
 
@@ -706,8 +706,8 @@
                             <input type="range" id="fuel-level" min="0" max="1" value="1" step="0.05">
                         </div>
                         <div class="input-group">
-                            <label for="fuel-tank-position">الموضع من مقدمة الطائرة (<span class="unit-label">سم</span>)</label>
-                            <input type="number" id="fuel-tank-position" value="15" step="1" title="المسافة للخلف من مقدمة الطائرة.">
+                            <label for="fuel-tank-position">موضع الخزان من المقدمة (<span class="unit-label">سم</span>)</label>
+                            <input type="number" id="fuel-tank-position" value="15" step="1" min="0" title="المسافة للخلف من مقدمة الطائرة. تغيير هذا الموضع يؤثر بشكل كبير على مركز الجاذبية (CG).">
                         </div>
                     </div>
                 </fieldset>
