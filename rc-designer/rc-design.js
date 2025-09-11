@@ -457,12 +457,6 @@ const otherAccessoriesWeightInput = document.getElementById('other-accessories-w
 // CG/AC Inputs
 const showCgAcCheckbox = document.getElementById('show-cg-ac');
 
-// Engine Thrust Angle Inputs
-const engineThrustAngleInput = document.getElementById('engine-thrust-angle');
-const engineSideThrustAngleInput = document.getElementById('engine-side-thrust-angle');
-const engineVerticalPositionInput = document.getElementById('engine-vertical-position');
-
-
 
 
 
@@ -495,10 +489,6 @@ const propTorqueResultEl = document.getElementById('prop-torque-result');
 const cgPositionResultEl = document.getElementById('cg-position-result');
 const acPositionResultEl = document.getElementById('ac-position-result');
 const staticMarginResultEl = document.getElementById('static-margin-result');
-
-const yawStabilityResultEl = document.getElementById('yaw-stability-result');
-const pitchingMomentResultEl = document.getElementById('pitching-moment-result');
-const yawingMomentResultEl = document.getElementById('yawing-moment-result');
 
 const planeParams = {}; // Object to hold cached plane parameters for the animation loop
 
@@ -746,9 +736,6 @@ function updatePlaneParameters() {
     planeParams.userParticleSize = getValidNumber(particleSizeInput);
     planeParams.userVibrationIntensity = getValidNumber(vibrationIntensityInput);
     planeParams.airflowTransparency = getValidNumber(airflowTransparencyInput);
-    // تخزين إعدادات المحرك التي يتم استخدامها في حلقة الرسوم المتحركة لتجنب الوصول إلى DOM
-    planeParams.enginePlacement = enginePlacementInput.value;
-    planeParams.wingPropRotation = wingPropRotationInput.value;
 
     // Cache fuselage dimensions
     const fuselageShape = fuselageShapeInput.value;
@@ -1756,20 +1743,6 @@ function updatePlaneModel() {
 }
 
 /**
- * Performs all aerodynamic and weight calculations and updates the results panel.
- * This function is designed to be fast and not modify the 3D model.
- */
-function updateCalculations() {
-    try {
-        calculateAerodynamics();
-        if (liftChart && dragChart && thrustChart) {
-            updateCharts();
-        }
-    } catch (error) {
-        console.error("Error during calculations update:", error);
-    }
-}
-/**
  * يقرأ جميع المدخلات، ويحسب الخصائص الديناميكية الهوائية والوزن، ويعرض النتائج.
  * تم تعديل هذه الدالة لتقرأ القيم مباشرة من عناصر DOM لضمان الدقة.
  */
@@ -1945,49 +1918,8 @@ function calculateAerodynamics() {
     const cdi = (aspectRatio > 0) ? (Math.pow(cl, 2) / (Math.PI * aspectRatio * oswaldEfficiency)) : 0;
     
     // --- حساب السحب الطفيلي (Parasitic Drag) ---
-    let cdp = 0; // سنقوم ببناء معامل السحب الطفيلي من مكوناته
-
-    // 1. سحب جسم الطائرة (Cd0_fuselage)
-    if (totalWingArea > 0) {
-        let frontalArea = 0;
-        let finenessRatio = 0;
-        let baseCd_fus = 0;
-
-        if (fuselageShape === 'rectangular') {
-            frontalArea = fuselageWidth * fuselageHeight;
-            const equivalentDiameter = Math.sqrt(4 * frontalArea / Math.PI);
-            if (equivalentDiameter > 0) finenessRatio = fuselageLength / equivalentDiameter;
-            baseCd_fus = 1.05; // لشكل الصندوق
-        } else { // cylindrical or teardrop
-            const frontRadius = (fuselageShape === 'cylindrical') ? fuselageDiameter / 2 : fuselageFrontDiameter / 2;
-            frontalArea = Math.PI * Math.pow(frontRadius, 2);
-            if (frontRadius > 0) finenessRatio = fuselageLength / (2 * frontRadius);
-            baseCd_fus = 0.82; // للأسطوانة ذات الأطراف المسطحة
-        }
-
-        // تعديل معامل السحب بناءً على شكل المقدمة والمؤخرة
-        if (noseShape === 'rounded' || noseShape === 'ogival') {
-            baseCd_fus *= 0.5; // تقليل السحب بنسبة 50% للمقدمة الانسيابية
-        }
-        if (tailShape === 'rounded' || fuselageTaperRatio < 0.8) {
-            baseCd_fus *= 0.7; // تقليل إضافي للمؤخرة الانسيابية أو المستدقة
-        }
-
-        // تعديل إضافي بناءً على نسبة النحافة (قيم مثالية حول 3-5)
-        if (finenessRatio > 5) {
-            baseCd_fus *= 1.1; // زيادة السحب للأجسام الطويلة جدًا
-        } else if (finenessRatio < 2) {
-            baseCd_fus *= 1.2; // زيادة السحب للأجسام القصيرة والسميكة
-        }
-
-        // تحويل معامل السحب من الاعتماد على المساحة الأمامية إلى مساحة الجناح المرجعية
-        const cd0_fuselage = baseCd_fus * (frontalArea / totalWingArea);
-        cdp += cd0_fuselage;
-    }
-
-    // 2. سحب المظهر الجانبي للجناح والذيل (Profile Drag)
-    cdp += 0.012; // قيمة تقديرية لسحب المظهر الجانبي للجناح والذيل
-
+    let cdp = 0.025; // معامل سحب طفيلي أساسي (لجسم الطائرة والذيل وغيرها)
+    
     // إضافة تأثير سحب الجنيحات بناءً على شكلها
     if (hasAileron) {
         if (aileronAirfoilType === 'flat_plate') {
@@ -2440,40 +2372,6 @@ function calculateAerodynamics() {
     // تحديث حالة إظهار مجموعة CG/AC
     cgAcGroup.visible = showCgAc;
 
-    // --- حساب عزم الدوران من الدفع (Pitching & Yawing Moments) ---
-    let pitchingMoment = 0;
-    let yawingMoment = 0;
-
-    if (thrust > 0 && (enginePlacement === 'front' || enginePlacement === 'rear')) {
-        // 1. تحديد نقطة تطبيق الدفع
-        const prop_pos_x = (enginePlacement === 'front')
-            ? (fuselageLength / 2) + engineLengthMeters + 0.01
-            : (-fuselageLength / 2) - engineLengthMeters - 0.01;
-        const prop_pos_y = engineVerticalPosition;
-
-        // 2. حساب ذراع العزم (من مركز الجاذبية إلى نقطة تطبيق الدفع)
-        const r_x = prop_pos_x - cg_x;
-        const r_y = prop_pos_y - 0; // نفترض أن مركز الجاذبية على المحور Y=0
-
-        // 3. حساب متجه الدفع مع الزوايا
-        const pitch_rad = engineThrustAngle * (Math.PI / 180);
-        const yaw_rad = engineSideThrustAngle * (Math.PI / 180);
-
-        const F_x = thrust * Math.cos(pitch_rad) * Math.cos(yaw_rad);
-        const F_y = thrust * Math.sin(pitch_rad); // القوة العمودية (للأعلى/للأسفل)
-        const F_z = thrust * Math.cos(pitch_rad) * Math.sin(yaw_rad); // القوة الجانبية (لليمين/لليسار)
-
-        // 4. حساب العزوم
-        // عزم الانحدار (حول المحور Z): M_z = r_x*F_y - r_y*F_x
-        // قيمة سالبة تعني ميلان للأسفل (nose-down)
-        pitchingMoment = (r_x * F_y) - (r_y * F_x);
-
-        // عزم الانعراج (حول المحور Y): M_y = r_z*F_x - r_x*F_z. بما أن r_z=0، يتبقى:
-        // قيمة موجبة تعني انعراج لليمين (nose-right)
-        yawingMoment = -r_x * F_z;
-    }
-    // ملاحظة: حسابات العزم لمحركات الجناح أكثر تعقيدًا ويمكن إضافتها لاحقًا.
-
     // --- تحديث علامة مركز الثقل على جسم الطائرة (CG Marker) ---
     while(cgFuselageMarkerGroup.children.length > 0) {
         const child = cgFuselageMarkerGroup.children[0];
@@ -2558,13 +2456,6 @@ function calculateAerodynamics() {
     acPositionResultEl.textContent = ((X_np - datum) * conversionFactorToDisplay).toFixed(1);
     staticMarginResultEl.textContent = `${staticMargin.toFixed(1)}%`;
 
-    // --- عرض نتائج عزوم الدوران ---
-    pitchingMomentResultEl.textContent = pitchingMoment.toFixed(2);
-    yawingMomentResultEl.textContent = yawingMoment.toFixed(2);
-    document.getElementById('pitching-moment-result-item').style.display = (enginePlacement === 'wing') ? 'none' : 'flex';
-    // تم إصلاح هذا السطر ليعمل بشكل صحيح
-    document.getElementById('yawing-moment-result-item').style.display = (enginePlacement === 'wing') ? 'none' : 'flex';
-
     // --- حساب استقرار الدوران (Roll Stability - Clβ) ---
     const Cl_alpha = airfoilLiftFactor * 2 * Math.PI * Math.cos(sweepRad);
 
@@ -2607,47 +2498,6 @@ function calculateAerodynamics() {
 
     const total_Cl_beta = Cl_beta_dihedral + Cl_beta_sweep + Cl_beta_position + Cl_beta_vtail + Cl_beta_h_dihedral;
     rollStabilityResultEl.textContent = total_Cl_beta.toFixed(3);
-
-    // --- حساب استقرار الانعراج (Yaw Stability - Cnβ) ---
-    let total_Cn_beta = 0;
-
-    if (totalWingArea > 0 && wingSpan > 0) {
-        const eta_v = 0.9; // كفاءة الذيل (نسبة الضغط الديناميكي)
-
-        // 1. مساهمة الذيل العمودي (الأكثر أهمية)
-        let Cn_beta_vtail = 0;
-        const vStabSweepRad = getRaw(vStabSweepAngleInput) * (Math.PI / 180);
-        const CL_alpha_v = 2 * Math.PI * Math.cos(vStabSweepRad);
-        const X_ac_v = tailPositionX - (0.25 * vStabChord); // مركز ضغط الذيل العمودي
-        const l_v = X_ac_v - cg_x; // ذراع العزم (سيكون سالبًا)
-
-        if (tailType === 'conventional' || tailType === 't-tail') {
-            const vStabArea = vStabHeight * vStabChord;
-            const V_v = (vStabArea * -l_v) / (totalWingArea * wingSpan); // معامل حجم الذيل العمودي
-            Cn_beta_vtail = V_v * CL_alpha_v * eta_v;
-        } else if (tailType === 'v-tail') {
-            const vTailAngleRad = getRaw(vTailAngleInput) * (Math.PI / 180);
-            const vStabArea = vStabHeight * vStabChord; // مساحة لوح واحد
-            const V_v = (vStabArea * -l_v) / (totalWingArea * wingSpan);
-            Cn_beta_vtail = 2 * V_v * CL_alpha_v * eta_v * Math.pow(Math.cos(vTailAngleRad), 2);
-        }
-
-        // 2. مساهمة جسم الطائرة (عادة ما تكون مزعزعة للاستقرار)
-        // صيغة تجريبية تعتمد على حجم الجسم
-        const Cn_beta_fuselage = -1.3 * (fuselageVolume / (totalWingArea * wingSpan));
-
-        // 3. مساهمة الجناح (تعتمد على زاوية الميلان)
-        // صيغة تقريبية
-        const Cn_beta_wing = -0.0001 * sweepAngle * Math.pow(cl, 2);
-
-        total_Cn_beta = Cn_beta_vtail + Cn_beta_fuselage + Cn_beta_wing;
-    }
-
-    yawStabilityResultEl.textContent = total_Cn_beta.toFixed(3);
-    // إظهار/إخفاء النتيجة بناءً على ما إذا كانت الحسابات ممكنة
-    document.getElementById('yaw-stability-result-item').style.display = (totalWingArea > 0) ? 'flex' : 'none';
-
-
 }
 
 function initCharts() {
@@ -2884,14 +2734,13 @@ function setAirflowVisibility(isSpinning) {
 }
 
 function updateAll() {
-    // حارس أمان: لا تقم بتحديث النموذج بالكامل أثناء دوران المروحة،
-    // لأن هذا يعيد إنشاء كائن المروحة ويعيد تعيين دورانه إلى الصفر.
-    if (isPropSpinning) return;
-
     try {
         updatePlaneModel();
-        updateCalculations(); // استدعاء دالة الحسابات المنفصلة
+        calculateAerodynamics(); // استدعاء دالة الحسابات التي تقرأ الآن القيم مباشرة
         updatePlaneParameters(); // تخزين المعلمات المؤقتة للرسوم المتحركة
+    if (liftChart && dragChart && thrustChart) {
+            updateCharts();
+        }
     } catch (error) {
         console.error("Error in updateAll:", error);
         // Optionally, display an error message to the user or log it more prominently
@@ -2906,12 +2755,12 @@ function updateUnitLabels() {
 }
 
 // --- ربط الأحداث ---
-const debouncedCalcUpdate = debounce(updateCalculations, 200); // تأخير 200ms للحسابات فقط
+const debouncedUpdate = debounce(updateAll, 150); // تأخير 150ms لتحسين الأداء
 
 allControls.forEach(control => {
     // استخدام دالة debounced للمدخلات التي تتغير بسرعة (مثل range و number)
     if (control.type === 'range' || control.type === 'number') {
-        control.addEventListener('input', debouncedCalcUpdate);
+        control.addEventListener('input', debouncedUpdate);
     } else { // للمدخلات الأخرى (مثل select و color)، التحديث فوري عند التغيير
         control.addEventListener('change', updateAll);
     }
@@ -2919,11 +2768,11 @@ allControls.forEach(control => {
 
 temperatureInput.addEventListener('input', () => {
     updateAirDensity();
-    debouncedCalcUpdate();
+    debouncedUpdate();
 });
 pressureInput.addEventListener('input', () => {
     updateAirDensity();
-    debouncedCalcUpdate();
+    debouncedUpdate();
 });
 
 hasAileronInput.addEventListener('change', updateAll);
@@ -2941,30 +2790,27 @@ fuselageShapeInput.addEventListener('change', updateAll);
 hasRudderInput.addEventListener('change', updateAll);
 engineTypeInput.addEventListener('change', updateEngineUI);
 fuselageNoseShapeInput.addEventListener('change', updateAll);
-batteryVoltageInput.addEventListener('input', debouncedCalcUpdate); // إعادة الحساب عند تغيير الفولتية
+batteryVoltageInput.addEventListener('input', debouncedUpdate); // إعادة الحساب عند تغيير الفولتية
 fuselageTailShapeInput.addEventListener('change', updateAll);
 hasCockpitInput.addEventListener('change', updateAll);
 fuelTankMaterialInput.addEventListener('change', updateAll);
 fuelTypeInput.addEventListener('change', updateAll);
-fuelLevelInput.addEventListener('input', debouncedCalcUpdate);
+fuelLevelInput.addEventListener('input', debouncedUpdate);
 electricMotorTypeInput.addEventListener('change', updateEngineUI);
 icEngineTypeInput.addEventListener('change', updateEngineUI);
 enginePlacementInput.addEventListener('change', updateAll);
 engineWingVerticalPosInput.addEventListener('change', updateAll);
 engineWingForeAftInput.addEventListener('change', updateAll);
 wingPropRotationInput.addEventListener('change', updateAll); // لا يؤثر على النموذج ولكنه جزء من الحالة
-engineWingDistanceInput.addEventListener('input', debouncedCalcUpdate);
+engineWingDistanceInput.addEventListener('input', debouncedUpdate);
 
 // Accessories Listeners
-receiverWeightInput.addEventListener('input', debouncedCalcUpdate);
-servoWeightInput.addEventListener('input', debouncedCalcUpdate);
-servoCountInput.addEventListener('input', debouncedCalcUpdate);
-cameraWeightInput.addEventListener('input', debouncedCalcUpdate);
-otherAccessoriesWeightInput.addEventListener('input', debouncedCalcUpdate);
-engineThrustAngleInput.addEventListener('input', debouncedCalcUpdate);
-engineSideThrustAngleInput.addEventListener('input', debouncedCalcUpdate);
-engineVerticalPositionInput.addEventListener('input', debouncedCalcUpdate);
-enginePylonLengthInput.addEventListener('input', debouncedCalcUpdate);
+receiverWeightInput.addEventListener('input', debouncedUpdate);
+servoWeightInput.addEventListener('input', debouncedUpdate);
+servoCountInput.addEventListener('input', debouncedUpdate);
+cameraWeightInput.addEventListener('input', debouncedUpdate);
+otherAccessoriesWeightInput.addEventListener('input', debouncedUpdate);
+enginePylonLengthInput.addEventListener('input', debouncedUpdate);
 
 
 
@@ -3095,26 +2941,33 @@ window.addEventListener('click', onMouseClick, false);
 function animate() {
     requestAnimationFrame(animate);
 
-    // إعادة تعيين موضع ودوران الطائرة في كل إطار لمنع تراكم الأخطاء
-    planeGroup.position.set(0, 0, 0);
-    planeGroup.rotation.set(0, 0, 0);
-
     const deltaTime = clock.getDelta(); // الوقت المنقضي منذ الإطار الأخير (بالثواني)
+
+    // Check for NaN in planeGroup.rotation and reset if found
+    if (isNaN(planeGroup.rotation.x) || isNaN(planeGroup.rotation.y) || isNaN(planeGroup.rotation.z)) {
+        console.warn("Detected NaN in planeGroup rotation. Resetting rotation.");
+        planeGroup.rotation.set(0, 0, 0);
+        lastVibrationRotation.set(0, 0, 0); // Also reset the vibration tracking
+    }
+
+    // إعادة تعيين موضع الطائرة فقط، للحفاظ على الدوران التراكمي للمحاكاة
+    planeGroup.position.set(0, 0, 0);
+
     if (isPropSpinning) {
         
         // سرعة الهواء الرئيسية يتم حسابها الآن ديناميكيًا من المروحة
-        const mainAirSpeed = (planeParams.propRpm / 60) * planeParams.propPitch;
+        const mainAirSpeed = (propRpm / 60) * propPitch;
 
         // --- قراءة قيم التحكم في الجسيمات ---
-        const densityFactor = planeParams.userParticleDensity * 2; // مضاعفة لجعل 50% هو الافتراضي
-        const sizeFactor = planeParams.userParticleSize * 2;       // مضاعفة لجعل 50% هو الافتراضي
+        const densityFactor = userParticleDensity * 2; // مضاعفة لجعل 50% هو الافتراضي
+        const sizeFactor = userParticleSize * 2;       // مضاعفة لجعل 50% هو الافتراضي
 
-        const enginePlacement = planeParams.enginePlacement;
-        const rotationPerSecond = (planeParams.propRpm / 60) * Math.PI * 2;
+        const enginePlacement = enginePlacementInput.value;
+        const rotationPerSecond = (propRpm / 60) * Math.PI * 2;
 
         // --- دوران المروحة ---
         if (enginePlacement === 'wing') {
-            const wingPropRotation = planeParams.wingPropRotation;
+            const wingPropRotation = wingPropRotationInput.value;
             const props = wingEnginesGroup.children.filter(c => c.type === 'Group');
 
             props.forEach(prop => {
@@ -3135,46 +2988,60 @@ function animate() {
         }
 
         // --- تأثير اهتزاز الطائرة ---
-        const minVibrationRpm = planeParams.propRpm/2;
+        const minVibrationRpm = 4000;
         const maxVibrationRpm = 8000;
 
         let vibrationMagnitude = 0;
-        if (planeParams.propRpm > minVibrationRpm) {
-            vibrationMagnitude = (planeParams.propRpm - minVibrationRpm) / (maxVibrationRpm - minVibrationRpm);
+        if (propRpm > minVibrationRpm) {
+            vibrationMagnitude = (propRpm - minVibrationRpm) / (maxVibrationRpm - minVibrationRpm);
             vibrationMagnitude = Math.min(1, Math.max(0, vibrationMagnitude)); // حصر القيمة بين 0 و 1
         }
 
         // تطبيق شدة الاهتزاز التي يحددها المستخدم
-        vibrationMagnitude *= planeParams.userVibrationIntensity;
+        vibrationMagnitude *= userVibrationIntensity;
 
-        // تطبيق اهتزاز الموضع والدوران
+        // اهتزاز الموضع (يتم إعادة تعيينه كل إطار لذا نستخدم `+=`)
         const maxPosOffset = 0.002;
-        const maxRotOffset = 0.005;
-
         planeGroup.position.x += (Math.random() * 2 - 1) * maxPosOffset * vibrationMagnitude;
         planeGroup.position.y += (Math.random() * 2 - 1) * maxPosOffset * vibrationMagnitude;
         planeGroup.position.z += (Math.random() * 2 - 1) * maxPosOffset * vibrationMagnitude;
 
-        planeGroup.rotation.x += (Math.random() * 2 - 1) * maxRotOffset * vibrationMagnitude;
-        planeGroup.rotation.y += (Math.random() * 2 - 1) * maxRotOffset * vibrationMagnitude;
-        planeGroup.rotation.z += (Math.random() * 2 - 1) * maxRotOffset * vibrationMagnitude;
+        // --- تحديث الدوران (التحكم والاهتزاز) ---
+        // 1. إزالة اهتزاز الدوران من الإطار السابق للعودة إلى الدوران "النظيف" الناتج عن التحكم
+        planeGroup.rotation.x -= lastVibrationRotation.x;
+        planeGroup.rotation.y -= lastVibrationRotation.y;
+        planeGroup.rotation.z -= lastVibrationRotation.z;
 
-        // --- محاكاة توجيه الطائرة بناءً على أسطح التحكم ---
+        // 2. تطبيق الدوران التراكمي الجديد من أسطح التحكم لهذا الإطار
         const rightAileronRot = scene.getObjectByName('rightAileron')?.parent.rotation.z || 0;
         const elevatorRot = scene.getObjectByName('rightElevator')?.parent.rotation.z || 0;
         const rudderRot = scene.getObjectByName('rudder')?.parent.rotation.y || 0;
         const maneuverFactor = 0.5; // معامل لتحديد مدى قوة استجابة الطائرة
+        const maneuverSpeed = maneuverFactor * deltaTime; // جعل الحركة معتمدة على الوقت وليس على معدل الإطارات
 
-        planeGroup.rotation.z -= elevatorRot * maneuverFactor; // الانحدار (Pitch)
-        planeGroup.rotation.x += rightAileronRot * maneuverFactor; // الدوران (Roll)
-        planeGroup.rotation.y += rudderRot * maneuverFactor; // الانعراج (Yaw)
+        planeGroup.rotation.z -= elevatorRot * maneuverSpeed; // الانحدار (Pitch)
+        planeGroup.rotation.x += rightAileronRot * maneuverSpeed; // الدوران (Roll)
+        planeGroup.rotation.y += rudderRot * maneuverSpeed; // الانعراج (Yaw)
 
+        // 3. حساب وتطبيق اهتزاز الدوران الجديد لهذا الإطار
+        const maxRotOffset = 0.005;
+        const currentVibration = new THREE.Euler(
+            (Math.random() * 2 - 1) * maxRotOffset * vibrationMagnitude,
+            (Math.random() * 2 - 1) * maxRotOffset * vibrationMagnitude,
+            (Math.random() * 2 - 1) * maxRotOffset * vibrationMagnitude
+        );
+        planeGroup.rotation.x += currentVibration.x;
+        planeGroup.rotation.y += currentVibration.y;
+        planeGroup.rotation.z += currentVibration.z;
+
+        // 4. تخزين اهتزاز الدوران الحالي لإزالته في الإطار التالي
+        lastVibrationRotation.copy(currentVibration);
 
         // --- كل تحديثات الجزيئات تحدث فقط عند تشغيل المروحة ---
         // --- تحديث جزيئات تدفق هواء المروحة ---
         if (propParticleSystem && propParticleSystem.visible) {
             const axialSpeed = mainAirSpeed * 1.5; // أسرع قليلاً للتأثير البصري
-            const rotationalSpeed = (planeParams.propRpm / 60) * Math.PI * 2 * 0.5; // عامل 0.5 لتقليل سرعة الدوران البصري
+            const rotationalSpeed = (propRpm / 60) * Math.PI * 2 * 0.5; // عامل 0.5 لتقليل سرعة الدوران البصري
 
             const positions = propParticleSystem.geometry.attributes.position.array;
             const opacities = propParticleSystem.geometry.attributes.customOpacity.array;
@@ -3417,6 +3284,9 @@ function animate() {
             vortexParticleSystem.geometry.attributes.scale.needsUpdate = true;
             vortexParticleSystem.geometry.attributes.spiralData.needsUpdate = true;
         }
+    }
+    else {
+        lastVibrationRotation.set(0, 0, 0);
     }
 
     controls.update(); // ضروري إذا تم تفعيل enableDamping
