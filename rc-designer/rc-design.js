@@ -1162,10 +1162,10 @@ function updatePlaneModel() {
         const spanProgressAtHinge = Math.max(0, aileronCenterZ / halfSpan);
         const chordAtHinge = rootChord + (rootChord * taperRatio - rootChord) * spanProgressAtHinge;
         const sweepAtHinge = aileronCenterZ * Math.tan(sweepRad);
-        // 3. حساب الموضع X للمفصل.
+        // 3. حساب الموضع X للمفصل (Hinge).
         // يجب أن يكون عند الحافة الأمامية للقطع المخصص للجنيح في الجناح.
-        // الحافة الخلفية للجناح عند sweepAtHinge - (chordAtHinge / 2).
-        const hingeX = sweepAtHinge - (chordAtHinge / 2);
+        // الحافة الخلفية للجناح هي (sweepAtHinge - chordAtHinge / 2). نضيف عرض الجنيح للوصول إلى الحافة الأمامية للقطع.
+        const hingeX = (sweepAtHinge - (chordAtHinge / 2)) + aileronWidth;
         
         // 3. The wing geometry is already translated by half fuselage width. The aileron pivot is a child of the wing, so its Z position is relative to the wing's local coordinate system.
         const finalPivotZ = aileronCenterZ;
