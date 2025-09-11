@@ -3146,8 +3146,8 @@ function animate() {
         const maxVibrationRpm = 8000;
 
         let vibrationMagnitude = 0;
-        if (propRpm > minVibrationRpm) {
-            vibrationMagnitude = (propRpm - minVibrationRpm) / (maxVibrationRpm - minVibrationRpm);
+        if (planeParams.propRpm > minVibrationRpm) {
+            vibrationMagnitude = (planeParams.propRpm - minVibrationRpm) / (maxVibrationRpm - minVibrationRpm);
             vibrationMagnitude = Math.min(1, Math.max(0, vibrationMagnitude)); // حصر القيمة بين 0 و 1
         }
 
