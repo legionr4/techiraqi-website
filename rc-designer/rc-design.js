@@ -2987,6 +2987,45 @@ function animate() {
             propellerGroup.rotation.x += rotationPerSecond * deltaTime;
         }
 
+        // --- تأثير اهتزاز الطائرة ---
+        const minVibrationRpm = 4000;
+        const maxVibrationRpm = 12000; // زيادة النطاق لتدرج أفضل
+
+        let vibrationMagnitude = 0;
+        if (planeParams.propRpm > minVibrationRpm) {
+            vibrationMagnitude = (planeParams.propRpm - minVibrationRpm) / (maxVibrationRpm - minVibrationRpm);
+            vibrationMagnitude = Math.min(1, Math.max(0, vibrationMagnitude)); // حصر القيمة بين 0 و 1
+        }
+
+        // تطبيق شدة الاهتزاز التي يحددها المستخدم
+        vibrationMagnitude *= planeParams.userVibrationIntensity;
+
+        // اهتزاز الموضع (يتم إعادة تعيينه كل إطار لذا نستخدم `+=`)
+        const maxPosOffset = 0.002;
+        planeGroup.position.x += (Math.random() * 2 - 1) * maxPosOffset * vibrationMagnitude;
+        planeGroup.position.y += (Math.random() * 2 - 1) * maxPosOffset * vibrationMagnitude;
+        planeGroup.position.z += (Math.random() * 2 - 1) * maxPosOffset * vibrationMagnitude;
+
+        // --- تحديث اهتزاز الدوران ---
+        // 1. إزالة اهتزاز الدوران من الإطار السابق للعودة إلى الدوران "النظيف"
+        planeGroup.rotation.x -= lastVibrationRotation.x;
+        planeGroup.rotation.y -= lastVibrationRotation.y;
+        planeGroup.rotation.z -= lastVibrationRotation.z;
+
+        // 2. حساب وتطبيق اهتزاز الدوران الجديد لهذا الإطار
+        const maxRotOffset = 0.005; // إزاحة دوران طفيفة
+        const currentVibration = new THREE.Euler(
+            (Math.random() * 2 - 1) * maxRotOffset * vibrationMagnitude,
+            (Math.random() * 2 - 1) * maxRotOffset * vibrationMagnitude,
+            (Math.random() * 2 - 1) * maxRotOffset * vibrationMagnitude
+        );
+        planeGroup.rotation.x += currentVibration.x;
+        planeGroup.rotation.y += currentVibration.y;
+        planeGroup.rotation.z += currentVibration.z;
+
+        // 3. تخزين اهتزاز الدوران الحالي لإزالته في الإطار التالي
+        lastVibrationRotation.copy(currentVibration);
+
         // --- كل تحديثات الجزيئات تحدث فقط عند تشغيل المروحة ---
         // --- تحديث جزيئات تدفق هواء المروحة ---
         if (propParticleSystem && propParticleSystem.visible) {
