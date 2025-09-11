@@ -809,10 +809,6 @@
                         <label for="prop-rpm">سرعة الدوران (RPM)</label>
                         <input type="number" id="prop-rpm" value="8000" step="100" title="يتم حساب القيمة تلقائياً عند تغيير المحرك، ولكن يمكنك تعديلها يدوياً.">
                     </div>
-                    <div class="input-group">
-                        <label for="toggle-prop-spin">تشغيل دوران المروحة</label>
-                        <button type="button" id="toggle-prop-spin" style="flex-basis: 45%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; background-color: #e9ecef;">تشغيل</button>
-                    </div>
                 </fieldset>
 
                 <fieldset>
@@ -883,25 +879,33 @@
                         <label for="pressure">الضغط (باسكال)</label>
                         <input type="number" id="pressure" value="101325" step="100">
                     </div>
+                </fieldset>
+
+                <fieldset>
+                    <legend>المحاكاة والتأثيرات البصرية</legend>
                     <div class="input-group">
-                        <label for="show-ambient-wind">إظهار رياح المحيط</label>
+                        <label for="toggle-prop-spin">تشغيل المحاكاة (الدوران والهواء)</label>
+                        <button type="button" id="toggle-prop-spin" style="flex-basis: 45%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; background-color: #e9ecef;">تشغيل</button>
+                    </div>
+                    <div class="input-group">
+                        <label for="show-ambient-wind">إظهار رياح المحيط والدوامات</label>
                         <input type="checkbox" id="show-ambient-wind" checked style="flex-basis: auto; margin-left: auto;">
                     </div>
                     <div class="input-group">
-                        <label for="particle-density">كثافة الجسيمات: <span id="particle-density-value">50</span>%</label>
+                        <label for="particle-density">كثافة جسيمات الهواء: <span id="particle-density-value">50</span>%</label>
                         <input type="range" id="particle-density" min="0" max="1" value="0.5" step="0.05">
                     </div>
                     <div class="input-group">
-                        <label for="particle-size">حجم الجسيمات: <span id="particle-size-value">50</span>%</label>
+                        <label for="particle-size">حجم جسيمات الهواء: <span id="particle-size-value">50</span>%</label>
                         <input type="range" id="particle-size" min="0" max="1" value="0.5" step="0.05">
-                    </div>
-                    <div class="input-group">
-                        <label for="vibration-intensity">شدة الاهتزاز: <span id="vibration-value">100</span>%</label>
-                        <input type="range" id="vibration-intensity" min="0" max="1" value="1" step="0.1">
                     </div>
                     <div class="input-group">
                         <label for="airflow-transparency">شفافية تدفق الهواء: <span id="airflow-transparency-value">100</span>%</label>
                         <input type="range" id="airflow-transparency" min="0" max="1" value="1" step="0.01">
+                    </div>
+                    <div class="input-group">
+                        <label for="vibration-intensity">شدة اهتزاز المحرك: <span id="vibration-value">100</span>%</label>
+                        <input type="range" id="vibration-intensity" min="0" max="1" value="1" step="0.1">
                     </div>
                 </fieldset>
 
