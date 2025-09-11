@@ -1137,44 +1137,37 @@ function updatePlaneModel() {
         const aileronPosition = getValidNumber(aileronPositionInput) * conversionFactor;
         const aileronAirfoilType = aileronAirfoilTypeInput.value;
 
-        // Create aileron geometry using the createSurface function for consistency
-        // We use it to create a non-tapered, non-swept surface.
-        const aileronGeom = createSurface(aileronLength, aileronWidth, 1.0, 0, aileronThickness, aileronAirfoilType, true, true);
-        aileronGeom.translate(-aileronWidth / 2, 0, 0); // Move the geometry so the hinge is at x=0 and it extends backwards
-        aileronGeom.rotateX(Math.PI / 2); // Rotate to align span with Z-axis
+        // --- حساب استدقاق الجنيح ليتناسب مع الجناح ---
+        const aileronStartZ = halfSpan - aileronPosition - aileronLength;
+        const aileronEndZ = halfSpan - aileronPosition;
+        const chordAtAileronStart = rootChord + (rootChord * taperRatio - rootChord) * (aileronStartZ / halfSpan);
+        const chordAtAileronEnd = rootChord + (rootChord * taperRatio - rootChord) * (aileronEndZ / halfSpan);
+        const aileronTaperRatio = chordAtAileronEnd / chordAtAileronStart;
+
+        // إنشاء هندسة الجنيح بشكل مستدق
+        const aileronGeom = createSurface(aileronLength, aileronWidth, aileronTaperRatio, 0, aileronThickness, aileronAirfoilType, true, true);
+        aileronGeom.translate(-aileronWidth / 2, 0, 0); // إزاحة المحور ليكون عند الحافة الأمامية للجنيح
+        aileronGeom.rotateX(Math.PI / 2); // تدوير ليتوافق مع امتداد الجناح
+
         // Create the aileron meshes
         const rightAileron = new THREE.Mesh(aileronGeom, aileronMaterial);
         rightAileron.name = 'rightAileron'; // Name for raycasting
 
-        const leftAileron = new THREE.Mesh(aileronGeom, aileronMaterial);
-        leftAileron.name = 'leftAileron';
-
         // Create pivot groups to handle positioning, sweep, and rotation
         const rightAileronPivot = new THREE.Group();
         rightAileronPivot.add(rightAileron);
-        const leftAileronPivot = new THREE.Group();
-        leftAileronPivot.add(leftAileron);
+        const leftAileronPivot = rightAileronPivot.clone();
+        leftAileronPivot.children[0].name = 'leftAileron';
 
-        // --- حساب موضع محور دوران الجنيح (Hinge) ---
-        // 1. حساب الموضع المركزي للجنيح على طول امتداد الجناح
-        const aileronCenterZ = halfSpan - aileronPosition - (aileronLength / 2);
-
-        // 2. حساب خصائص الجناح عند مركز الجنيح
-        const spanProgressAtHinge = Math.max(0, aileronCenterZ / halfSpan);
-        const chordAtHinge = rootChord + (rootChord * taperRatio - rootChord) * spanProgressAtHinge;
-        const sweepAtHinge = aileronCenterZ * Math.tan(sweepRad);
-
-        // 3. حساب زاوية دوران محور الجنيح. هذه الزاوية تتأثر بكل من الميلان (Sweep) والاستدقاق (Taper).
+        // --- حساب موضع ودوران محور الجنيح ---
         const hingeLineSlope = Math.tan(sweepRad) + (rootChord * (1 - taperRatio)) / wingSpan;
         const hingeAngle = Math.atan(hingeLineSlope);
 
-        // 4. حساب الموضع X للمفصل (Hinge) عند مركز الجنيح.
-        const hingeX = (sweepAtHinge - (chordAtHinge / 2)) + aileronWidth;
-        
-        // 5. الموضع Z للمحور هو مركز الجنيح.
-        const finalPivotZ = aileronCenterZ;
+        // حساب الموضع عند بداية الجنيح (أقرب نقطة للجسم)
+        const sweepAtHingeStart = aileronStartZ * Math.tan(sweepRad);
+        const hingeX = (sweepAtHingeStart - (chordAtAileronStart / 2)) + aileronWidth;
+        const finalPivotZ = aileronStartZ;
 
-        // 6. تحديد موضع ودوران المحاور.
         rightAileronPivot.position.set(hingeX, 0, finalPivotZ);
         rightAileronPivot.rotation.y = hingeAngle;
 
