@@ -1707,7 +1707,6 @@ function updatePlaneModel() {
  * يقرأ جميع المدخلات، ويحسب الخصائص الديناميكية الهوائية والوزن، ويعرض النتائج.
  * تم تعديل هذه الدالة لتقرأ القيم مباشرة من عناصر DOM لضمان الدقة.
  */
-    const fuelLevel = params.fuelLevel;
 function calculateAerodynamics() {
     // --- Fix: Read all values directly from DOM to ensure they are current ---
     const conversionFactor = UNIT_CONVERSIONS[unitSelector.value];
