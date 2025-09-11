@@ -1918,8 +1918,49 @@ function calculateAerodynamics() {
     const cdi = (aspectRatio > 0) ? (Math.pow(cl, 2) / (Math.PI * aspectRatio * oswaldEfficiency)) : 0;
     
     // --- حساب السحب الطفيلي (Parasitic Drag) ---
-    let cdp = 0.025; // معامل سحب طفيلي أساسي (لجسم الطائرة والذيل وغيرها)
-    
+    let cdp = 0; // سنقوم ببناء معامل السحب الطفيلي من مكوناته
+
+    // 1. سحب جسم الطائرة (Cd0_fuselage)
+    if (totalWingArea > 0) {
+        let frontalArea = 0;
+        let finenessRatio = 0;
+        let baseCd_fus = 0;
+
+        if (fuselageShape === 'rectangular') {
+            frontalArea = fuselageWidth * fuselageHeight;
+            const equivalentDiameter = Math.sqrt(4 * frontalArea / Math.PI);
+            if (equivalentDiameter > 0) finenessRatio = fuselageLength / equivalentDiameter;
+            baseCd_fus = 1.05; // لشكل الصندوق
+        } else { // cylindrical or teardrop
+            const frontRadius = (fuselageShape === 'cylindrical') ? fuselageDiameter / 2 : fuselageFrontDiameter / 2;
+            frontalArea = Math.PI * Math.pow(frontRadius, 2);
+            if (frontRadius > 0) finenessRatio = fuselageLength / (2 * frontRadius);
+            baseCd_fus = 0.82; // للأسطوانة ذات الأطراف المسطحة
+        }
+
+        // تعديل معامل السحب بناءً على شكل المقدمة والمؤخرة
+        if (noseShape === 'rounded' || noseShape === 'ogival') {
+            baseCd_fus *= 0.5; // تقليل السحب بنسبة 50% للمقدمة الانسيابية
+        }
+        if (tailShape === 'rounded' || fuselageTaperRatio < 0.8) {
+            baseCd_fus *= 0.7; // تقليل إضافي للمؤخرة الانسيابية أو المستدقة
+        }
+
+        // تعديل إضافي بناءً على نسبة النحافة (قيم مثالية حول 3-5)
+        if (finenessRatio > 5) {
+            baseCd_fus *= 1.1; // زيادة السحب للأجسام الطويلة جدًا
+        } else if (finenessRatio < 2) {
+            baseCd_fus *= 1.2; // زيادة السحب للأجسام القصيرة والسميكة
+        }
+
+        // تحويل معامل السحب من الاعتماد على المساحة الأمامية إلى مساحة الجناح المرجعية
+        const cd0_fuselage = baseCd_fus * (frontalArea / totalWingArea);
+        cdp += cd0_fuselage;
+    }
+
+    // 2. سحب المظهر الجانبي للجناح والذيل (Profile Drag)
+    cdp += 0.012; // قيمة تقديرية لسحب المظهر الجانبي للجناح والذيل
+
     // إضافة تأثير سحب الجنيحات بناءً على شكلها
     if (hasAileron) {
         if (aileronAirfoilType === 'flat_plate') {
