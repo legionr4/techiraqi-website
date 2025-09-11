@@ -3677,13 +3677,25 @@ function animate() {
             const emissionPoints = [];
             const engineLength = (getValidNumber(icEngineLengthInput) * planeParams.conversionFactor);
 
+            // تصحيح: البحث عن المحركات في المجموعات الصحيحة الخاصة بكل جناح
             if (enginePlacement === 'wing') {
-                const engines = wingEnginesGroup.children.filter(c => c.type === 'Mesh' && c.geometry.type === 'CylinderGeometry');
-                engines.forEach(engine => {
-                    const pos = engine.position.clone();
-                    pos.x -= engineLength / 2; // الانبعاث من نهاية المحرك
-                    emissionPoints.push(pos);
-                });
+                const rightWingEngineGrp = scene.getObjectByName("rightWingEngineGroup");
+                const leftWingEngineGrp = scene.getObjectByName("leftWingEngineGroup");
+
+                const findAndAddEngine = (group) => {
+                    if (group) {
+                        const engine = group.children.find(c => c.type === 'Mesh' && c.geometry.type === 'CylinderGeometry');
+                        if (engine) {
+                            const worldPos = new THREE.Vector3();
+                            engine.getWorldPosition(worldPos);
+                            worldPos.x -= engineLength / 2; // الانبعاث من نهاية المحرك
+                            emissionPoints.push(worldPos);
+                        }
+                    }
+                };
+
+                findAndAddEngine(rightWingEngineGrp);
+                findAndAddEngine(leftWingEngineGrp);
             } else {
                 const pos = engineGroup.position.clone();
                 pos.x -= engineLength / 2; // الانبعاث من نهاية المحرك
@@ -3695,13 +3707,17 @@ function animate() {
                 const i3 = i * 3;
 
                 // توزيع الجسيمات على نقاط الانبعاث
-                const emissionPoint = emissionPoints[i % emissionPoints.length];
+                let emissionPoint = emissionPoints.length > 0 ? emissionPoints[i % emissionPoints.length] : new THREE.Vector3();
 
                 // تحديث عمر الجسيم
                 lifeData[i2] -= deltaTime;
 
                 // إذا انتهى عمر الجسيم، يتم إعادة إنشائه
                 if (lifeData[i2] <= 0) {
+                    // إعادة الحصول على نقطة الانبعاث في حال تغير موضع الطائرة
+                    if (emissionPoints.length > 0) {
+                        emissionPoint = emissionPoints[i % emissionPoints.length];
+                    }
                     positions[i3] = emissionPoint.x + (Math.random() - 0.5) * 0.05;
                     positions[i3 + 1] = emissionPoint.y + (Math.random() - 0.5) * 0.05;
                     positions[i3 + 2] = emissionPoint.z + (Math.random() - 0.5) * 0.05;
