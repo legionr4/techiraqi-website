@@ -459,7 +459,6 @@ const twrResultEl = document.getElementById('twr-result');
 const wingAreaResultEl = document.getElementById('wing-area-result');
 const wingWeightResultEl = document.getElementById('wing-weight-result');
 const tailAreaResultEl = document.getElementById('tail-area-result');
-const wingtipWeightResultEl = document.getElementById('wingtip-weight-result'); // عنصر جديد
 const tailWeightResultEl = document.getElementById('tail-weight-result');
 const fuselageWeightResultEl = document.getElementById('fuselage-weight-result');
 const fuselageAreaResultEl = document.getElementById('fuselage-area-result');
@@ -1087,14 +1086,14 @@ function updatePlaneModel() {
         rightWingtip.position.copy(tipCentroid);
 
         // Apply the cant angle (up/down rotation)
-        rightWingtip.rotation.x = wingtipAngle;
+        rightWingtip.rotation.z = -wingtipAngle; // Use Z-axis for up/down rotation in this context
 
         const leftWingtip = rightWingtip.clone();
-        leftWingtip.rotation.x = wingtipAngle; // Corrected: Both should have the same angle
+        leftWingtip.scale.z = -1; // Mirror the geometry for the left side
 
-        rightWing.add(rightWingtip);
-        leftWing.add(leftWingtip);
-
+        // إضافة أطراف الجناح إلى مجموعة الجناح الرئيسية بدلاً من إضافتها إلى شبكة الجناح نفسها
+        // هذا يمنع حدوث حلقة لا نهائية ويحل مشكلة الشاشة السوداء
+        wingGroup.add(rightWingtip, leftWingtip);
     }
 
     // Ailerons (Added after wingtips to ensure correct positioning relative to the final wing)
@@ -1801,7 +1800,7 @@ function calculateAerodynamics(params) {
         airfoilLiftFactor = 0.85; // أقل كفاءة
     }
     const cl = airfoilLiftFactor * 2 * Math.PI * alphaRad;
-    const lift = 0.5 * cl * airDensity * Math.pow(airSpeed, 2) * totalWingArea;
+    const lift = 0.5 * cl * airDensity * Math.pow(airSpeed, 2) * mainWingArea;
 
     // 2. قوة السحب (Drag)
     // D = 0.5 * Cd * rho * V^2 * A
@@ -1811,7 +1810,7 @@ function calculateAerodynamics(params) {
     const cdi = (aspectRatio > 0) ? (Math.pow(cl, 2) / (Math.PI * aspectRatio * oswaldEfficiency)) : 0;
     const cdp = 0.025; // معامل سحب طفيلي مفترض (لجسم الطائرة والذيل وغيرها)
     const cd = cdp + cdi;
-    const aeroDrag = 0.5 * cd * airDensity * Math.pow(airSpeed, 2) * totalWingArea;
+    const aeroDrag = 0.5 * cd * airDensity * Math.pow(airSpeed, 2) * mainWingArea;
     
     // 3. قوة الدفع (Thrust) وأداء المروحة
     const propDiameterMeters = propDiameter; // تم تحويله بالفعل
@@ -2003,7 +2002,7 @@ function calculateAerodynamics(params) {
     const totalAccessoriesWeightGrams = receiverWeightGrams + servoWeightGrams + cameraWeightGrams + otherAccessoriesWeightGrams;
     const totalAccessoriesWeightKg = totalAccessoriesWeightGrams / 1000;
 
-    const totalWeightKg = totalWingWeightKg + tailWeightKg + fuselageWeightKg + propWeightKg + landingGearWeightKg + engineWeightKg + energySourceWeightKg + cockpitWeightKg + totalAccessoriesWeightKg;
+    const totalWeightKg = wingWeightKg + tailWeightKg + fuselageWeightKg + propWeightKg + landingGearWeightKg + engineWeightKg + energySourceWeightKg + cockpitWeightKg + totalAccessoriesWeightKg + wingtipWeightKg;
 
     // 5. نسبة الدفع إلى الوزن (Thrust-to-Weight Ratio)
     const weightInNewtons = totalWeightKg * 9.81;
@@ -2132,10 +2131,8 @@ function calculateAerodynamics(params) {
     liftResultEl.textContent = lift > 0 ? lift.toFixed(2) : '0.00';
     dragResultEl.textContent = totalDrag > 0 ? totalDrag.toFixed(2) : '0.00';
     thrustResultEl.textContent = thrust > 0 ? thrust.toFixed(2) : '0.00';
-    wingAreaResultEl.textContent = totalWingArea > 0 ? `${totalWingArea.toFixed(2)}` : '0.00';
-    wingWeightResultEl.textContent = (totalWingWeightKg * 1000).toFixed(0);
-    wingtipWeightResultEl.textContent = (wingtipWeightKg * 1000).toFixed(0);
-    wingtipWeightResultEl.parentElement.style.display = hasWingtip ? 'flex' : 'none';
+    wingAreaResultEl.textContent = mainWingArea > 0 ? `${mainWingArea.toFixed(2)}` : '0.00';
+    wingWeightResultEl.textContent = (wingWeightKg * 1000).toFixed(0);
     tailAreaResultEl.textContent = totalTailArea > 0 ? totalTailArea.toFixed(2) : '0.00';
     tailWeightResultEl.textContent = (tailWeightKg * 1000).toFixed(0);
     fuselageAreaResultEl.textContent = fuselageSurfaceArea > 0 ? fuselageSurfaceArea.toFixed(2) : '0.00';
