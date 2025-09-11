@@ -1693,6 +1693,10 @@ function updatePlaneModel() {
  * @param {object} params - كائن يحتوي على جميع معلمات الطائرة المحسوبة.
  */
 function calculateAerodynamics(params) {
+    // --- Fix: Use the provided conversion factor consistently ---
+    // The 'params' object contains raw values from the inputs.
+    // We must apply the conversion factor to all dimensional values.
+
     // استخلاص القيم من كائن المعلمات وتطبيق التحويلات اللازمة
     const conversionFactor = params.conversionFactor;
     const wingSpan = params.wingSpan * conversionFactor;
@@ -1711,7 +1715,7 @@ function calculateAerodynamics(params) {
     const propMaterial = params.propMaterial;
     const propPitch = params.propPitch; // inches
     const propRpm = params.propRpm; // RPM
-    const structureMaterial = params.structureMaterial;
+    const structureMaterial = params.structureMaterial; // This is a string, no conversion needed
     const fuselageMaterialValue = params.fuselageMaterial;
     const fuselageShape = params.fuselageShape;
     const fuselageTaperRatio = params.fuselageTaperRatio;
@@ -1772,12 +1776,21 @@ function calculateAerodynamics(params) {
     const engineLengthMeters = (engineType === 'electric' ? params.electricMotorLengthInput : params.icEngineLengthInput) * conversionFactor;
 
     // --- حسابات محدثة ---
+    // حساب مساحة الجناح الرئيسي (بدون الأطراف)
     const tipChord = wingChord * taperRatio;
-    const wingArea = wingSpan * (wingChord + tipChord) / 2; // Area of a trapezoid
+    const mainWingArea = wingSpan * (wingChord + tipChord) / 2; // Area of a trapezoid
     const alphaRad = angleOfAttack * (Math.PI / 180);
 
-    // نستخدم مساحة الجناح الكلية للحسابات. أسطح التحكم هي جزء من الجناح وتساهم في الرفع والوزن.
-    const mainWingArea = wingArea;
+    // حساب مساحة أطراف الجناح (إذا كانت مفعلة)
+    let wingtipsArea = 0;
+    if (hasWingtip) {
+        // مساحة طرفي الجناح (مستطيلين)
+        wingtipsArea = 2 * wingtipLength * wingtipWidth;
+    }
+
+    // المساحة الكلية للجناح المستخدمة في حسابات الرفع والسحب
+    const totalWingArea = mainWingArea + wingtipsArea;
+
     let totalTailArea = 0;
 
     if (tailType === 'conventional' || tailType === 't-tail') {
@@ -1800,18 +1813,18 @@ function calculateAerodynamics(params) {
         airfoilLiftFactor = 0.85; // أقل كفاءة
     }
     const cl = airfoilLiftFactor * 2 * Math.PI * alphaRad;
-    const lift = 0.5 * cl * airDensity * Math.pow(airSpeed, 2) * mainWingArea;
+    const lift = 0.5 * cl * airDensity * Math.pow(airSpeed, 2) * totalWingArea;
 
     // 2. قوة السحب (Drag)
     // D = 0.5 * Cd * rho * V^2 * A
     // Cd = Cdp + Cdi (سحب طفيلي + سحب مستحث)
-    const aspectRatio = wingArea > 0 ? Math.pow(wingSpan, 2) / wingArea : 0;
+    const aspectRatio = totalWingArea > 0 ? Math.pow(wingSpan, 2) / totalWingArea : 0;
     const oswaldEfficiency = 0.8; // كفاءة أوزوالد (قيمة مفترضة)
     const cdi = (aspectRatio > 0) ? (Math.pow(cl, 2) / (Math.PI * aspectRatio * oswaldEfficiency)) : 0;
     const cdp = 0.025; // معامل سحب طفيلي مفترض (لجسم الطائرة والذيل وغيرها)
     const cd = cdp + cdi;
-    const aeroDrag = 0.5 * cd * airDensity * Math.pow(airSpeed, 2) * mainWingArea;
-    
+    const aeroDrag = 0.5 * cd * airDensity * Math.pow(airSpeed, 2) * totalWingArea;
+
     // 3. قوة الدفع (Thrust) وأداء المروحة
     const propDiameterMeters = propDiameter; // تم تحويله بالفعل
     const propPitchMeters = params.propPitch * 0.0254; // تحويل خطوة المروحة من بوصة إلى متر
@@ -1838,7 +1851,7 @@ function calculateAerodynamics(params) {
     const prop_drag = airSpeed > 1 ? power_consumed_watts / airSpeed : 0; // تجنب القسمة على صفر
     const totalDrag = aeroDrag + prop_drag;
     // 4. حساب الوزن (Weight Calculation)
-    const wingVolume = mainWingArea * wingThickness; // Volume in m³
+    const wingVolume = mainWingArea * wingThickness; // Volume of main wing in m³
     const structureMaterialDensity = MATERIAL_DENSITIES[structureMaterial]; // Density in kg/m³
     const fuselageMaterialDensity = MATERIAL_DENSITIES[fuselageMaterialValue];
     const wingWeightKg = wingVolume * structureMaterialDensity; // Weight in kg
@@ -1850,6 +1863,10 @@ function calculateAerodynamics(params) {
         const singleWingtipVolume = wingtipLength * wingtipWidth * wingtipThickness;
         wingtipWeightKg = 2 * singleWingtipVolume * structureMaterialDensity; // لليمين واليسار
     }
+    // عرض وزن أطراف الجناح في النتائج
+    document.getElementById('wingtip-weight-result').textContent = (wingtipWeightKg * 1000).toFixed(0);
+    document.getElementById('wingtip-weight-result').parentElement.style.display = hasWingtip ? 'flex' : 'none';
+
 
     const tailVolume = totalTailArea * tailThickness;
     const tailWeightKg = tailVolume * structureMaterialDensity;
@@ -2130,8 +2147,8 @@ function calculateAerodynamics(params) {
     // عرض النتائج
     liftResultEl.textContent = lift > 0 ? lift.toFixed(2) : '0.00';
     dragResultEl.textContent = totalDrag > 0 ? totalDrag.toFixed(2) : '0.00';
-    thrustResultEl.textContent = thrust > 0 ? thrust.toFixed(2) : '0.00';
-    wingAreaResultEl.textContent = mainWingArea > 0 ? `${mainWingArea.toFixed(2)}` : '0.00';
+    thrustResultEl.textContent = thrust > 0 ? thrust.toFixed(2) : '0.00';    
+    wingAreaResultEl.textContent = totalWingArea > 0 ? `${totalWingArea.toFixed(2)}` : '0.00';
     wingWeightResultEl.textContent = (wingWeightKg * 1000).toFixed(0);
     tailAreaResultEl.textContent = totalTailArea > 0 ? totalTailArea.toFixed(2) : '0.00';
     tailWeightResultEl.textContent = (tailWeightKg * 1000).toFixed(0);
