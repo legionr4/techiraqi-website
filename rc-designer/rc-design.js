@@ -1653,9 +1653,8 @@ function updatePlaneModel() {
                 rightPylon.position.set(pylonX, pylonY, posOnWingZ);
                 const leftPylon = rightPylon.clone();
                 leftPylon.position.z = -posOnWingZ;
-                // تم التعديل: إضافة كل حامل إلى الجناح الخاص به مباشرة
-                rightWing.add(rightPylon);
-                leftWing.add(leftPylon);
+                // تصحيح: إضافة الحوامل إلى مجموعة محركات الجناح
+                wingEnginesGroup.add(rightPylon, leftPylon);
             }
             // إنشاء ووضع المحركات والمراوح
             const rightEngine = engineProto.clone();
@@ -1663,12 +1662,12 @@ function updatePlaneModel() {
             const rightProp = propModel.clone();
             const leftProp = propModel.clone();
 
-            // تم التعديل: تحديد الموضع بالنسبة للجناح وليس للطائرة ككل
-            rightEngine.position.set(engineCenterX, engineYOffset, posOnWingZ - (currentFuselageWidth / 2));
-            leftEngine.position.set(engineCenterX, engineYOffset, posOnWingZ - (currentFuselageWidth / 2)); // Z موجب لأن الجناح الأيسر معكوس
+            // تحديد الموضع بالنسبة للطائرة ككل
+            rightEngine.position.set(engineCenterX, engineYOffset, posOnWingZ);
+            leftEngine.position.set(engineCenterX, engineYOffset, -posOnWingZ);
 
-            rightProp.position.set(propCenterX, engineYOffset, posOnWingZ - (currentFuselageWidth / 2));
-            leftProp.position.set(propCenterX, engineYOffset, posOnWingZ - (currentFuselageWidth / 2));
+            rightProp.position.set(propCenterX, engineYOffset, posOnWingZ);
+            leftProp.position.set(propCenterX, engineYOffset, -posOnWingZ);
 
             // Apply thrust angles to each component
             rightEngine.rotation.set(0, engineSideThrustAngle, engineThrustAngle);
@@ -1682,9 +1681,8 @@ function updatePlaneModel() {
                 leftProp.rotation.y += Math.PI;
             }
 
-            // تم التعديل: إضافة كل مكون إلى الجناح الخاص به
-            rightWing.add(rightEngine, rightProp);
-            leftWing.add(leftEngine, leftProp);
+            // إضافة كل المكونات إلى مجموعة محركات الجناح
+            wingEnginesGroup.add(rightEngine, leftEngine, rightProp, leftProp);
         }
     }
     // --- Landing Gear ---
