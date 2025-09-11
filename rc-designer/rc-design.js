@@ -1162,20 +1162,23 @@ function updatePlaneModel() {
         const spanProgressAtHinge = Math.max(0, aileronCenterZ / halfSpan);
         const chordAtHinge = rootChord + (rootChord * taperRatio - rootChord) * spanProgressAtHinge;
         const sweepAtHinge = aileronCenterZ * Math.tan(sweepRad);
-        // 3. حساب الموضع X للمفصل (Hinge).
-        // يجب أن يكون عند الحافة الأمامية للقطع المخصص للجنيح في الجناح.
-        // الحافة الخلفية للجناح هي (sweepAtHinge - chordAtHinge / 2). نضيف عرض الجنيح للوصول إلى الحافة الأمامية للقطع.
+
+        // 3. حساب زاوية دوران محور الجنيح. هذه الزاوية تتأثر بكل من الميلان (Sweep) والاستدقاق (Taper).
+        const hingeLineSlope = Math.tan(sweepRad) + (rootChord * (1 - taperRatio)) / wingSpan;
+        const hingeAngle = Math.atan(hingeLineSlope);
+
+        // 4. حساب الموضع X للمفصل (Hinge) عند مركز الجنيح.
         const hingeX = (sweepAtHinge - (chordAtHinge / 2)) + aileronWidth;
         
-        // 3. The wing geometry is already translated by half fuselage width. The aileron pivot is a child of the wing, so its Z position is relative to the wing's local coordinate system.
+        // 5. الموضع Z للمحور هو مركز الجنيح.
         const finalPivotZ = aileronCenterZ;
 
-        // 4. تحديد موضع ودوران المحاور. يستخدم المحور الأيسر نفس القيم لأن الجناح الأيسر هو نسخة معكوسة.
+        // 6. تحديد موضع ودوران المحاور.
         rightAileronPivot.position.set(hingeX, 0, finalPivotZ);
-        rightAileronPivot.rotation.y = sweepRad;
+        rightAileronPivot.rotation.y = hingeAngle;
 
         leftAileronPivot.position.set(hingeX, 0, finalPivotZ);
-        leftAileronPivot.rotation.y = sweepRad;
+        leftAileronPivot.rotation.y = hingeAngle;
 
         // Add pivots to the wings
         rightWing.add(rightAileronPivot);
