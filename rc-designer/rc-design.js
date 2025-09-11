@@ -1636,19 +1636,16 @@ function updatePlaneModel() {
                 const pylonMaterial = new THREE.MeshStandardMaterial({ color: pylonColor, side: THREE.DoubleSide });
                 
                 // حساب موضع الحامل
-                let pylonX, pylonY;
+                let pylonY;
                 
-                if (wingEngineForeAft === 'leading') {
-                    pylonX = leadingEdgeX + pylonForeAftLength / 2;
-                } else { // trailing
-                    pylonX = trailingEdgeX - pylonForeAftLength / 2;
-                }
-
                 if (wingEngineVerticalPos === 'above') {
                     pylonY = wingCenterY + (wingThickness / 2) + (pylonHeightMeters / 2);
                 } else { // below
                     pylonY = wingCenterY - (wingThickness / 2) - (pylonHeightMeters / 2);
                 }
+
+                // تصحيح: يتم الآن حساب موضع الحامل ليكون بين الجناح والمحرك
+                const pylonX = (wingEngineForeAft === 'leading') ? (leadingEdgeX + pylonForeAftLength / 2) : (trailingEdgeX - pylonForeAftLength / 2);
 
                 const rightPylon = new THREE.Mesh(pylonGeom, pylonMaterial);
                 rightPylon.position.set(pylonX, pylonY, posOnWingZ);
