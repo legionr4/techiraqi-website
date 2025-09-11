@@ -3578,9 +3578,16 @@ function animate() {
                     positions[i3 + 2] = emitterZ + zOffset;
                 }
 
-                // Fade in/out effect
-                opacities[i] = effectStrength * Math.min(1, currentVortexStrength * 5.0) * densityFactor * airflowTransparency;
-                scales[i] = effectStrength * 1.0 * sizeFactor;
+                // تعديل: إضافة "تموج" عشوائي لمحاكاة تشوه الهواء
+                const shimmerStrength = 0.05 * effectStrength * currentVortexStrength;
+                positions[i3 + 1] += (Math.random() - 0.5) * shimmerStrength;
+                positions[i3 + 2] += (Math.random() - 0.5) * shimmerStrength;
+
+                // تعديل: جعل التأثير أكثر شفافية ونعومة
+                // يتم التحكم في الشفافية بشكل أساسي من خلال قوة الدوامة وعمر الجسيم
+                opacities[i] = effectStrength * Math.min(1, currentVortexStrength * 3.0) * 0.5 * densityFactor * airflowTransparency;
+                // زيادة الحجم قليلاً لجعله أكثر وضوحًا كتشوه
+                scales[i] = effectStrength * 1.5 * sizeFactor;
             }
             vortexParticleSystem.geometry.attributes.position.needsUpdate = true;
             vortexParticleSystem.geometry.attributes.customOpacity.needsUpdate = true;
@@ -3817,9 +3824,17 @@ function initVortexParticles() {
     particleGeometry.setAttribute('spiralData', new THREE.BufferAttribute(spiralData, 1));
     particleGeometry.setAttribute('life', new THREE.BufferAttribute(lifeData, 2));
 
-    const particleMaterial = createAirflowMaterial(0xffffff); // White vortices
+    // تعديل: استخدام مادة مخصصة للدوامات لتبدو كتشوه في الهواء بدلاً من جسيمات صلبة
+    const vortexMaterial = new THREE.ShaderMaterial({
+        uniforms: { color: { value: new THREE.Color(0xffffff) } },
+        vertexShader: createAirflowMaterial().vertexShader, // استخدام نفس شادر الرأس
+        fragmentShader: createAirflowMaterial().fragmentShader, // استخدام نفس شادر الجزء
+        blending: THREE.NormalBlending, // استخدام المزج العادي لمظهر أكثر نعومة
+        depthWrite: false,
+        transparent: true,
+    });
 
-    vortexParticleSystem = new THREE.Points(particleGeometry, particleMaterial);
+    vortexParticleSystem = new THREE.Points(particleGeometry, vortexMaterial);
     vortexParticleSystem.visible = false;
     // إضافة إلى المشهد الرئيسي لأن الدوامات ستنبعث من أماكن متعددة (الجناح والذيل)
     scene.add(vortexParticleSystem);
