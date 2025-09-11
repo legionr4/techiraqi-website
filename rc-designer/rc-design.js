@@ -791,6 +791,9 @@ function updateEngineInputs(spec, type) {
     }
 }
 function updateEngineUI() {
+    // حارس أمان: لا تقم بتحديث واجهة المستخدم للمحرك (وبالتالي النموذج) أثناء دوران المروحة.
+    if (isPropSpinning) return;
+
     const engineType = engineTypeInput.value;
 
     // Show/hide option blocks
@@ -2870,7 +2873,7 @@ function setAirflowVisibility(isSpinning) {
 }
 
 function updateAll() {
-    // لا تقم بتحديث النموذج بالكامل أثناء دوران المروحة،
+    // حارس أمان: لا تقم بتحديث النموذج بالكامل أثناء دوران المروحة،
     // لأن هذا يعيد إنشاء كائن المروحة ويعيد تعيين دورانه إلى الصفر.
     if (isPropSpinning) return;
 
