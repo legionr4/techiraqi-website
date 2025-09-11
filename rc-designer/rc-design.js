@@ -3142,7 +3142,7 @@ function animate() {
         }
 
         // --- تأثير اهتزاز الطائرة ---
-        const minVibrationRpm = 4000;
+        const minVibrationRpm = planeParams.propRpm/2;
         const maxVibrationRpm = 8000;
 
         let vibrationMagnitude = 0;
@@ -3152,7 +3152,7 @@ function animate() {
         }
 
         // تطبيق شدة الاهتزاز التي يحددها المستخدم
-        vibrationMagnitude *= userVibrationIntensity;
+        vibrationMagnitude *= planeParams.userVibrationIntensity;
 
         // اهتزاز الموضع (يتم إعادة تعيينه كل إطار لذا نستخدم `+=`)
         const maxPosOffset = 0.002;
