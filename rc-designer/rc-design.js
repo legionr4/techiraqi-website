@@ -263,6 +263,7 @@ const tailTaperRatioInput = document.getElementById('tail-taper-ratio');
 const rudderAirfoilTypeInput = document.getElementById('rudder-airfoil-type');
 const tailAirfoilTypeInput = document.getElementById('tail-airfoil-type');
 const tailThicknessInput = document.getElementById('tail-thickness');
+const controlSurfaceThicknessInput = document.getElementById('control-surface-thickness');
 const tailIncidenceAngleInput = document.getElementById('tail-incidence-angle');
 const tailDihedralAngleInput = document.getElementById('tail-dihedral-angle');
 
@@ -1226,6 +1227,7 @@ function updatePlaneModel() {
     }
 
     const tailThickness = getValidNumber(tailThicknessInput) * conversionFactor;
+    const controlSurfaceThickness = getValidNumber(controlSurfaceThicknessInput) * conversionFactor;
     const hasElevator = hasElevatorInput.checked;
     const elevatorWidth = getValidNumber(elevatorWidthInput) * conversionFactor;
     const hasRudder = hasRudderInput.checked;
@@ -1309,7 +1311,7 @@ function updatePlaneModel() {
     if (hasElevator && tailType !== 'v-tail') {
         // إنشاء سطح مائل ومستدق لنصف الرافع
         const elevatorLength = getValidNumber(elevatorLengthInput) * conversionFactor;
-        const elevatorHalfGeom = createSurface(elevatorLength * 2, elevatorWidth, tailTaperRatio, tailSweepAngle, tailThickness, elevatorAirfoilType, false, true);
+        const elevatorHalfGeom = createSurface(elevatorLength * 2, elevatorWidth, tailTaperRatio, tailSweepAngle, controlSurfaceThickness, elevatorAirfoilType, false, true);
         elevatorHalfGeom.translate(-elevatorWidth / 2, 0, 0); // تمدد للخلف من نقطة المفصل
         // إزاحة الرافع ليبدأ من جانب جسم الطائرة، مما يخلق فجوة في المنتصف
         elevatorHalfGeom.translate(0, 0, currentFuselageWidth / 2);
@@ -1338,8 +1340,8 @@ function updatePlaneModel() {
     if (hasRudder && tailType !== 'v-tail') {
         // إنشاء سطح مائل ومستدق للدفة
         const rudderLength = getValidNumber(rudderLengthInput) * conversionFactor;
-        // تصحيح: يجب أن تستخدم الدفة زاوية ميلان الذيل العمودي
-        const rudderGeom = createSurface(rudderLength, rudderWidth, tailTaperRatio, vStabSweepAngle, tailThickness, rudderAirfoilType, true, true);
+        // تصحيح: استخدام سماكة أسطح التحكم الجديدة
+        const rudderGeom = createSurface(rudderLength, rudderWidth, tailTaperRatio, vStabSweepAngle, controlSurfaceThickness, rudderAirfoilType, true, true);
         rudderGeom.translate(-rudderWidth / 2, 0, 0); // تمدد للخلف من نقطة المفصل
 
         const rudder = new THREE.Mesh(rudderGeom, aileronMaterial);
@@ -1846,6 +1848,7 @@ function calculateAerodynamics() {
     const vStabChord = getVal(vStabChordInput);
     const tailType = getStr(tailTypeInput);
     const tailThickness = getVal(tailThicknessInput);
+    const controlSurfaceThickness = getVal(controlSurfaceThicknessInput);
     const hasWingtip = getCheck(hasWingtipInput);
     const wingtipShape = getStr(wingtipShapeInput);
     const wingtipAirfoilType = getStr(wingtipAirfoilTypeInput);
@@ -2056,13 +2059,13 @@ function calculateAerodynamics() {
 
     let elevatorWeightKg = 0;
     if (hasElevator && (tailType === 'conventional' || tailType === 't-tail')) {
-        const singleElevatorVolume = elevatorLength * elevatorWidth * tailThickness;
+        const singleElevatorVolume = elevatorLength * elevatorWidth * controlSurfaceThickness;
         elevatorWeightKg = 2 * singleElevatorVolume * structureMaterialDensity;
     }
 
     let rudderWeightKg = 0;
     if (hasRudder && (tailType === 'conventional' || tailType === 't-tail')) {
-        const rudderVolume = rudderLength * rudderWidth * tailThickness;
+        const rudderVolume = rudderLength * rudderWidth * controlSurfaceThickness;
         rudderWeightKg = rudderVolume * structureMaterialDensity;
     }
     // ملاحظة: أسطح التحكم للذيل V تعتبر جزءًا من وزن الذيل الرئيسي حاليًا لتبسيط الحسابات.
