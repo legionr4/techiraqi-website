@@ -62,14 +62,9 @@ const wheelMaterial = new THREE.MeshStandardMaterial({ color: 0x333333, side: TH
 const fuselageGroup = new THREE.Group();
 planeGroup.add(fuselageGroup);
 
-// علامة مركز الثقل على جسم الطائرة
-const cgOnFuselageMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000, depthTest: false }); // أحمر، مع إلغاء اختبار العمق لضمان ظهوره
-const cgOnFuselageGeom = new THREE.SphereGeometry(0.03, 16, 16); // أكبر قليلاً ليكون واضحاً
-const cgOnFuselageSphere = new THREE.Mesh(cgOnFuselageGeom, cgOnFuselageMaterial);
-cgOnFuselageSphere.renderOrder = 1; // يتم عرضه فوق الأجسام الأخرى
-fuselageGroup.add(cgOnFuselageSphere);
-
-
+// علامة مركز الثقل على جسم الطائرة - سيتم إنشاؤها ديناميكيًا
+const cgFuselageMarkerGroup = new THREE.Group();
+cgFuselageMarkerGroup.name = 'cgFuselageMarker';
 // مجموعة الجناح (سيتم إنشاؤها ديناميكيًا)
 const wingGroup = new THREE.Group();
 planeGroup.add(wingGroup);
@@ -1299,10 +1294,8 @@ function updatePlaneModel() {
     while(fuselageGroup.children.length > 0) {
         fuselageGroup.remove(fuselageGroup.children[0]);
     }
-
-    // إعادة إضافة علامة مركز الثقل بعد مسح المجموعة لضمان عدم حذفها
-    fuselageGroup.add(cgOnFuselageSphere);
-
+    // إعادة إضافة مجموعة علامة مركز الثقل بعد مسح المجموعة لضمان عدم حذفها
+    fuselageGroup.add(cgFuselageMarkerGroup);
     if (fuselageShape === 'rectangular') {
         const rearWidth = currentFuselageWidth * fuselageTaperRatio;
         const rearHeight = currentFuselageHeight * fuselageTaperRatio;
@@ -2161,10 +2154,50 @@ function calculateAerodynamics() {
     // تحديث حالة إظهار مجموعة CG/AC
     cgAcGroup.visible = showCgAc;
 
-    // تحديث موضع علامة مركز الثقل على جسم الطائرة
-    cgOnFuselageSphere.position.x = cg_x;
-    cgOnFuselageSphere.visible = showCgAc;
+    // --- تحديث علامة مركز الثقل على جسم الطائرة (CG Marker) ---
+    while(cgFuselageMarkerGroup.children.length > 0) {
+        const child = cgFuselageMarkerGroup.children[0];
+        cgFuselageMarkerGroup.remove(child);
+        if (child.geometry) child.geometry.dispose(); // Clean up geometry
+        if (child.material) child.material.dispose(); // Clean up material
+    }
 
+    if (showCgAc) {
+        const cgMarkerMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000, depthTest: false, side: THREE.DoubleSide });
+        cgMarkerMaterial.renderOrder = 1; // Ensure it's drawn on top
+
+        // حساب أبعاد الجسم عند موضع مركز الثقل لضبط حجم العلامة
+        const t = (cg_x + fuselageLength / 2) / fuselageLength; // 0 at rear, 1 at front
+
+        if (fuselageShape === 'rectangular') {
+            const frontWidth = fuselageWidth;
+            const rearWidth = fuselageWidth * fuselageTaperRatio;
+            const currentWidth = rearWidth + t * (frontWidth - rearWidth);
+
+            const frontHeight = fuselageHeight;
+            const rearHeight = fuselageHeight * fuselageTaperRatio;
+            const currentHeight = rearHeight + t * (frontHeight - rearHeight);
+
+            const halfW = currentWidth / 2;
+            const halfH = currentHeight / 2;
+            const points = [ new THREE.Vector3(0, halfH, halfW), new THREE.Vector3(0, halfH, -halfW), new THREE.Vector3(0, -halfH, -halfW), new THREE.Vector3(0, -halfH, halfW) ];
+            const frameGeom = new THREE.BufferGeometry().setFromPoints(points);
+            const cgFrame = new THREE.LineLoop(frameGeom, new THREE.LineBasicMaterial({ color: 0xff0000, depthTest: false, renderOrder: 1 }));
+            cgFuselageMarkerGroup.add(cgFrame);
+
+        } else { // Cylindrical or Teardrop
+            let radiusFront, radiusRear;
+            if (fuselageShape === 'cylindrical') { radiusFront = fuselageDiameter / 2; radiusRear = radiusFront * fuselageTaperRatio; } 
+            else { radiusFront = fuselageFrontDiameter / 2; radiusRear = fuselageRearDiameter / 2; }
+            const currentRadius = Math.max(0.001, radiusRear + t * (radiusFront - radiusRear));
+
+            const tubeRadius = 0.005; // Thickness of the ring itself
+            const ringGeom = new THREE.TorusGeometry(currentRadius + tubeRadius, tubeRadius, 8, 48);
+            ringGeom.rotateY(Math.PI / 2); // Rotate to wrap around the X-axis
+            cgFuselageMarkerGroup.add(new THREE.Mesh(ringGeom, cgMarkerMaterial));
+        }
+    }
+    cgFuselageMarkerGroup.position.x = cg_x;
     // عرض النتائج
     liftResultEl.textContent = lift > 0 ? lift.toFixed(2) : '0.00';
     dragResultEl.textContent = totalDrag > 0 ? totalDrag.toFixed(2) : '0.00';
