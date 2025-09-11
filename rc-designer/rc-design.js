@@ -3006,8 +3006,9 @@ togglePropSpinBtn.addEventListener('click', () => {
         togglePropSpinBtn.textContent = 'إيقاف';
         togglePropSpinBtn.style.backgroundColor = '#ffc107'; // لون مميز للإشارة إلى التشغيل
         togglePropSpinBtn.style.color = '#000';
-        if (engineSound && engineSound.paused) {
-            // محاولة تشغيل الصوت. قد يتم حظره بواسطة المتصفح إذا لم يتفاعل المستخدم مع الصفحة أولاً.
+        if (engineSound) {
+            // التأكد من تحميل الصوت قبل محاولة التشغيل لزيادة الموثوقية
+            engineSound.load();
             engineSound.play().catch(e => console.error("فشل تشغيل الصوت:", e));
         }
     } else {
