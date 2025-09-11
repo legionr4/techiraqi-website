@@ -49,10 +49,6 @@ const engineGroup = new THREE.Group();
 planeGroup.add(engineGroup);
 const engineMaterial = new THREE.MeshStandardMaterial({ color: 0x666666 }); // A metallic grey
 
-// مجموعة محركات الجناح
-const wingEnginesGroup = new THREE.Group();
-wingGroup.add(wingEnginesGroup); // تصحيح: يجب أن تكون تابعة لمجموعة الجناح
-
 // مجموعة عجلات الهبوط
 const landingGearGroup = new THREE.Group();
 planeGroup.add(landingGearGroup);
@@ -70,6 +66,10 @@ cgFuselageMarkerGroup.name = 'cgFuselageMarker';
 // مجموعة الجناح (سيتم إنشاؤها ديناميكيًا)
 const wingGroup = new THREE.Group();
 planeGroup.add(wingGroup);
+
+// مجموعة محركات الجناح
+const wingEnginesGroup = new THREE.Group();
+wingGroup.add(wingEnginesGroup); // تم نقلها إلى هنا لضمان تعريف wingGroup أولاً
 
 // مجموعة تجميع الذيل (للسماح بدوران الميلان)
 const tailAssembly = new THREE.Group();
