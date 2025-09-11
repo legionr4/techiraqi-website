@@ -457,6 +457,12 @@ const otherAccessoriesWeightInput = document.getElementById('other-accessories-w
 // CG/AC Inputs
 const showCgAcCheckbox = document.getElementById('show-cg-ac');
 
+// Engine Thrust Angle Inputs
+const engineThrustAngleInput = document.getElementById('engine-thrust-angle');
+const engineSideThrustAngleInput = document.getElementById('engine-side-thrust-angle');
+const engineVerticalPositionInput = document.getElementById('engine-vertical-position');
+
+
 
 
 
@@ -489,6 +495,10 @@ const propTorqueResultEl = document.getElementById('prop-torque-result');
 const cgPositionResultEl = document.getElementById('cg-position-result');
 const acPositionResultEl = document.getElementById('ac-position-result');
 const staticMarginResultEl = document.getElementById('static-margin-result');
+
+const yawStabilityResultEl = document.getElementById('yaw-stability-result');
+const pitchingMomentResultEl = document.getElementById('pitching-moment-result');
+const yawingMomentResultEl = document.getElementById('yawing-moment-result');
 
 const planeParams = {}; // Object to hold cached plane parameters for the animation loop
 
@@ -2413,6 +2423,40 @@ function calculateAerodynamics() {
     // تحديث حالة إظهار مجموعة CG/AC
     cgAcGroup.visible = showCgAc;
 
+    // --- حساب عزم الدوران من الدفع (Pitching & Yawing Moments) ---
+    let pitchingMoment = 0;
+    let yawingMoment = 0;
+
+    if (thrust > 0 && (enginePlacement === 'front' || enginePlacement === 'rear')) {
+        // 1. تحديد نقطة تطبيق الدفع
+        const prop_pos_x = (enginePlacement === 'front')
+            ? (fuselageLength / 2) + engineLengthMeters + 0.01
+            : (-fuselageLength / 2) - engineLengthMeters - 0.01;
+        const prop_pos_y = engineVerticalPosition;
+
+        // 2. حساب ذراع العزم (من مركز الجاذبية إلى نقطة تطبيق الدفع)
+        const r_x = prop_pos_x - cg_x;
+        const r_y = prop_pos_y - 0; // نفترض أن مركز الجاذبية على المحور Y=0
+
+        // 3. حساب متجه الدفع مع الزوايا
+        const pitch_rad = engineThrustAngle * (Math.PI / 180);
+        const yaw_rad = engineSideThrustAngle * (Math.PI / 180);
+
+        const F_x = thrust * Math.cos(pitch_rad) * Math.cos(yaw_rad);
+        const F_y = thrust * Math.sin(pitch_rad); // القوة العمودية (للأعلى/للأسفل)
+        const F_z = thrust * Math.cos(pitch_rad) * Math.sin(yaw_rad); // القوة الجانبية (لليمين/لليسار)
+
+        // 4. حساب العزوم
+        // عزم الانحدار (حول المحور Z): M_z = r_x*F_y - r_y*F_x
+        // قيمة سالبة تعني ميلان للأسفل (nose-down)
+        pitchingMoment = (r_x * F_y) - (r_y * F_x);
+
+        // عزم الانعراج (حول المحور Y): M_y = r_z*F_x - r_x*F_z. بما أن r_z=0، يتبقى:
+        // قيمة موجبة تعني انعراج لليمين (nose-right)
+        yawingMoment = -r_x * F_z;
+    }
+    // ملاحظة: حسابات العزم لمحركات الجناح أكثر تعقيدًا ويمكن إضافتها لاحقًا.
+
     // --- تحديث علامة مركز الثقل على جسم الطائرة (CG Marker) ---
     while(cgFuselageMarkerGroup.children.length > 0) {
         const child = cgFuselageMarkerGroup.children[0];
@@ -2497,6 +2541,13 @@ function calculateAerodynamics() {
     acPositionResultEl.textContent = ((X_np - datum) * conversionFactorToDisplay).toFixed(1);
     staticMarginResultEl.textContent = `${staticMargin.toFixed(1)}%`;
 
+    // --- عرض نتائج عزوم الدوران ---
+    pitchingMomentResultEl.textContent = pitchingMoment.toFixed(2);
+    yawingMomentResultEl.textContent = yawingMoment.toFixed(2);
+    document.getElementById('pitching-moment-result-item').style.display = (enginePlacement === 'wing') ? 'none' : 'flex';
+    // تم إصلاح هذا السطر ليعمل بشكل صحيح
+    document.getElementById('yawing-moment-result-item').style.display = (enginePlacement === 'wing') ? 'none' : 'flex';
+
     // --- حساب استقرار الدوران (Roll Stability - Clβ) ---
     const Cl_alpha = airfoilLiftFactor * 2 * Math.PI * Math.cos(sweepRad);
 
@@ -2539,6 +2590,47 @@ function calculateAerodynamics() {
 
     const total_Cl_beta = Cl_beta_dihedral + Cl_beta_sweep + Cl_beta_position + Cl_beta_vtail + Cl_beta_h_dihedral;
     rollStabilityResultEl.textContent = total_Cl_beta.toFixed(3);
+
+    // --- حساب استقرار الانعراج (Yaw Stability - Cnβ) ---
+    let total_Cn_beta = 0;
+
+    if (totalWingArea > 0 && wingSpan > 0) {
+        const eta_v = 0.9; // كفاءة الذيل (نسبة الضغط الديناميكي)
+
+        // 1. مساهمة الذيل العمودي (الأكثر أهمية)
+        let Cn_beta_vtail = 0;
+        const vStabSweepRad = getRaw(vStabSweepAngleInput) * (Math.PI / 180);
+        const CL_alpha_v = 2 * Math.PI * Math.cos(vStabSweepRad);
+        const X_ac_v = tailPositionX - (0.25 * vStabChord); // مركز ضغط الذيل العمودي
+        const l_v = X_ac_v - cg_x; // ذراع العزم (سيكون سالبًا)
+
+        if (tailType === 'conventional' || tailType === 't-tail') {
+            const vStabArea = vStabHeight * vStabChord;
+            const V_v = (vStabArea * -l_v) / (totalWingArea * wingSpan); // معامل حجم الذيل العمودي
+            Cn_beta_vtail = V_v * CL_alpha_v * eta_v;
+        } else if (tailType === 'v-tail') {
+            const vTailAngleRad = getRaw(vTailAngleInput) * (Math.PI / 180);
+            const vStabArea = vStabHeight * vStabChord; // مساحة لوح واحد
+            const V_v = (vStabArea * -l_v) / (totalWingArea * wingSpan);
+            Cn_beta_vtail = 2 * V_v * CL_alpha_v * eta_v * Math.pow(Math.cos(vTailAngleRad), 2);
+        }
+
+        // 2. مساهمة جسم الطائرة (عادة ما تكون مزعزعة للاستقرار)
+        // صيغة تجريبية تعتمد على حجم الجسم
+        const Cn_beta_fuselage = -1.3 * (fuselageVolume / (totalWingArea * wingSpan));
+
+        // 3. مساهمة الجناح (تعتمد على زاوية الميلان)
+        // صيغة تقريبية
+        const Cn_beta_wing = -0.0001 * sweepAngle * Math.pow(cl, 2);
+
+        total_Cn_beta = Cn_beta_vtail + Cn_beta_fuselage + Cn_beta_wing;
+    }
+
+    yawStabilityResultEl.textContent = total_Cn_beta.toFixed(3);
+    // إظهار/إخفاء النتيجة بناءً على ما إذا كانت الحسابات ممكنة
+    document.getElementById('yaw-stability-result-item').style.display = (totalWingArea > 0) ? 'flex' : 'none';
+
+
 }
 
 function initCharts() {
@@ -2851,6 +2943,9 @@ servoWeightInput.addEventListener('input', debouncedUpdate);
 servoCountInput.addEventListener('input', debouncedUpdate);
 cameraWeightInput.addEventListener('input', debouncedUpdate);
 otherAccessoriesWeightInput.addEventListener('input', debouncedUpdate);
+engineThrustAngleInput.addEventListener('input', debouncedUpdate);
+engineSideThrustAngleInput.addEventListener('input', debouncedUpdate);
+engineVerticalPositionInput.addEventListener('input', debouncedUpdate);
 enginePylonLengthInput.addEventListener('input', debouncedUpdate);
 
 
@@ -2997,14 +3092,14 @@ function animate() {
     if (isPropSpinning) {
         
         // سرعة الهواء الرئيسية يتم حسابها الآن ديناميكيًا من المروحة
-        const mainAirSpeed = (propRpm / 60) * propPitch;
+        const mainAirSpeed = (planeParams.propRpm / 60) * planeParams.propPitch;
 
         // --- قراءة قيم التحكم في الجسيمات ---
-        const densityFactor = userParticleDensity * 2; // مضاعفة لجعل 50% هو الافتراضي
-        const sizeFactor = userParticleSize * 2;       // مضاعفة لجعل 50% هو الافتراضي
+        const densityFactor = planeParams.userParticleDensity * 2; // مضاعفة لجعل 50% هو الافتراضي
+        const sizeFactor = planeParams.userParticleSize * 2;       // مضاعفة لجعل 50% هو الافتراضي
 
         const enginePlacement = enginePlacementInput.value;
-        const rotationPerSecond = (propRpm / 60) * Math.PI * 2;
+        const rotationPerSecond = (planeParams.propRpm / 60) * Math.PI * 2;
 
         // --- دوران المروحة ---
         if (enginePlacement === 'wing') {
