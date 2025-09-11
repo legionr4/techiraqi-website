@@ -3145,7 +3145,7 @@ function animate() {
         }
 
         // تطبيق شدة الاهتزاز التي يحددها المستخدم
-        vibrationMagnitude *= getValidNumber(vibrationIntensityInput);
+        vibrationMagnitude *= planeParams.userVibrationIntensity;
 
         // تطبيق اهتزاز الموضع والدوران
         const maxPosOffset = 0.002;
