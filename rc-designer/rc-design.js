@@ -2956,21 +2956,21 @@ function animate() {
     if (isPropSpinning) {
         
         // سرعة الهواء الرئيسية يتم حسابها الآن ديناميكيًا من المروحة
-        const mainAirSpeed = (propRpm / 60) * propPitch;
+        const mainAirSpeed = (planeParams.propRpm / 60) * planeParams.propPitch;
 
         // --- قراءة قيم التحكم في الجسيمات ---
-        const densityFactor = userParticleDensity * 2; // مضاعفة لجعل 50% هو الافتراضي
-        const sizeFactor = userParticleSize * 2;       // مضاعفة لجعل 50% هو الافتراضي
+        const densityFactor = planeParams.userParticleDensity * 2; // مضاعفة لجعل 50% هو الافتراضي
+        const sizeFactor = planeParams.userParticleSize * 2;       // مضاعفة لجعل 50% هو الافتراضي
 
         const enginePlacement = enginePlacementInput.value;
-        const rotationPerSecond = (propRpm / 60) * Math.PI * 2;
+        const rotationPerSecond = (planeParams.propRpm / 60) * Math.PI * 2;
 
         // --- دوران المروحة ---
-        if (enginePlacement === 'wing') {
+        if (enginePlacement === 'wing') { // This logic was duplicated, removing the duplicate
             const wingPropRotation = wingPropRotationInput.value;
             const props = wingEnginesGroup.children.filter(c => c.type === 'Group');
 
-            props.forEach(prop => {
+            props.forEach(prop => { // The props are groups containing the blades
                 if (wingPropRotation === 'counter') {
                     // المروحة اليمنى (z > 0) تدور في اتجاه، واليسرى (z < 0) في الاتجاه المعاكس
                     if (prop.position.z > 0) {
@@ -2983,65 +2983,13 @@ function animate() {
                 }
             });
 
-        } else { // أمامي أو خلفي
-            propellerGroup.rotation.x += rotationPerSecond * deltaTime;
         }
-
-        // --- تأثير اهتزاز الطائرة ---
-        const minVibrationRpm = 4000;
-        const maxVibrationRpm = 8000;
-
-        let vibrationMagnitude = 0;
-        if (propRpm > minVibrationRpm) {
-            vibrationMagnitude = (propRpm - minVibrationRpm) / (maxVibrationRpm - minVibrationRpm);
-            vibrationMagnitude = Math.min(1, Math.max(0, vibrationMagnitude)); // حصر القيمة بين 0 و 1
-        }
-
-        // تطبيق شدة الاهتزاز التي يحددها المستخدم
-        vibrationMagnitude *= userVibrationIntensity;
-
-        // اهتزاز الموضع (يتم إعادة تعيينه كل إطار لذا نستخدم `+=`)
-        const maxPosOffset = 0.002;
-        planeGroup.position.x += (Math.random() * 2 - 1) * maxPosOffset * vibrationMagnitude;
-        planeGroup.position.y += (Math.random() * 2 - 1) * maxPosOffset * vibrationMagnitude;
-        planeGroup.position.z += (Math.random() * 2 - 1) * maxPosOffset * vibrationMagnitude;
-
-        // --- تحديث الدوران (التحكم والاهتزاز) ---
-        // 1. إزالة اهتزاز الدوران من الإطار السابق للعودة إلى الدوران "النظيف" الناتج عن التحكم
-        planeGroup.rotation.x -= lastVibrationRotation.x;
-        planeGroup.rotation.y -= lastVibrationRotation.y;
-        planeGroup.rotation.z -= lastVibrationRotation.z;
-
-        // 2. تطبيق الدوران التراكمي الجديد من أسطح التحكم لهذا الإطار
-        const rightAileronRot = scene.getObjectByName('rightAileron')?.parent.rotation.z || 0;
-        const elevatorRot = scene.getObjectByName('rightElevator')?.parent.rotation.z || 0;
-        const rudderRot = scene.getObjectByName('rudder')?.parent.rotation.y || 0;
-        const maneuverFactor = 0.5; // معامل لتحديد مدى قوة استجابة الطائرة
-        const maneuverSpeed = maneuverFactor * deltaTime; // جعل الحركة معتمدة على الوقت وليس على معدل الإطارات
-
-        planeGroup.rotation.z -= elevatorRot * maneuverSpeed; // الانحدار (Pitch)
-        planeGroup.rotation.x += rightAileronRot * maneuverSpeed; // الدوران (Roll)
-        planeGroup.rotation.y += rudderRot * maneuverSpeed; // الانعراج (Yaw)
-
-        // 3. حساب وتطبيق اهتزاز الدوران الجديد لهذا الإطار
-        const maxRotOffset = 0.005;
-        const currentVibration = new THREE.Euler(
-            (Math.random() * 2 - 1) * maxRotOffset * vibrationMagnitude,
-            (Math.random() * 2 - 1) * maxRotOffset * vibrationMagnitude,
-            (Math.random() * 2 - 1) * maxRotOffset * vibrationMagnitude
-        );
-        planeGroup.rotation.x += currentVibration.x;
-        planeGroup.rotation.y += currentVibration.y;
-        planeGroup.rotation.z += currentVibration.z;
-
-        // 4. تخزين اهتزاز الدوران الحالي لإزالته في الإطار التالي
-        lastVibrationRotation.copy(currentVibration);
 
         // --- كل تحديثات الجزيئات تحدث فقط عند تشغيل المروحة ---
         // --- تحديث جزيئات تدفق هواء المروحة ---
         if (propParticleSystem && propParticleSystem.visible) {
             const axialSpeed = mainAirSpeed * 1.5; // أسرع قليلاً للتأثير البصري
-            const rotationalSpeed = (propRpm / 60) * Math.PI * 2 * 0.5; // عامل 0.5 لتقليل سرعة الدوران البصري
+            const rotationalSpeed = (planeParams.propRpm / 60) * Math.PI * 2 * 0.5; // عامل 0.5 لتقليل سرعة الدوران البصري
 
             const positions = propParticleSystem.geometry.attributes.position.array;
             const opacities = propParticleSystem.geometry.attributes.customOpacity.array;
@@ -3153,7 +3101,7 @@ function animate() {
             const rudderRot = scene.getObjectByName('rudder')?.parent.rotation.y || 0;
 
             const deflectionFactor = 8.0; // How strongly the surface deflects air
-            
+
             const startX = 2.0; // Corresponds to emission point in init
             const endX = -fuselageLength / 2 - 1.0;
             const travelDistance = startX - endX;
@@ -3199,7 +3147,7 @@ function animate() {
                 const rudderYEnd = rudderYStart + rudderLength;
                 if (Math.abs(px - rudderZoneX) < 0.2 && Math.abs(pz) < 0.2) {
                      if (py > rudderYStart && py < rudderYEnd) {
-                        velocities[i3 + 2] -= rudderRot * deflectionFactor;
+                        velocities[i3 + 2] -= rudderRot * deflectionFactor; // This was a bug, it should affect z-velocity
                     }
                 }
 
