@@ -1633,10 +1633,11 @@ function updatePlaneModel() {
                     pylonY = wingCenterY - (wingThickness / 2) - (pylonHeightMeters / 2);
                 }
 
-                const pylonX = (wingEngineForeAft === 'leading') ? (leadingEdgeX + pylonForeAftLength / 2) : (trailingEdgeX - pylonForeAftLength / 2);
+                // تصحيح: حساب موضع الحامل بالنسبة لمجموعة الجناح وليس للمشهد العام
+                const pylonX_relative = ((wingEngineForeAft === 'leading') ? (leadingEdgeX + pylonForeAftLength / 2) : (trailingEdgeX - pylonForeAftLength / 2)) - wingGroup.position.x;
 
                 const rightPylon = new THREE.Mesh(pylonGeom, pylonMaterial);
-                rightPylon.position.set(pylonX, pylonY, posOnWingZ);
+                rightPylon.position.set(pylonX_relative, pylonY, posOnWingZ);
                 const leftPylon = rightPylon.clone();
                 leftPylon.position.z = -posOnWingZ;
                 wingEnginesGroup.add(rightPylon, leftPylon);
