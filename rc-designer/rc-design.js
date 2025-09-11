@@ -542,10 +542,10 @@ function generateAirfoil(chord, thickness, airfoilType, numPoints = 15) {
     }
     // Add simpler shapes for control surfaces
     else if (airfoilType === 'wedge') {
+        // A wedge is a triangle. The points must be in order to form a loop.
         points.push(new THREE.Vector2(chord / 2, thickness / 2));   // Top-front
+        points.push(new THREE.Vector2(-chord / 2, 0));              // Trailing edge point
         points.push(new THREE.Vector2(chord / 2, -thickness / 2));  // Bottom-front
-        points.push(new THREE.Vector2(-chord / 2, -thickness / 2)); // Bottom-rear
-        points.push(new THREE.Vector2(-chord / 2, thickness / 2));  // Top-rear
     }
     else if (airfoilType === 'flat_plate') {
         points.push(new THREE.Vector2(chord / 2, thickness / 2));
@@ -1107,11 +1107,12 @@ function updatePlaneModel() {
         const rightWingtip = new THREE.Mesh(wingtipGeometry, wingtipMaterial);
 
         // Position the wingtip at the end of the main wing
+        const tipChord = rootChord * taperRatio; // عرض الجناح عند النهاية
         const tipSweep = halfSpan * Math.tan(sweepRad);
-        const tipZ = halfSpan;
-        // The wingtip's origin should be at the center of the wing's tip chord.
-        // The center of the wing's chord at the tip is at `tipSweep`.
-        rightWingtip.position.set(tipSweep, 0, tipZ);
+        const tipZ = halfSpan; // الموضع على امتداد الجناح
+        // يجب أن يبدأ طرف الجناح من الحافة الخلفية لنهاية الجناح الرئيسي
+        const wingtipX = tipSweep - (tipChord / 2) + (wingtipWidth / 2);
+        rightWingtip.position.set(wingtipX, 0, tipZ);
 
         // Apply the cant angle (up/down rotation)
         rightWingtip.rotation.x = wingtipAngle;
@@ -1160,8 +1161,9 @@ function updatePlaneModel() {
         // 2. حساب خصائص الجناح عند مركز الجنيح
         const spanProgressAtHinge = Math.max(0, aileronCenterZ / halfSpan);
         const chordAtHinge = rootChord + (rootChord * taperRatio - rootChord) * spanProgressAtHinge;
-        const sweepAtHinge = (aileronCenterZ) * Math.tan(sweepRad);
-        const hingeX = sweepAtHinge + (chordAtHinge / 2) - aileronWidth;
+        const sweepAtHinge = aileronCenterZ * Math.tan(sweepRad);
+        // 3. حساب الموضع X للمفصل. يجب أن يكون عند الحافة الخلفية للجناح.
+        const hingeX = sweepAtHinge - (chordAtHinge / 2);
         
         // 3. The wing geometry is already translated by half fuselage width. The aileron pivot is a child of the wing, so its Z position is relative to the wing's local coordinate system.
         const finalPivotZ = aileronCenterZ;
