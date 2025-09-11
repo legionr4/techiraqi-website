@@ -260,6 +260,7 @@ const tailTaperRatioInput = document.getElementById('tail-taper-ratio');
 const tailAirfoilTypeInput = document.getElementById('tail-airfoil-type');
 const tailThicknessInput = document.getElementById('tail-thickness');
 const tailIncidenceAngleInput = document.getElementById('tail-incidence-angle');
+const tailDihedralAngleInput = document.getElementById('tail-dihedral-angle');
 
 const hStabSpanGroup = document.getElementById('h-stab-span-group');
 const hStabChordGroup = document.getElementById('h-stab-chord-group');
@@ -372,6 +373,7 @@ const fuelLevelValueEl = document.getElementById('fuel-level-value');
 const tailSweepValueEl = document.getElementById('tail-sweep-value');
 const vStabSweepValueEl = document.getElementById('vstab-sweep-value');
 const tailIncidenceValueEl = document.getElementById('tail-incidence-value');
+const tailDihedralValueEl = document.getElementById('tail-dihedral-value');
 const tailTaperValueEl = document.getElementById('tail-taper-value');
 const particleDensityValueEl = document.getElementById('particle-density-value');
 const particleSizeValueEl = document.getElementById('particle-size-value');
@@ -812,6 +814,8 @@ function updatePlaneModel() {
     const vStabSweepAngle = getValidNumber(vStabSweepAngleInput);
     const tailAirfoilType = tailAirfoilTypeInput.value;
     const tailIncidenceAngle = getValidNumber(tailIncidenceAngleInput);
+    const tailDihedralAngle = getValidNumber(tailDihedralAngleInput);
+    const tailDihedralRad = tailDihedralAngle * (Math.PI / 180);
     const tailTaperRatio = getValidNumber(tailTaperRatioInput);
 
     // قراءة قيم جسم الطائرة
@@ -1210,6 +1214,7 @@ function updatePlaneModel() {
         hStabGeom.translate(0, 0, currentFuselageWidth / 2);
         const rightHStab = new THREE.Mesh(hStabGeom, tailMaterial); // Define rightHStab
         rightHStab.position.x = -hStabChordEffective / 2; // Position relative to tailAssembly
+        rightHStab.rotation.x = tailDihedralRad;
         // Clone and mirror for the left half
         const leftHStab = rightHStab.clone();
         leftHStab.scale.z = -1;
@@ -1229,6 +1234,7 @@ function updatePlaneModel() {
         const rightHStab = new THREE.Mesh(hStabGeom, tailMaterial);
         // رفع المثبت الأفقي ليجلس فوق المثبت العمودي
         rightHStab.position.set(-hStabChordEffective / 2, vStabHeight + currentFuselageHeight / 2, 0);
+        rightHStab.rotation.x = tailDihedralRad;
 
         // Clone and mirror for the left half
         const leftHStab = rightHStab.clone(); // Corrected: leftHStab was not defined
@@ -1307,7 +1313,7 @@ function updatePlaneModel() {
         // تصحيح: نضع المحور عند الحافة الخلفية للجزء الثابت من الذيل العمودي
         const vStabRootChordEffective = vStabChord - rudderWidth;
         // يجب أن يكون موضع المحور عند الحافة الخلفية للجزء الثابت من الذيل العمودي
-        const pivotX = -vStabRootChordEffective / 2;
+        const pivotX = -vStabRootChordEffective;
         
         rudderPivot.position.set(pivotX, currentFuselageHeight / 2, 0); // تبدأ الهندسة من y=0، لذا نرفعها
 
@@ -1764,6 +1770,9 @@ function calculateAerodynamics() {
     const fuselageLength = getVal(fuselageLengthInput);
     const sweepRad = getRaw(sweepAngleInput) * (Math.PI / 180); // تعريف sweepRad مرة واحدة هنا
     const sweepAngle = getRaw(sweepAngleInput);
+    const wingPosition = getStr(wingPositionInput);
+    const dihedralAngle = getRaw(dihedralAngleInput);
+    const tailDihedralAngle = getRaw(tailDihedralAngleInput);
     const tailSpan = getVal(tailSpanInput);
     const tailChord = getVal(tailChordInput);
     const vStabHeight = getVal(vStabHeightInput);
@@ -2412,7 +2421,16 @@ function calculateAerodynamics() {
         Cl_beta_vtail = -CL_alpha_v * (vStabArea / totalWingArea) * (Z_v / wingSpan);
     }
 
-    const total_Cl_beta = Cl_beta_dihedral + Cl_beta_sweep + Cl_beta_position + Cl_beta_vtail;
+    // 5. تأثير الديhedral للذيل الأفقي (Horizontal Tail Dihedral)
+    let Cl_beta_h_dihedral = 0;
+    if (hStabArea > 0) {
+        const tailDihedralRad = tailDihedralAngle * (Math.PI / 180);
+        const eta_h = 0.9; // Dynamic pressure ratio at the tail (assumed)
+        // The formula is similar to the wing's but scaled by area and dynamic pressure
+        Cl_beta_h_dihedral = -0.5 * CL_alpha_h * (hStabArea / totalWingArea) * eta_h * tailDihedralRad;
+    }
+
+    const total_Cl_beta = Cl_beta_dihedral + Cl_beta_sweep + Cl_beta_position + Cl_beta_vtail + Cl_beta_h_dihedral;
     rollStabilityResultEl.textContent = total_Cl_beta.toFixed(3);
 }
 
@@ -2733,6 +2751,7 @@ dihedralAngleInput.addEventListener('input', () => dihedralValueEl.textContent =
 fuelLevelInput.addEventListener('input', () => fuelLevelValueEl.textContent = Math.round(fuelLevelInput.value * 100));
 tailSweepAngleInput.addEventListener('input', () => tailSweepValueEl.textContent = tailSweepAngleInput.value);
 tailIncidenceAngleInput.addEventListener('input', () => tailIncidenceValueEl.textContent = parseFloat(tailIncidenceAngleInput.value).toFixed(1));
+tailDihedralAngleInput.addEventListener('input', () => tailDihedralValueEl.textContent = tailDihedralAngleInput.value);
 vStabSweepAngleInput.addEventListener('input', () => vStabSweepValueEl.textContent = vStabSweepAngleInput.value);
 tailTaperRatioInput.addEventListener('input', () => tailTaperValueEl.textContent = parseFloat(tailTaperRatioInput.value).toFixed(2));
 particleDensityInput.addEventListener('input', () => particleDensityValueEl.textContent = Math.round(particleDensityInput.value * 100));
