@@ -204,7 +204,8 @@ const MATERIAL_DENSITIES = {
     'plastic': 1150, // بلاستيك Nylon/ABS
     'carbon_fiber': 1600,
     'wood': 700,
-    'polycarbonate': 1200 // كثافة البولي كربونات
+    'polycarbonate': 1200, // كثافة البولي كربونات
+    'aluminum': 2700
 };
 
 const FUEL_DENSITIES = {
@@ -424,6 +425,7 @@ const engineWingDistanceInput = document.getElementById('engine-wing-distance');
 const engineWingVerticalPosInput = document.getElementById('engine-wing-vertical-pos');
 const engineWingForeAftInput = document.getElementById('engine-wing-fore-aft');
 const enginePylonLengthInput = document.getElementById('engine-pylon-length');
+const pylonMaterialInput = document.getElementById('pylon-material');
 const wingPropRotationInput = document.getElementById('wing-prop-rotation');
 
 const electricMotorWeightInput = document.getElementById('electric-motor-weight-input');
@@ -1554,7 +1556,6 @@ function updatePlaneModel() {
             const wingEngineDistMeters = getValidNumber(engineWingDistanceInput) * conversionFactor;
             const wingEngineVerticalPos = engineWingVerticalPosInput.value;
             const wingEngineForeAft = engineWingForeAftInput.value;
-            // "طول" الحامل من المدخلات هو في الواقع ارتفاعه العمودي
             const pylonHeightMeters = getValidNumber(enginePylonLengthInput) * conversionFactor;
 
             // حساب الموضع على امتداد الجناح
@@ -1567,7 +1568,7 @@ function updatePlaneModel() {
             const leadingEdgeX = wingPositionX + sweepAtPylon + chordAtPylon / 2;
             const trailingEdgeX = wingPositionX + sweepAtPylon - chordAtPylon / 2;
 
-            // حساب الموضع العمودي للمحرك (أعلى/أسفل) مع الأخذ في الاعتبار ارتفاع الحامل
+            // حساب الموضع العمودي (أعلى/أسفل)
             const wingCenterY = wingGroup.position.y;
             let engineYOffset;
             if (wingEngineVerticalPos === 'above') {
@@ -1579,15 +1580,12 @@ function updatePlaneModel() {
             // حساب الموضع الأفقي (أمامي/خلفي) وإعداد المروحة
             let engineCenterX, propCenterX;
             let propModel;
-            // تحديد طول الحامل في الاتجاه الأمامي-الخلفي (غير محدد من قبل المستخدم)
-            const pylonForeAftLength = engineDiameterMeters * 0.6;
-
             if (wingEngineForeAft === 'leading') {
-                engineCenterX = leadingEdgeX + pylonForeAftLength + (engineLengthMeters / 2);
+                engineCenterX = leadingEdgeX + pylonLengthMeters + (engineLengthMeters / 2);
                 propCenterX = engineCenterX + (engineLengthMeters / 2) + 0.01;
                 propModel = propProto.clone(); // مروحة سحب (Tractor)
             } else { // 'trailing'
-                engineCenterX = trailingEdgeX - pylonForeAftLength - (engineLengthMeters / 2);
+                engineCenterX = trailingEdgeX - pylonLengthMeters - (engineLengthMeters / 2);
                 propCenterX = engineCenterX - (engineLengthMeters / 2) - 0.01;
                 propModel = propProto.clone();
                 propModel.rotation.y = Math.PI; // مروحة دفع (Pusher)
@@ -1597,6 +1595,18 @@ function updatePlaneModel() {
             if (pylonHeightMeters > 0.001) {
                 const pylonWidth = engineDiameterMeters * 0.4; // عرض الحامل أنحف قليلاً من المحرك
                 const pylonGeom = new THREE.BoxGeometry(pylonForeAftLength, pylonHeightMeters, pylonWidth);
+                
+                // New: Create pylon material based on selection
+                const pylonMaterialValue = pylonMaterialInput.value;
+                let pylonColor;
+                if (pylonMaterialValue === 'aluminum') {
+                    pylonColor = 0xafb8c1; // Silvery gray
+                } else if (pylonMaterialValue === 'carbon_fiber') {
+                    pylonColor = 0x444444; // Dark gray
+                } else { // plastic
+                    pylonColor = 0x555555; // Default plastic gray
+                }
+                const pylonMaterial = new THREE.MeshStandardMaterial({ color: pylonColor, side: THREE.DoubleSide });
                 
                 // حساب موضع الحامل
                 let pylonX, pylonY;
@@ -1613,7 +1623,7 @@ function updatePlaneModel() {
                     pylonY = wingCenterY - (wingThickness / 2) - (pylonHeightMeters / 2);
                 }
 
-                const rightPylon = new THREE.Mesh(pylonGeom, engineMaterial); // استخدام نفس مادة المحرك
+                const rightPylon = new THREE.Mesh(pylonGeom, pylonMaterial);
                 rightPylon.position.set(pylonX, pylonY, posOnWingZ);
                 const leftPylon = rightPylon.clone();
                 leftPylon.position.z = -posOnWingZ;
@@ -1932,6 +1942,7 @@ function calculateAerodynamics() {
     const otherAccessoriesWeightGrams = getRaw(otherAccessoriesWeightInput);
     const engineWeightKg = (engineType === 'electric' ? getRaw(electricMotorWeightInput) : getRaw(icEngineWeightInput)) / 1000;
     const pylonHeightMeters = getVal(enginePylonLengthInput);
+    const pylonMaterial = getStr(pylonMaterialInput);
     const engineDiameterMeters = (engineType === 'electric' ? getVal(electricMotorDiameterInput) : getVal(icEngineDiameterInput));
     const wingEngineVerticalPos = getStr(engineWingVerticalPosInput);
     const wingEngineForeAft = getStr(engineWingForeAftInput);
@@ -2246,9 +2257,19 @@ function calculateAerodynamics() {
     const totalAccessoriesWeightGrams = receiverWeightGrams + servoWeightGrams + cameraWeightGrams + otherAccessoriesWeightGrams;
     const totalAccessoriesWeightKg = totalAccessoriesWeightGrams / 1000;
 
-    let pylonWeightKg = 0; // Initialize pylon weight
+    // حساب وزن الحامل (Pylon) قبل حساب الوزن الإجمالي
+    let pylonWeightKg = 0;
+    if (enginePlacement === 'wing' && pylonHeightMeters > 0.001) {
+        const pylonForeAftLength = engineDiameterMeters * 0.6;
+        if (pylonForeAftLength > 0) {
+            const pylonWidth = engineDiameterMeters * 0.4;
+            const pylonVolume = pylonForeAftLength * pylonHeightMeters * pylonWidth;
+            const pylonMaterialDensity = MATERIAL_DENSITIES[pylonMaterial] || MATERIAL_DENSITIES['plastic'];
+            pylonWeightKg = pylonVolume * pylonMaterialDensity * 2; // For both pylons
+        }
+    }
 
-    const totalWeightKg = wingWeightKg + tailWeightKg + fuselageWeightKg + propWeightKg + landingGearWeightKg + engineWeightKg + energySourceWeightKg + cockpitWeightKg + totalAccessoriesWeightKg + wingtipWeightKg + aileronWeightKg + elevatorWeightKg + rudderWeightKg + pylonWeightKg;
+    const totalWeightKg = wingWeightKg + tailWeightKg + fuselageWeightKg + propWeightKg + landingGearWeightKg + engineWeightKg + energySourceWeightKg + cockpitWeightKg + totalAccessoriesWeightKg + wingtipWeightKg + aileronWeightKg + elevatorWeightKg + rudderWeightKg + pylonWeightKg; // Now includes correct pylon weight
     
     // 5. نسبة الدفع إلى الوزن (Thrust-to-Weight Ratio)
     const weightInNewtons = totalWeightKg * 9.81;
@@ -2416,21 +2437,11 @@ function calculateAerodynamics() {
         addMoment(totalWingPropulsionWeight, wingEngineX);
 
         // --- حساب وزن وعزم حوامل المحركات (Pylons) ---
-        if (pylonHeightMeters > 0.001) {
-            // يجب أن تكون هذه القيمة متسقة مع ما هو موجود في updatePlaneModel
+        // تم حساب الوزن مسبقًا، هنا نحسب العزم فقط
+        if (pylonWeightKg > 0) {
             const pylonForeAftLength = engineDiameterMeters * 0.6;
-
-            if (pylonForeAftLength > 0) {
-                const pylonWidth = engineDiameterMeters * 0.4; // Consistent with 3D model
-                const pylonVolume = pylonForeAftLength * pylonHeightMeters * pylonWidth;
-                const pylonMaterialDensity = MATERIAL_DENSITIES['plastic']; // Assume plastic for now
-                const totalPylonWeightKg = pylonVolume * pylonMaterialDensity * 2; // For both pylons
-                pylonWeightKg = totalPylonWeightKg; // Store it
-                
-                // Calculate pylon X position for moment
-                const pylonX = (wingEngineForeAft === 'leading') ? (leadingEdgeX + pylonForeAftLength / 2) : (trailingEdgeX - pylonForeAftLength / 2);
-                addMoment(pylonWeightKg, pylonX);
-            }
+            const pylonX = (wingEngineForeAft === 'leading') ? (leadingEdgeX + pylonForeAftLength / 2) : (trailingEdgeX - pylonForeAftLength / 2);
+            addMoment(pylonWeightKg, pylonX);
         }
     }
 
@@ -2950,6 +2961,7 @@ cameraWeightInput.addEventListener('input', debouncedUpdate);
 otherAccessoriesWeightInput.addEventListener('input', debouncedUpdate);
 enginePylonLengthInput.addEventListener('input', debouncedUpdate);
 
+pylonMaterialInput.addEventListener('change', updateAll);
 
 
 // تحديث عرض قيم شريط التمرير
