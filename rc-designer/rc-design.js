@@ -791,9 +791,6 @@ function updateEngineInputs(spec, type) {
     }
 }
 function updateEngineUI() {
-    // حارس أمان: لا تقم بتحديث واجهة المستخدم للمحرك (وبالتالي النموذج) أثناء دوران المروحة.
-    if (isPropSpinning) return;
-
     const engineType = engineTypeInput.value;
 
     // Show/hide option blocks
@@ -1758,6 +1755,20 @@ function updatePlaneModel() {
     }
 }
 
+/**
+ * Performs all aerodynamic and weight calculations and updates the results panel.
+ * This function is designed to be fast and not modify the 3D model.
+ */
+function updateCalculations() {
+    try {
+        calculateAerodynamics();
+        if (liftChart && dragChart && thrustChart) {
+            updateCharts();
+        }
+    } catch (error) {
+        console.error("Error during calculations update:", error);
+    }
+}
 /**
  * يقرأ جميع المدخلات، ويحسب الخصائص الديناميكية الهوائية والوزن، ويعرض النتائج.
  * تم تعديل هذه الدالة لتقرأ القيم مباشرة من عناصر DOM لضمان الدقة.
@@ -2879,11 +2890,8 @@ function updateAll() {
 
     try {
         updatePlaneModel();
-        calculateAerodynamics(); // استدعاء دالة الحسابات التي تقرأ الآن القيم مباشرة
+        updateCalculations(); // استدعاء دالة الحسابات المنفصلة
         updatePlaneParameters(); // تخزين المعلمات المؤقتة للرسوم المتحركة
-    if (liftChart && dragChart && thrustChart) {
-            updateCharts();
-        }
     } catch (error) {
         console.error("Error in updateAll:", error);
         // Optionally, display an error message to the user or log it more prominently
@@ -2898,12 +2906,12 @@ function updateUnitLabels() {
 }
 
 // --- ربط الأحداث ---
-const debouncedUpdate = debounce(updateAll, 150); // تأخير 150ms لتحسين الأداء
+const debouncedCalcUpdate = debounce(updateCalculations, 200); // تأخير 200ms للحسابات فقط
 
 allControls.forEach(control => {
     // استخدام دالة debounced للمدخلات التي تتغير بسرعة (مثل range و number)
     if (control.type === 'range' || control.type === 'number') {
-        control.addEventListener('input', debouncedUpdate);
+        control.addEventListener('input', debouncedCalcUpdate);
     } else { // للمدخلات الأخرى (مثل select و color)، التحديث فوري عند التغيير
         control.addEventListener('change', updateAll);
     }
@@ -2911,11 +2919,11 @@ allControls.forEach(control => {
 
 temperatureInput.addEventListener('input', () => {
     updateAirDensity();
-    debouncedUpdate();
+    debouncedCalcUpdate();
 });
 pressureInput.addEventListener('input', () => {
     updateAirDensity();
-    debouncedUpdate();
+    debouncedCalcUpdate();
 });
 
 hasAileronInput.addEventListener('change', updateAll);
@@ -2938,25 +2946,25 @@ fuselageTailShapeInput.addEventListener('change', updateAll);
 hasCockpitInput.addEventListener('change', updateAll);
 fuelTankMaterialInput.addEventListener('change', updateAll);
 fuelTypeInput.addEventListener('change', updateAll);
-fuelLevelInput.addEventListener('input', debouncedUpdate);
+fuelLevelInput.addEventListener('input', debouncedCalcUpdate);
 electricMotorTypeInput.addEventListener('change', updateEngineUI);
 icEngineTypeInput.addEventListener('change', updateEngineUI);
 enginePlacementInput.addEventListener('change', updateAll);
 engineWingVerticalPosInput.addEventListener('change', updateAll);
 engineWingForeAftInput.addEventListener('change', updateAll);
 wingPropRotationInput.addEventListener('change', updateAll); // لا يؤثر على النموذج ولكنه جزء من الحالة
-engineWingDistanceInput.addEventListener('input', debouncedUpdate);
+engineWingDistanceInput.addEventListener('input', debouncedCalcUpdate);
 
 // Accessories Listeners
-receiverWeightInput.addEventListener('input', debouncedUpdate);
-servoWeightInput.addEventListener('input', debouncedUpdate);
-servoCountInput.addEventListener('input', debouncedUpdate);
-cameraWeightInput.addEventListener('input', debouncedUpdate);
-otherAccessoriesWeightInput.addEventListener('input', debouncedUpdate);
-engineThrustAngleInput.addEventListener('input', debouncedUpdate);
-engineSideThrustAngleInput.addEventListener('input', debouncedUpdate);
-engineVerticalPositionInput.addEventListener('input', debouncedUpdate);
-enginePylonLengthInput.addEventListener('input', debouncedUpdate);
+receiverWeightInput.addEventListener('input', debouncedCalcUpdate);
+servoWeightInput.addEventListener('input', debouncedCalcUpdate);
+servoCountInput.addEventListener('input', debouncedCalcUpdate);
+cameraWeightInput.addEventListener('input', debouncedCalcUpdate);
+otherAccessoriesWeightInput.addEventListener('input', debouncedCalcUpdate);
+engineThrustAngleInput.addEventListener('input', debouncedCalcUpdate);
+engineSideThrustAngleInput.addEventListener('input', debouncedCalcUpdate);
+engineVerticalPositionInput.addEventListener('input', debouncedCalcUpdate);
+enginePylonLengthInput.addEventListener('input', debouncedCalcUpdate);
 
 
 
