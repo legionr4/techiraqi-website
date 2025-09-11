@@ -2248,25 +2248,36 @@ function calculateAerodynamics() {
 
     // --- عزم أسطح التحكم ---
     if (hasAileron && aileronWeightKg > 0) {
+        // حساب أكثر دقة لمركز الجاذبية للجنيح مع الأخذ في الاعتبار الميلان والاستدقاق
         const halfSpan = wingSpan / 2;
-        // حساب الموضع X لمركز ثقل الجنيح
-        const aileronCenterZ = halfSpan - aileronPosition - (aileronLength / 2);
-        const chordAtAileronCenter = wingChord + (wingChord * taperRatio - wingChord) * (aileronCenterZ / halfSpan);
-        const sweepAtAileronCenter = aileronCenterZ * Math.tan(sweepRad);
-        // مركز ثقل الجنيح يقع عند الحافة الخلفية للجناح، ويتحرك للأمام بمقدار نصف عرضه
-        const aileronCgX = (wingPositionX + sweepAtAileronCenter - (chordAtAileronCenter / 2)) + (aileronWidth / 2);
+        const aileronZStart = halfSpan - aileronPosition - aileronLength;
+        const aileronZEnd = halfSpan - aileronPosition;
+
+        // حساب موضع الحافة الأمامية للجنيح عند بدايته ونهايته
+        const chordAtStart = wingChord + (wingChord * taperRatio - wingChord) * (aileronZStart / halfSpan);
+        const sweepAtStart = aileronZStart * Math.tan(sweepRad);
+        const hingeX_start = (wingPositionX + sweepAtStart - (chordAtStart / 2)) + aileronWidth;
+
+        const chordAtEnd = wingChord + (wingChord * taperRatio - wingChord) * (aileronZEnd / halfSpan);
+        const sweepAtEnd = aileronZEnd * Math.tan(sweepRad);
+        const hingeX_end = (wingPositionX + sweepAtEnd - (chordAtEnd / 2)) + aileronWidth;
+
+        // مركز الجاذبية للجنيح يقع في منتصف المسافة بين بداية ونهاية الحافة الأمامية، ومزاح للخلف بمقدار نصف عرضه
+        const aileronCgX = ((hingeX_start + hingeX_end) / 2) - (aileronWidth / 2);
         addMoment(aileronWeightKg, aileronCgX);
     }
 
     if (hasElevator && elevatorWeightKg > 0) {
-        // مركز ثقل الرافع يقع عند الحافة الخلفية للمثبت الأفقي، ويتحرك للأمام بمقدار نصف عرضه
-        const elevatorCgX = (tailPositionX - (tailChord / 2)) + (elevatorWidth / 2);
+        // حساب مركز الجاذبية للرافع مع الأخذ في الاعتبار استدقاق الذيل
+        const tailTaperRatio = getRaw(tailTaperRatioInput);
+        const elevatorCgX = (tailPositionX - (tailChord * (1 + tailTaperRatio) / 4)) + (elevatorWidth / 2);
         addMoment(elevatorWeightKg, elevatorCgX);
     }
 
     if (hasRudder && rudderWeightKg > 0) {
-        // مركز ثقل الدفة يقع عند الحافة الخلفية للمثبت العمودي، ويتحرك للأمام بمقدار نصف عرضه
-        const rudderCgX = (tailPositionX - (vStabChord / 2)) + (rudderWidth / 2);
+        // حساب مركز الجاذبية للدفة مع الأخذ في الاعتبار استدقاق الذيل العمودي
+        const tailTaperRatio = getRaw(tailTaperRatioInput); // نفترض أن استدقاق الذيل العمودي هو نفسه
+        const rudderCgX = (tailPositionX - (vStabChord * (1 + tailTaperRatio) / 4)) + (rudderWidth / 2);
         addMoment(rudderWeightKg, rudderCgX);
     }
 
