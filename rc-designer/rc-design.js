@@ -829,6 +829,8 @@ function updateEngineUI() {
         calculatedRpm = selectedEngineSpec.rpm || 8000; // استخدام RPM من المواصفات
     }
     propRpmInput.value = Math.round(calculatedRpm);
+    // بعد تحديث حقول الإدخال من القائمة المنسدلة، قم بتحديث النموذج والحسابات
+    updateAll();
     // لا حاجة لاستدعاء updateAll() هنا لأن مستمع الحدث 'change' سيقوم بذلك تلقائيًا.
 }
 
