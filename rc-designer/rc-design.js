@@ -1107,12 +1107,11 @@ function updatePlaneModel() {
         const rightWingtip = new THREE.Mesh(wingtipGeometry, wingtipMaterial);
 
         // Position the wingtip at the end of the main wing
-        const tipChord = rootChord * taperRatio; // عرض الجناح عند النهاية
         const tipSweep = halfSpan * Math.tan(sweepRad);
         const tipZ = halfSpan; // الموضع على امتداد الجناح
-        // يجب أن يبدأ طرف الجناح من الحافة الخلفية لنهاية الجناح الرئيسي
-        const wingtipX = tipSweep - (tipChord / 2) + (wingtipWidth / 2);
-        rightWingtip.position.set(wingtipX, 0, tipZ);
+        // يجب أن يتمركز طرف الجناح مع مركز وتر الجناح عند نهايته.
+        // مركز وتر الجناح عند النهاية هو tipSweep.
+        rightWingtip.position.set(tipSweep, 0, tipZ);
 
         // Apply the cant angle (up/down rotation)
         rightWingtip.rotation.x = wingtipAngle;
@@ -1163,7 +1162,7 @@ function updatePlaneModel() {
         const chordAtHinge = rootChord + (rootChord * taperRatio - rootChord) * spanProgressAtHinge;
         const sweepAtHinge = aileronCenterZ * Math.tan(sweepRad);
         // 3. حساب الموضع X للمفصل. يجب أن يكون عند الحافة الخلفية للجناح.
-        const hingeX = sweepAtHinge - (chordAtHinge / 2);
+        const hingeX = sweepAtHinge - (chordAtHinge / 2) + aileronWidth;
         
         // 3. The wing geometry is already translated by half fuselage width. The aileron pivot is a child of the wing, so its Z position is relative to the wing's local coordinate system.
         const finalPivotZ = aileronCenterZ;
