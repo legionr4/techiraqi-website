@@ -376,6 +376,8 @@ const propColorInput = document.getElementById('prop-color');
 const cockpitColorInput = document.getElementById('cockpit-color');
 const engineColorInput = document.getElementById('engine-color');
 const pylonColorInput = document.getElementById('pylon-color');
+const airflowColorInput = document.getElementById('airflow-color');
+const vortexColorInput = document.getElementById('vortex-color');
 const strutColorInput = document.getElementById('strut-color');
 const wheelColorInput = document.getElementById('wheel-color');
 const backgroundColorInput = document.getElementById('background-color');
@@ -910,6 +912,8 @@ function updatePlaneModel() {
     const fuselageOpacity = getValidNumber(fuselageOpacityInput);
     const tailColor = tailColorInput.value;
     const pylonColor = pylonColorInput.value;
+    const vortexColor = vortexColorInput.value;
+    const airflowColor = airflowColorInput.value;
     const backgroundColor = backgroundColorInput.value;
 
 
@@ -926,6 +930,17 @@ function updatePlaneModel() {
     strutMaterial.color.set(strutColorInput.value);
     wheelMaterial.color.set(wheelColorInput.value);
     energySourceMaterial.color.set(energySourceColorInput.value);
+
+    // تحديث ألوان جسيمات الهواء
+    if (propParticleSystem && propParticleSystem.material.uniforms.color) {
+        propParticleSystem.material.uniforms.color.value.set(airflowColor);
+    }
+    if (wingAirflowParticleSystem && wingAirflowParticleSystem.material.uniforms.color) {
+        wingAirflowParticleSystem.material.uniforms.color.value.set(airflowColor);
+    }
+    if (vortexParticleSystem && vortexParticleSystem.material.uniforms.color) {
+        vortexParticleSystem.material.uniforms.color.value.set(vortexColor);
+    }
     scene.background.set(backgroundColor);
 
      // Wingtip Controls visibility
@@ -3403,53 +3418,96 @@ function animate() {
             const opacities = vortexParticleSystem.geometry.attributes.customOpacity.array;
             const scales = vortexParticleSystem.geometry.attributes.scale.array;
             const spiralData = vortexParticleSystem.geometry.attributes.spiralData.array;
+            const lifeData = vortexParticleSystem.geometry.attributes.life.array;
             
             // Vortex strength is proportional to the lift coefficient (read from cached params)
-            const vortexStrength = Math.max(0, planeParams.cl) * 0.2; // Adjust multiplier for visual effect
+            const baseVortexStrength = Math.max(0, planeParams.cl) * 0.25; // زيادة التأثير قليلاً
             const vortexRotationSpeed = 15; // How fast the particles spiral
             const travelLength = 5.0; // How far back the vortices travel before resetting
 
-            const tipZ = (planeParams.wingSpan / 2) + (planeParams.fuselageWidth / 2);
-            const tipY = wingGroup.position.y;
+            // حساب مواضع الانبعاث
+            const wingTipZ = (planeParams.wingSpan / 2);
+            const wingTipY = wingGroup.position.y;
+            const wingTipX = wingGroup.position.x - (planeParams.wingChord * planeParams.taperRatio * 0.25); // تقريبًا عند ربع الوتر
+
+            const tailTipZ = (getValidNumber(tailSpanInput) * planeParams.conversionFactor) / 2;
+            const tailTipY = tailAssembly.position.y;
+            const tailTipX = tailAssembly.position.x - (getValidNumber(tailChordInput) * planeParams.conversionFactor * 0.25);
+
+            const vStabTipY = tailAssembly.position.y + (getValidNumber(vStabHeightInput) * planeParams.conversionFactor);
+            const vStabTipX = tailAssembly.position.x - (getValidNumber(vStabChordInput) * planeParams.conversionFactor * 0.25);
 
             for (let i = 0; i < vortexParticleCount; i++) {
                 const i2 = i * 2;
                 const i3 = i * 3;
 
+                let emitterX, emitterY, emitterZ, side, currentVortexStrength;
+
+                // تقسيم الجسيمات بين المصادر المختلفة
+                if (i < 1000) { // دوامات الجناح
+                    emitterX = wingTipX;
+                    emitterY = wingTipY;
+                    emitterZ = wingTipZ;
+                    side = (i < 500) ? 1 : -1;
+                    currentVortexStrength = baseVortexStrength;
+                } else if (i < 2000) { // دوامات الذيل الأفقي
+                    emitterX = tailTipX;
+                    emitterY = tailTipY;
+                    emitterZ = tailTipZ;
+                    side = (i < 1500) ? 1 : -1;
+                    currentVortexStrength = baseVortexStrength * 0.4; // دوامات الذيل أضعف
+                } else { // دوامة الذيل العمودي
+                    emitterX = vStabTipX;
+                    emitterY = vStabTipY;
+                    emitterZ = 0;
+                    side = 1; // جانب واحد فقط
+                    currentVortexStrength = baseVortexStrength * 0.3; // أضعف
+                }
+
+                // إعادة تعيين الجسيم إذا كان قديمًا
+                const age = emitterX - positions[i3];
+                if (age > travelLength || age < 0 || lifeData[i2] <= 0) {
+                    positions[i3] = emitterX;
+                    positions[i3+1] = emitterY;
+                    positions[i3+2] = emitterZ * side;
+                    spiralData[i] = Math.random() * Math.PI * 2;
+                    lifeData[i2] = 1.0; // إعادة تعيين العمر
+                }
+
+                // تحديث العمر
+                lifeData[i2] -= deltaTime / (travelLength / mainAirSpeed);
+
                 // Move particle backward
                 positions[i3] -= mainAirSpeed * deltaTime;
 
                 // Update spiral angle
-                spiralData[i2] += vortexRotationSpeed * deltaTime;
+                spiralData[i] += vortexRotationSpeed * deltaTime * side;
 
                 // Calculate spiral position
-                const age = -positions[i3]; // Age is distance travelled from x=0
-                const radius = vortexStrength * (1 - Math.exp(-age * 2.0)); // Radius grows quickly then levels off
-                const yOffset = radius * Math.cos(spiralData[i2]);
-                const zOffset = radius * Math.sin(spiralData[i2]);
+                const ageRatio = Math.max(0, lifeData[i2]);
+                const effectStrength = Math.sin(ageRatio * Math.PI);
+                const radius = currentVortexStrength * (1 - Math.exp(-age * 1.5));
+                const yOffset = radius * Math.cos(spiralData[i]);
+                const zOffset = radius * Math.sin(spiralData[i]);
 
-                // Determine if it's a left or right vortex particle
-                const side = (i < vortexParticleCount / 2) ? 1 : -1; // 1 for right, -1 for left
-
-                positions[i3 + 1] = tipY + yOffset;
-                positions[i3 + 2] = (tipZ + zOffset) * side;
+                // تطبيق الإزاحة الحلزونية
+                if (emitterZ !== 0) { // دوامات أفقية (جناح وذيل)
+                    positions[i3 + 1] = emitterY + yOffset;
+                    positions[i3 + 2] = (emitterZ * side) + zOffset;
+                } else { // دوامة عمودية (ذيل عمودي)
+                    positions[i3 + 1] = emitterY + yOffset;
+                    positions[i3 + 2] = emitterZ + zOffset;
+                }
 
                 // Fade in/out effect
-                const ageRatio = Math.min(1, age / travelLength);
-                const effectStrength = Math.sin(ageRatio * Math.PI);
-
-                opacities[i] = effectStrength * Math.min(1, vortexStrength * 2.5) * densityFactor * airflowTransparency; // تقليل الشفافية
-                scales[i] = effectStrength * 0.8 * sizeFactor; // تقليل الحجم
-
-                // Reset particle
-                if (age > travelLength || age < 0) {
-                    spiralData[i2] = Math.random() * Math.PI * 2; // New random start angle
-                }
+                opacities[i] = effectStrength * Math.min(1, currentVortexStrength * 5.0) * densityFactor * airflowTransparency;
+                scales[i] = effectStrength * 1.0 * sizeFactor;
             }
             vortexParticleSystem.geometry.attributes.position.needsUpdate = true;
             vortexParticleSystem.geometry.attributes.customOpacity.needsUpdate = true;
             vortexParticleSystem.geometry.attributes.scale.needsUpdate = true;
             vortexParticleSystem.geometry.attributes.spiralData.needsUpdate = true;
+            vortexParticleSystem.geometry.attributes.life.needsUpdate = true; // تحديث بيانات العمر
         }
 
         // --- تحديث دخان محرك IC ---
@@ -3594,12 +3652,16 @@ function initWingAirflowParticles() {
 
 /** Initializes the particle system for wingtip vortex simulation. */
 function initVortexParticles() {
+    // زيادة عدد الجسيمات لاستيعاب الدوامات الجديدة (الجناح، الذيل الأفقي، الذيل العمودي)
+    vortexParticleCount = 2500; // 1000 للجناح, 1000 للذيل الأفقي, 500 للذيل العمودي
+
     const particleGeometry = new THREE.BufferGeometry();
     const positions = new Float32Array(vortexParticleCount * 3).fill(0);
     const opacities = new Float32Array(vortexParticleCount).fill(0);
     const scales = new Float32Array(vortexParticleCount).fill(0);
-    // Custom attribute to store spiral angle
+    // Custom attributes
     const spiralData = new Float32Array(vortexParticleCount);
+    const lifeData = new Float32Array(vortexParticleCount * 2); // [currentLife, maxLife]
 
     for (let i = 0; i < vortexParticleCount; i++) {
         // Store a random initial angle
@@ -3610,13 +3672,14 @@ function initVortexParticles() {
     particleGeometry.setAttribute('customOpacity', new THREE.BufferAttribute(opacities, 1));
     particleGeometry.setAttribute('scale', new THREE.BufferAttribute(scales, 1));
     particleGeometry.setAttribute('spiralData', new THREE.BufferAttribute(spiralData, 1));
+    particleGeometry.setAttribute('life', new THREE.BufferAttribute(lifeData, 2));
 
     const particleMaterial = createAirflowMaterial(0xffffff); // White vortices
 
     vortexParticleSystem = new THREE.Points(particleGeometry, particleMaterial);
     vortexParticleSystem.visible = false;
-    // Add to the wing group so they originate from the correct wing height
-    wingGroup.add(vortexParticleSystem);
+    // إضافة إلى المشهد الرئيسي لأن الدوامات ستنبعث من أماكن متعددة (الجناح والذيل)
+    scene.add(vortexParticleSystem);
 }
 
 /** Initializes the particle system for IC engine smoke. */
