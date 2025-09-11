@@ -3174,7 +3174,7 @@ function animate() {
         // --- تحديث جزيئات تدفق هواء المروحة ---
         if (propParticleSystem && propParticleSystem.visible) {
             const axialSpeed = mainAirSpeed * 1.5; // أسرع قليلاً للتأثير البصري
-            const rotationalSpeed = (propRpm / 60) * Math.PI * 2 * 0.5; // عامل 0.5 لتقليل سرعة الدوران البصري
+            const rotationalSpeed = (planeParams.propRpm / 60) * Math.PI * 2 * 0.5; // عامل 0.5 لتقليل سرعة الدوران البصري
 
             const positions = propParticleSystem.geometry.attributes.position.array;
             const opacities = propParticleSystem.geometry.attributes.customOpacity.array;
