@@ -1083,6 +1083,14 @@ function updatePlaneModel() {
     rightWing.rotation.x = dihedralRad;
     leftWing.rotation.x = dihedralRad; // الانعكاس في المقياس Z سيتكفل بجعل الجناح الآخر يرتفع أيضًا
 
+    // --- إنشاء محاور دوران لأطراف الجناح والجنيحات ---
+    // سيتم إضافتها إلى wingGroup مباشرة بدلاً من rightWing/leftWing
+    // هذا يحل مشكلة تحديد الموضع عند وجود زاوية الديhedral
+    const rightWingtipsAndAileronsPivot = new THREE.Group();
+    const leftWingtipsAndAileronsPivot = new THREE.Group();
+    rightWingtipsAndAileronsPivot.rotation.x = dihedralRad;
+    leftWingtipsAndAileronsPivot.rotation.x = dihedralRad;
+
     wingGroup.add(rightWing, leftWing);
      // Wingtip
     if (hasWingtipInput.checked) {
@@ -1105,9 +1113,8 @@ function updatePlaneModel() {
 
         // Position the wingtip at the end of the main wing
         const tipChord = rootChord * taperRatio;
-        const tipSweep = halfSpan * Math.tan(sweepRad);
-        // The wing geometry is translated by currentFuselageWidth/2, but the winglet is a child of the wing, so its position is relative.
-        const tipZ = halfSpan;
+        const tipSweep = (halfSpan + currentFuselageWidth / 2) * Math.tan(sweepRad);
+        const tipZ = halfSpan + currentFuselageWidth / 2;
         rightWingtip.position.set(tipSweep, 0, tipZ);
 
         // Apply the cant angle (up/down rotation)
@@ -1119,9 +1126,9 @@ function updatePlaneModel() {
         // The cant angle (rotation.x) is handled correctly by the parent's negative scale.
         leftWingtip.rotation.y = -wingtipTwistAngle;
 
-        rightWing.add(rightWingtip);
-        leftWing.add(leftWingtip);
-
+        // إضافة أطراف الجناح إلى محاور الدوران الجديدة
+        rightWingtipsAndAileronsPivot.add(rightWingtip);
+        leftWingtipsAndAileronsPivot.add(leftWingtip);
     }
 
     // Ailerons (Added after wingtips to ensure correct positioning relative to the final wing)
@@ -1152,26 +1159,27 @@ function updatePlaneModel() {
 
         // --- حساب موضع محور دوران الجنيح ---
         // 1. حساب الموضع المركزي للجنيح على طول امتداد الجناح (قبل إزاحته عن جسم الطائرة)
-        const aileronCenterZ = halfSpan - aileronPosition - (aileronLength / 2);
+        const aileronCenterZ_local = halfSpan - aileronPosition - (aileronLength / 2);
 
         // 2. حساب عرض الجناح ومقدار الانحناء عند مركز الجنيح لتحديد موضع المفصل على المحور X
-        const chordAtHinge = rootChord + (rootChord * taperRatio - rootChord) * (aileronCenterZ / halfSpan);
-        const sweepAtHinge = (aileronCenterZ >= 0 ? aileronCenterZ : 0) * Math.tan(sweepRad);
+        const chordAtHinge = rootChord + (rootChord * taperRatio - rootChord) * (aileronCenterZ_local / halfSpan);
+        const sweepAtHinge = (aileronCenterZ_local >= 0 ? aileronCenterZ_local : 0) * Math.tan(sweepRad);
         const hingeX = sweepAtHinge - (chordAtHinge / 2) + aileronWidth;
         
-        // 3. The wing geometry is already translated by half fuselage width. The aileron pivot is a child of the wing, so its Z position is relative to the wing's local coordinate system.
-        const finalPivotZ = aileronCenterZ;
+        // 3. حساب الموضع Z النهائي للمحور في الإحداثيات العامة (World Coordinates)
+        const finalPivotZ = aileronCenterZ_local + (currentFuselageWidth / 2);
 
         // 4. تحديد موضع ودوران المحاور. يستخدم المحور الأيسر نفس القيم لأن الجناح الأيسر هو نسخة معكوسة.
         rightAileronPivot.position.set(hingeX, 0, finalPivotZ);
         rightAileronPivot.rotation.y = sweepRad;
 
         leftAileronPivot.position.set(hingeX, 0, finalPivotZ);
-        leftAileronPivot.rotation.y = sweepRad;
+        leftAileronPivot.rotation.y = sweepRad; // نفس زاوية الميلان
+        leftAileronPivot.scale.z = -1; // عكس المحور بالكامل بما فيه الكائن الفرعي
 
-        // Add pivots to the wings
-        rightWing.add(rightAileronPivot);
-        leftWing.add(leftAileronPivot);
+        // إضافة محاور الجنيحات إلى محاور الدوران الجديدة
+        rightWingtipsAndAileronsPivot.add(rightAileronPivot);
+        leftWingtipsAndAileronsPivot.add(leftAileronPivot);
     }
 
 
@@ -1182,6 +1190,9 @@ function updatePlaneModel() {
     if (wingPosition === 'high') wingGroup.position.y = currentFuselageHeight / 2;
     else if (wingPosition === 'mid') wingGroup.position.y = 0;
     else if (wingPosition === 'low') wingGroup.position.y = -currentFuselageHeight / 2;
+
+    // إضافة محاور الدوران التي تحتوي على أطراف الجناح والجنيحات إلى مجموعة الجناح الرئيسية
+    wingGroup.add(rightWingtipsAndAileronsPivot, leftWingtipsAndAileronsPivot);
 
     // --- تحديث الأبعاد الأخرى ---
     // --- إعادة بناء مجموعة الذيل بالكامل ---
