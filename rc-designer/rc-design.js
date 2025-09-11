@@ -403,6 +403,9 @@ const hasRetractableGearInput = document.getElementById('has-retractable-gear');
 const mainGearWidthInput = document.getElementById('main-gear-width');
 
 // Engine Inputs
+    const engineVerticalPositionInput = document.getElementById('engine-vertical-position');
+    const engineThrustAngleInput = document.getElementById('engine-thrust-angle');
+    const engineSideThrustAngleInput = document.getElementById('engine-side-thrust-angle');
 const engineTypeInput = document.getElementById('engine-type');
 const electricEngineOptions = document.getElementById('electric-engine-options');
 const icEngineOptions = document.getElementById('ic-engine-options');
@@ -819,6 +822,12 @@ function updatePlaneModel() {
     const wingPosition = wingPositionInput.value;
     const airfoilType = airfoilTypeInput.value;
     const sweepAngle = getValidNumber(sweepAngleInput);
+
+    // قراءة قيم المحرك والمروحة
+    const engineVerticalPosition = getValidNumber(engineVerticalPositionInput) * conversionFactor;
+    const engineThrustAngle = getValidNumber(engineThrustAngleInput) * (Math.PI / 180); // to radians
+    const engineSideThrustAngle = getValidNumber(engineSideThrustAngleInput) * (Math.PI / 180); // to radians
+
     const dihedralAngle = getValidNumber(dihedralAngleInput);
     const taperRatio = getValidNumber(taperRatioInput);
 
@@ -949,6 +958,8 @@ function updatePlaneModel() {
     // إظهار/إخفاء خيارات موضع محرك الجناح
     const enginePlacement = enginePlacementInput.value;
     wingEnginePlacementOptions.style.display = enginePlacement === 'wing' ? 'block' : 'none';
+    // إخفاء حقل الموضع العمودي للمحرك عند التركيب على الجناح لأنه غير مستخدم في هذه الحالة
+    document.getElementById('engine-vertical-position-group').style.display = enginePlacement === 'wing' ? 'none' : 'flex';
 
 
     // Landing Gear Controls visibility
@@ -1447,6 +1458,13 @@ function updatePlaneModel() {
     while(propellerGroup.children.length > 0) propellerGroup.remove(propellerGroup.children[0]);
     while(wingEnginesGroup.children.length > 0) wingEnginesGroup.remove(wingEnginesGroup.children[0]);
 
+    // إعادة تعيين موضع ودوران المجموعات قبل تطبيق القيم الجديدة
+    engineGroup.position.set(0, 0, 0);
+    engineGroup.rotation.set(0, 0, 0);
+    propellerGroup.position.set(0, 0, 0);
+    propellerGroup.rotation.set(0, 0, 0);
+
+
     // 2. قراءة أبعاد المحرك والمروحة
     const engineType = engineTypeInput.value;
     let engineLengthMeters = 0;
@@ -1482,22 +1500,34 @@ function updatePlaneModel() {
     // 4. تحديد الموضع بناءً على اختيار المستخدم
     if (enginePlacement === 'front') {
         if (engineProto) {
-            const engine = engineProto.clone();
-            engine.position.x = fuselageLength / 2 + engineLengthMeters / 2;
-            engineGroup.add(engine);
+            // The engine model itself has no offset within its group
+            engineGroup.add(engineProto.clone());
         }
         propellerGroup.add(propProto.clone());
-        propellerGroup.position.x = fuselageLength / 2 + engineLengthMeters + 0.01;
+
+        // Apply position and rotation to the GROUPS
+        engineGroup.position.set(fuselageLength / 2 + engineLengthMeters / 2, engineVerticalPosition, 0);
+        engineGroup.rotation.set(0, engineSideThrustAngle, engineThrustAngle);
+
+        propellerGroup.position.set(fuselageLength / 2 + engineLengthMeters + 0.01, engineVerticalPosition, 0);
+        propellerGroup.rotation.copy(engineGroup.rotation); // Propeller has the same thrust line
+
     } else if (enginePlacement === 'rear') {
         if (engineProto) {
-            const engine = engineProto.clone();
-            engine.position.x = -fuselageLength / 2 - engineLengthMeters / 2;
-            engineGroup.add(engine);
+            engineGroup.add(engineProto.clone());
         }
         const pusherProp = propProto.clone();
-        pusherProp.rotation.y = Math.PI; // تدوير المروحة 180 درجة
+        pusherProp.rotation.y = Math.PI; // Visual rotation for pusher
         propellerGroup.add(pusherProp);
-        propellerGroup.position.x = -fuselageLength / 2 - engineLengthMeters - 0.01;
+
+        // Apply position and rotation to the GROUPS
+        engineGroup.position.set(-fuselageLength / 2 - engineLengthMeters / 2, engineVerticalPosition, 0);
+        engineGroup.rotation.set(0, engineSideThrustAngle, engineThrustAngle);
+
+        propellerGroup.position.set(-fuselageLength / 2 - engineLengthMeters - 0.01, engineVerticalPosition, 0);
+        // Combine thrust angles with the 180-degree pusher rotation
+        propellerGroup.rotation.set(0, engineSideThrustAngle + Math.PI, engineThrustAngle);
+
     } else if (enginePlacement === 'wing') {
         if (engineProto) {
             // قراءة جميع خيارات تركيب الجناح
@@ -1577,6 +1607,18 @@ function updatePlaneModel() {
 
             rightProp.position.set(propCenterX, engineYOffset, posOnWingZ);
             leftProp.position.set(propCenterX, engineYOffset, -posOnWingZ);
+
+            // Apply thrust angles to each component
+            rightEngine.rotation.set(0, engineSideThrustAngle, engineThrustAngle);
+            leftEngine.rotation.set(0, engineSideThrustAngle, engineThrustAngle);
+            rightProp.rotation.set(0, engineSideThrustAngle, engineThrustAngle);
+            leftProp.rotation.set(0, engineSideThrustAngle, engineThrustAngle);
+
+            // For pusher props on the wing, add the 180 deg rotation
+            if (wingEngineForeAft === 'trailing') {
+                rightProp.rotation.y += Math.PI;
+                leftProp.rotation.y += Math.PI;
+            }
 
             wingEnginesGroup.add(rightEngine, leftEngine, rightProp, leftProp);
         }
