@@ -135,6 +135,16 @@
             height: 350px;
             width: 100%;
         }
+        /* New styles for results inside fieldsets */
+        .fieldset-results {
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px dashed #90caf9;
+        }
+        .fieldset-results .result-item {
+            font-size: 0.95em; /* Make them slightly smaller */
+            margin-bottom: 5px;
+        }
     </style>
 </head>
 <body>
@@ -305,6 +315,18 @@
                         </div>
                     </div>
 
+                    <!-- Wing Results -->
+                    <div class="fieldset-results">
+                        <div class="result-item">
+                            <p>مساحة الجناح (م²):</p>
+                            <span id="wing-area-result">0.00</span>
+                        </div>
+                        <div class="result-item">
+                            <p>وزن الجناح التقديري (جرام):</p>
+                            <span id="wing-weight-result">0</span>
+                        </div>
+                    </div>
+
 
                 </fieldset>
 
@@ -416,6 +438,18 @@
                             <input type="number" id="rudder-length" value="18" step="1">
                         </div>
                     </div>
+
+                    <!-- Tail Results -->
+                    <div class="fieldset-results">
+                        <div class="result-item">
+                            <p>مساحة الذيل (م²):</p>
+                            <span id="tail-area-result">0.00</span>
+                        </div>
+                        <div class="result-item">
+                            <p>وزن الذيل التقديري (جرام):</p>
+                            <span id="tail-weight-result">0</span>
+                        </div>
+                    </div>
                 </fieldset>
 
                 <fieldset>
@@ -523,6 +557,22 @@
                         <div class="input-group">
                             <label for="cockpit-opacity">شفافية القمرة: <span id="cockpit-opacity-value">70</span>%</label>
                             <input type="range" id="cockpit-opacity" min="0" max="1" value="0.7" step="0.05">
+                        </div>
+                    </div>
+
+                    <!-- Fuselage & Cockpit Results -->
+                    <div class="fieldset-results">
+                        <div class="result-item">
+                            <p>وزن الجسم التقديري (جرام):</p>
+                            <span id="fuselage-weight-result">0</span>
+                        </div>
+                        <div class="result-item">
+                            <p>مساحة سطح الجسم (م²):</p>
+                            <span id="fuselage-area-result">0.00</span>
+                        </div>
+                        <div class="result-item" style="display: none;"> <!-- Initially hidden, controlled by JS -->
+                            <p>وزن القمرة التقديري (جرام):</p>
+                            <span id="cockpit-weight-result">0</span>
                         </div>
                     </div>
                 </fieldset>
@@ -692,6 +742,14 @@
                             <input type="number" id="ic-engine-diameter-input" step="0.1">
                         </div>
                     </div>
+
+                    <!-- Engine Results -->
+                    <div class="fieldset-results">
+                        <div class="result-item">
+                            <p>وزن المحرك (جرام):</p>
+                            <span id="engine-weight-result">0</span>
+                        </div>
+                    </div>
                 </fieldset>
 
                 <fieldset>
@@ -770,6 +828,14 @@
                             <input type="number" id="fuel-tank-position" value="15" step="1" min="0" title="المسافة للخلف من مقدمة الطائرة. تغيير هذا الموضع يؤثر بشكل كبير على مركز الجاذبية (CG).">
                         </div>
                     </div>
+
+                    <!-- Energy Source Results -->
+                    <div class="fieldset-results">
+                        <div class="result-item" style="display: none;"> <!-- Initially hidden, controlled by JS -->
+                            <p>وزن مصدر الطاقة (الحالي) (جرام):</p>
+                            <span id="energy-source-weight-result">0</span>
+                        </div>
+                    </div>
                 </fieldset>
 
                 <fieldset>
@@ -802,6 +868,23 @@
                         <label for="prop-rpm">سرعة الدوران (RPM)</label>
                         <input type="number" id="prop-rpm" value="8000" step="100" title="يتم حساب القيمة تلقائياً عند تغيير المحرك، ولكن يمكنك تعديلها يدوياً.">
                     </div>
+
+                    <!-- Propeller Results -->
+                    <div class="fieldset-results">
+                        <div class="result-item">
+                            <p>وزن المروحة التقديري (جرام):</p>
+                            <span id="prop-weight-result">0</span>
+                        </div>
+                        <div class="result-item" title="الطاقة التي تسحبها المروحة من المحرك لتدور بالسرعة المحددة.">
+                            <p>الطاقة المستهلكة (واط):</p>
+                            <span id="prop-power-result">0</span>
+                        </div>
+                        <div class="result-item" title="العزم الذي يجب أن يوفره المحرك لتدوير المروحة بالسرعة المحددة. قارن هذه القيمة بعزم المحرك.">
+                            <p>العزم المطلوب (N.m):</p>
+                            <span id="prop-torque-result">0.000</span>
+                        </div>
+                    </div>
+
                 </fieldset>
 
                 <fieldset>
@@ -846,6 +929,22 @@
                         <div class="input-group">
                             <label for="main-gear-width">المسافة بين العجلات الرئيسية (<span class="unit-label">سم</span>)</label>
                             <input type="number" id="main-gear-width" value="15" step="1">
+                        </div>
+
+                        <!-- Landing Gear Results -->
+                        <div class="fieldset-results">
+                            <div class="result-item" style="display: none;">
+                                <p>وزن العجلة الواحدة (جرام):</p>
+                                <span id="wheel-weight-result">0</span>
+                            </div>
+                            <div class="result-item" style="display: none;">
+                                <p>وزن الدعامة الواحدة (جرام):</p>
+                                <span id="strut-weight-result">0</span>
+                            </div>
+                            <div class="result-item">
+                                <p>الوزن الإجمالي للعجلات (جرام):</p>
+                                <span id="landing-gear-weight-result">0</span>
+                            </div>
                         </div>
                     </div>
                 </fieldset>
@@ -962,6 +1061,14 @@
                         <label for="other-accessories-weight">أوزان أخرى (هيكل، غراء...) (جرام)</label>
                         <input type="number" id="other-accessories-weight" value="250" step="10">
                     </div>
+
+                    <!-- Accessories Results -->
+                    <div class="fieldset-results">
+                        <div class="result-item">
+                            <p>الوزن الإجمالي للملحقات (جرام):</p>
+                            <span id="accessories-weight-result">0</span>
+                        </div>
+                    </div>
                 </fieldset>
 
                 <fieldset>
@@ -1031,74 +1138,6 @@
                 <div class="result-item">
                     <p>قوة الدفع (نيوتن):</p>
                     <span id="thrust-result">0.00</span>
-                </div>
-                <div class="result-item">
-                    <p>مساحة الجناح (م²):</p>
-                    <span id="wing-area-result">0.00</span>
-                </div>
-                <div class="result-item">
-                    <p>وزن الجناح التقديري (جرام):</p>
-                    <span id="wing-weight-result">0</span>
-                </div>
-                <div class="result-item">
-                    <p>وزن أطراف الجناح (جرام):</p>
-                    <span id="wingtip-weight-result">0</span>
-                </div>
-                <div class="result-item">
-                    <p>مساحة الذيل (م²):</p>
-                    <span id="tail-area-result">0.00</span>
-                </div>
-                <div class="result-item">
-                    <p>وزن الذيل التقديري (جرام):</p>
-                    <span id="tail-weight-result">0</span>
-                </div>
-                <div class="result-item">
-                    <p>وزن الجسم التقديري (جرام):</p>
-                    <span id="fuselage-weight-result">0</span>
-                </div>
-                <div class="result-item">
-                    <p>وزن القمرة التقديري (جرام):</p>
-                    <span id="cockpit-weight-result">0</span>
-                </div>
-                <div class="result-item">
-                    <p>مساحة سطح الجسم (م²):</p>
-                    <span id="fuselage-area-result">0.00</span>
-                </div>
-                <div class="result-item">
-                    <p>وزن المروحة التقديري (جرام):</p>
-                    <span id="prop-weight-result">0</span>
-                </div>
-                <div class="result-item" title="الطاقة التي تسحبها المروحة من المحرك لتدور بالسرعة المحددة.">
-                    <p>الطاقة المستهلكة من المروحة (واط):</p>
-                    <span id="prop-power-result">0</span>
-                </div>
-                <div class="result-item" title="العزم الذي يجب أن يوفره المحرك لتدوير المروحة بالسرعة المحددة. قارن هذه القيمة بعزم المحرك.">
-                    <p>العزم المطلوب للمروحة (N.m):</p>
-                    <span id="prop-torque-result">0.000</span>
-                </div>
-                <div class="result-item">
-                    <p>وزن خزان الوقود (الحالي) (جرام):</p>
-                    <span id="fuel-tank-weight-result">0</span>
-                </div>
-                <div class="result-item">
-                    <p>وزن المحرك (جرام):</p>
-                    <span id="engine-weight-result">0</span>
-                </div>
-                <div class="result-item">
-                    <p>وزن الملحقات الإضافية (جرام):</p>
-                    <span id="accessories-weight-result">0</span>
-                </div>
-                <div class="result-item">
-                    <p>وزن العجلة الواحدة (جرام):</p>
-                    <span id="wheel-weight-result">0</span>
-                </div>
-                <div class="result-item">
-                    <p>وزن الدعامة الواحدة (جرام):</p>
-                    <span id="strut-weight-result">0</span>
-                </div>
-                <div class="result-item">
-                    <p>وزن عجلات الهبوط (جرام):</p>
-                    <span id="landing-gear-weight-result">0</span>
                 </div>
                 <div class="result-item">
                     <p>الوزن الكلي التقديري (جرام):</p>

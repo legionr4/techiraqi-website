@@ -486,10 +486,10 @@ const wingAreaResultEl = document.getElementById('wing-area-result');
 const wingWeightResultEl = document.getElementById('wing-weight-result');
 const tailAreaResultEl = document.getElementById('tail-area-result');
 const tailWeightResultEl = document.getElementById('tail-weight-result');
-const fuselageWeightResultEl = document.getElementById('fuselage-weight-result');
+const fuselageWeightResultEl = document.getElementById('fuselage-weight-result'); // This ID is correct
 const fuselageAreaResultEl = document.getElementById('fuselage-area-result');
 const cockpitWeightResultEl = document.getElementById('cockpit-weight-result');
-const fuelTankWeightResultEl = document.getElementById('fuel-tank-weight-result');
+const energySourceWeightResultEl = document.getElementById('energy-source-weight-result');
 const fuelLevelInput = document.getElementById('fuel-level');
 const fuelTypeInput = document.getElementById('fuel-type');
 const accessoriesWeightResultEl = document.getElementById('accessories-weight-result');
@@ -2192,8 +2192,8 @@ function calculateAerodynamics() {
 
     let energySourceWeightKg = 0;
     if (engineType === 'electric') {
-        energySourceWeightKg = batteryWeightGrams / 1000;
-        fuelTankWeightResultEl.parentElement.style.display = 'none'; // إخفاء نتيجة وزن الخزان
+        energySourceWeightKg = batteryWeightGrams / 1000; // This is correct
+        energySourceWeightResultEl.parentElement.style.display = 'flex';
     } else { // ic
         // حساب وزن خزان الوقود بناءً على المستوى والنوع
         const tankMaterialDensity = MATERIAL_DENSITIES[tankMaterial];
@@ -2211,8 +2211,7 @@ function calculateAerodynamics() {
         const shellWeightKg = shellVolume * tankMaterialDensity;
 
         energySourceWeightKg = fuelWeightKg + shellWeightKg;
-        fuelTankWeightResultEl.textContent = (energySourceWeightKg * 1000).toFixed(0);
-        fuelTankWeightResultEl.parentElement.style.display = 'flex'; // إظهار نتيجة وزن الخزان
+        energySourceWeightResultEl.parentElement.style.display = 'flex'; // إظهار نتيجة وزن الخزان
     }
 
     // حساب وزن الملحقات الإضافية
@@ -2481,10 +2480,11 @@ function calculateAerodynamics() {
     wingWeightResultEl.textContent = (wingWeightKg * 1000).toFixed(0);
     tailAreaResultEl.textContent = totalTailArea > 0 ? totalTailArea.toFixed(2) : '0.00';
     tailWeightResultEl.textContent = (tailWeightKg * 1000).toFixed(0);
-    fuselageAreaResultEl.textContent = fuselageSurfaceArea > 0 ? fuselageSurfaceArea.toFixed(2) : '0.00';
+    fuselageAreaResultEl.textContent = fuselageSurfaceArea > 0 ? fuselageSurfaceArea.toFixed(2) : '0.00'; // Correct
     fuselageWeightResultEl.textContent = (fuselageWeightKg * 1000).toFixed(0);
     cockpitWeightResultEl.textContent = (cockpitWeightKg * 1000).toFixed(0);
-    cockpitWeightResultEl.parentElement.style.display = getCheck(hasCockpitInput) ? 'flex' : 'none';
+    cockpitWeightResultEl.parentElement.parentElement.style.display = getCheck(hasCockpitInput) ? 'block' : 'none'; // Adjusting for new structure
+    energySourceWeightResultEl.textContent = (energySourceWeightKg * 1000).toFixed(0);
     accessoriesWeightResultEl.textContent = totalAccessoriesWeightGrams.toFixed(0);
     if (hasLandingGear) {
         wheelWeightResultEl.parentElement.style.display = 'flex';
