@@ -473,14 +473,8 @@ const showCgAcCheckbox = document.getElementById('show-cg-ac');
 const aileronControlSlider = document.getElementById('aileron-control');
 const elevatorControlSlider = document.getElementById('elevator-control');
 const rudderControlSlider = document.getElementById('rudder-control');
+const engineSound = document.getElementById('engine-sound');
 const resetControlsBtn = document.getElementById('reset-controls-btn');
-
-
-
-
-
-
-
 const liftResultEl = document.getElementById('lift-result');
 const dragResultEl = document.getElementById('drag-result');
 const thrustResultEl = document.getElementById('thrust-result');
@@ -3010,10 +3004,18 @@ togglePropSpinBtn.addEventListener('click', () => {
         togglePropSpinBtn.textContent = 'إيقاف';
         togglePropSpinBtn.style.backgroundColor = '#ffc107'; // لون مميز للإشارة إلى التشغيل
         togglePropSpinBtn.style.color = '#000';
+        if (engineSound && engineSound.paused) {
+            // محاولة تشغيل الصوت. قد يتم حظره بواسطة المتصفح إذا لم يتفاعل المستخدم مع الصفحة أولاً.
+            engineSound.play().catch(e => console.error("فشل تشغيل الصوت:", e));
+        }
     } else {
         togglePropSpinBtn.textContent = 'تشغيل';
         togglePropSpinBtn.style.backgroundColor = '#e9ecef'; // اللون الافتراضي
         togglePropSpinBtn.style.color = '#333';
+        if (engineSound) {
+            engineSound.pause();
+            engineSound.currentTime = 0; // إعادة الصوت إلى البداية
+        }
     }
     setAirflowVisibility(isPropSpinning);
 });
@@ -3071,6 +3073,23 @@ function animate() {
         // --- قراءة قيم المحرك مباشرة من المدخلات للتحديث الفوري ---
         const currentRpm = getValidNumber(propRpmInput);
         const currentPitch = getValidNumber(propPitchInput) * 0.0254; // to meters
+
+        // --- تحديث صوت المحرك ---
+        if (engineSound && !engineSound.paused) {
+            const minRpm = 1000; // أقل سرعة دوران يبدأ عندها الصوت
+            const maxRpm = 15000; // أقصى سرعة دوران لضبط الصوت
+            const rpmRatio = Math.max(0, Math.min(1, (currentRpm - minRpm) / (maxRpm - minRpm)));
+
+            // ربط سرعة الدوران بمستوى الصوت (مثلاً من 0.2 إلى 1.0)
+            const minVolume = 0.2;
+            const maxVolume = 1.0;
+            engineSound.volume = minVolume + (rpmRatio * (maxVolume - minVolume));
+
+            // ربط سرعة الدوران بسرعة التشغيل (حدة الصوت) (مثلاً من 0.8 إلى 2.0)
+            const minPlaybackRate = 0.8;
+            const maxPlaybackRate = 2.0;
+            engineSound.playbackRate = minPlaybackRate + (rpmRatio * (maxPlaybackRate - minPlaybackRate));
+        }
 
         // سرعة الهواء الرئيسية يتم حسابها الآن ديناميكيًا من المروحة
         const mainAirSpeed = (currentRpm / 60) * currentPitch;
