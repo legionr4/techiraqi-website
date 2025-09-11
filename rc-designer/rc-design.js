@@ -1108,10 +1108,10 @@ function updatePlaneModel() {
 
         // Position the wingtip at the end of the main wing
         const tipSweep = halfSpan * Math.tan(sweepRad);
-        const tipChord = rootChord * taperRatio; // عرض الجناح عند النهاية
-        const wingtipX = tipSweep - (tipChord / 2); // يجب أن يبدأ طرف الجناح من الحافة الخلفية لنهاية الجناح
         const tipZ = halfSpan;
-        rightWingtip.position.set(wingtipX, 0, tipZ);
+        // The wingtip's origin should be at the center of the wing's tip chord.
+        // The center of the wing's chord at the tip is at `tipSweep`.
+        rightWingtip.position.set(tipSweep, 0, tipZ);
 
         // Apply the cant angle (up/down rotation)
         rightWingtip.rotation.x = wingtipAngle;
@@ -1160,9 +1160,8 @@ function updatePlaneModel() {
         // 2. حساب خصائص الجناح عند مركز الجنيح
         const spanProgressAtHinge = Math.max(0, aileronCenterZ / halfSpan);
         const chordAtHinge = rootChord + (rootChord * taperRatio - rootChord) * spanProgressAtHinge;
-        const sweepAtHinge = aileronCenterZ * Math.tan(sweepRad);
-        // 3. حساب الموضع X للمفصل. يجب أن يكون عند الحافة الخلفية للجناح.
-        const hingeX = sweepAtHinge - (chordAtHinge / 2);
+        const sweepAtHinge = (aileronCenterZ) * Math.tan(sweepRad);
+        const hingeX = sweepAtHinge + (chordAtHinge / 2) - aileronWidth;
         
         // 3. The wing geometry is already translated by half fuselage width. The aileron pivot is a child of the wing, so its Z position is relative to the wing's local coordinate system.
         const finalPivotZ = aileronCenterZ;
