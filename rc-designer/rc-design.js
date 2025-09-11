@@ -1046,10 +1046,11 @@ function updatePlaneModel() {
             const segmentOverlapsAileron = aileronActive && (z_start < aileronZEnd && z_end > aileronZStart);
             const p1_vertex_index = (i * pointsPerSection + j) * 3;
             const p1_x = vertices[p1_vertex_index];
-            const currentChord = rootChord + (rootChord * taperRatio - rootChord) * (z_start / halfSpan);
+            const spanProgress = z_start / halfSpan;
+            const currentChord = rootChord + (rootChord * taperRatio - rootChord) * spanProgress;
             const sweepAtZ = z_start * Math.tan(sweepRad);
-            // The wing is flipped, so leading edge is at +x, trailing edge is at -x.
-            const isTrailingEdgeFace = (p1_x - sweepAtZ) < (-currentChord / 2) + aileronWidth;
+            const trailingEdgeX = sweepAtZ - (currentChord / 2);
+            const isTrailingEdgeFace = p1_x < trailingEdgeX + aileronWidth;
             if (segmentOverlapsAileron && isTrailingEdgeFace) {
                 continue; // Skip creating this face, effectively creating a hole
             }
