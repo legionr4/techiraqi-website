@@ -497,6 +497,7 @@ const accessoriesWeightResultEl = document.getElementById('accessories-weight-re
 const wheelWeightResultEl = document.getElementById('wheel-weight-result');
 const strutWeightResultEl = document.getElementById('strut-weight-result');
 const engineWeightResultEl = document.getElementById('engine-weight-result');
+const pylonWeightResultEl = document.getElementById('pylon-weight-result');
 const landingGearWeightResultEl = document.getElementById('landing-gear-weight-result');
 const totalWeightResultEl = document.getElementById('total-weight-result');
 const propWeightResultEl = document.getElementById('prop-weight-result');
@@ -1878,7 +1879,28 @@ function calculateAerodynamics() {
     const fuselageFrontDiameter = getVal(fuselageFrontDiameterInput);
     const fuselageRearDiameter = getVal(fuselageRearDiameterInput);
     const fuselageWidth = getVal(fuselageWidthInput);
-    const fuselageHeight = getVal(fuselageHeightInput);
+    let fuselageHeight = getVal(fuselageHeightInput); // Use let to allow modification
+
+    // --- Fix: Determine current fuselage dimensions for calculations ---
+    let currentFuselageWidth, currentFuselageHeight;
+    if (fuselageShape === 'rectangular') {
+        currentFuselageWidth = fuselageWidth;
+        currentFuselageHeight = fuselageHeight;
+    } else if (fuselageShape === 'cylindrical') {
+        currentFuselageWidth = fuselageDiameter;
+        currentFuselageHeight = fuselageDiameter;
+    } else if (fuselageShape === 'teardrop') {
+        currentFuselageWidth = Math.max(fuselageFrontDiameter, fuselageRearDiameter);
+        currentFuselageHeight = Math.max(fuselageFrontDiameter, fuselageRearDiameter);
+    } else {
+        currentFuselageWidth = 0.15; // Default
+        currentFuselageHeight = 0.15; // Default
+    }
+    // This ensures fuselageHeight is correctly set for pylon calculations below
+    if (fuselageShape !== 'rectangular') {
+        fuselageHeight = currentFuselageHeight;
+    }
+
     const hasAileron = getCheck(hasAileronInput);
     const aileronLength = getVal(aileronLengthInput);
     const aileronWidth = getVal(aileronWidthInput);
@@ -2221,7 +2243,9 @@ function calculateAerodynamics() {
     const totalAccessoriesWeightGrams = receiverWeightGrams + servoWeightGrams + cameraWeightGrams + otherAccessoriesWeightGrams;
     const totalAccessoriesWeightKg = totalAccessoriesWeightGrams / 1000;
 
-    const totalWeightKg = wingWeightKg + tailWeightKg + fuselageWeightKg + propWeightKg + landingGearWeightKg + engineWeightKg + energySourceWeightKg + cockpitWeightKg + totalAccessoriesWeightKg + wingtipWeightKg + aileronWeightKg + elevatorWeightKg + rudderWeightKg;
+    let pylonWeightKg = 0; // Initialize pylon weight
+
+    const totalWeightKg = wingWeightKg + tailWeightKg + fuselageWeightKg + propWeightKg + landingGearWeightKg + engineWeightKg + energySourceWeightKg + cockpitWeightKg + totalAccessoriesWeightKg + wingtipWeightKg + aileronWeightKg + elevatorWeightKg + rudderWeightKg + pylonWeightKg;
     
     // 5. نسبة الدفع إلى الوزن (Thrust-to-Weight Ratio)
     const weightInNewtons = totalWeightKg * 9.81;
@@ -2388,31 +2412,29 @@ function calculateAerodynamics() {
         const wingEngineX = (wingEngineForeAft === 'leading') ? (leadingEdgeX + pylonLengthMeters + (engineLengthMeters / 2)) : (trailingEdgeX - pylonLengthMeters - (engineLengthMeters / 2));
         addMoment(totalWingPropulsionWeight, wingEngineX);
 
-        // --- حساب وزن وعزم حوامل المحركات (Pylons) --- (تم التصحيح)
-        // This block was causing a crash because fuselageHeight was not defined in this scope.
-        // The weight of pylons is very small and can be ignored for now to fix the crash.
-        // A more robust implementation would pass all required variables into this function.
-        // if (pylonLengthMeters > 0.001) {            
-        //     // Correctly get wing position from the input element
-        //     const wingPositionValue = getStr(wingPositionInput);
-        //     const wingCenterY = (wingPositionValue === 'high' ? fuselageHeight / 2 : (wingPositionValue === 'low' ? -fuselageHeight / 2 : 0));
-        //     const engineYOffset = (wingEngineVerticalPos === 'above')
-        //         ? wingCenterY + (wingThickness / 2) + (engineDiameterMeters / 2)
-        //         : wingCenterY - (wingThickness / 2) - (engineDiameterMeters / 2);
-
-        //     const pylonHeight = Math.abs(engineYOffset - wingCenterY) - (wingThickness / 2) - (engineDiameterMeters / 2);
+        // --- حساب وزن وعزم حوامل المحركات (Pylons) ---
+        if (pylonLengthMeters > 0.001) {
+            const wingPositionValue = getStr(wingPositionInput);
+            const wingCenterY = (wingPositionValue === 'high' ? fuselageHeight / 2 : (wingPositionValue === 'low' ? -fuselageHeight / 2 : 0));
             
-        //     if (pylonHeight > 0.001 && pylonLengthMeters > 0.001) {
-        //         const pylonWidth = engineDiameterMeters * 0.4;
-        //         const pylonVolume = pylonLengthMeters * pylonHeight * pylonWidth;
-        //         const pylonMaterialDensity = MATERIAL_DENSITIES['plastic'];
-        //         const totalPylonWeightKg = pylonVolume * pylonMaterialDensity * 2;
+            const engineYOffset = (wingEngineVerticalPos === 'above')
+                ? wingCenterY + (wingThickness / 2) + pylonLengthMeters + (engineDiameterMeters / 2)
+                : wingCenterY - (wingThickness / 2) - pylonLengthMeters - (engineDiameterMeters / 2);
+
+            const pylonHeight = Math.abs(engineYOffset - wingCenterY) - (wingThickness / 2) - (engineDiameterMeters / 2);
+            
+            if (pylonHeight > 0.001) {
+                const pylonWidth = engineDiameterMeters * 0.4; // Consistent with 3D model
+                const pylonVolume = pylonLengthMeters * pylonHeight * pylonWidth;
+                const pylonMaterialDensity = MATERIAL_DENSITIES['plastic']; // Assume plastic for now
+                const totalPylonWeightKg = pylonVolume * pylonMaterialDensity * 2; // For both pylons
+                pylonWeightKg = totalPylonWeightKg; // Store it
                 
-        //         // The weight is already added to totalWeightKg, so we just need to add the moment
-        //         const pylonX = (wingEngineForeAft === 'leading') ? (leadingEdgeX + pylonLengthMeters / 2) : (trailingEdgeX - pylonLengthMeters / 2);
-        //         addMoment(totalPylonWeightKg, pylonX);
-        //     }
-        // }
+                // Calculate pylon X position for moment
+                const pylonX = (wingEngineForeAft === 'leading') ? (leadingEdgeX + pylonLengthMeters / 2) : (trailingEdgeX - pylonLengthMeters / 2);
+                addMoment(pylonWeightKg, pylonX);
+            }
+        }
     }
 
 
@@ -2502,6 +2524,16 @@ function calculateAerodynamics() {
         strutWeightResultEl.parentElement.style.display = 'none';
     }
     landingGearWeightResultEl.textContent = (landingGearWeightKg * 1000).toFixed(0);
+    
+    // إظهار/إخفاء نتيجة وزن الحوامل
+    const pylonResultItem = document.getElementById('pylon-weight-result-item');
+    if (enginePlacement === 'wing' && pylonWeightKg > 0) {
+        pylonResultItem.style.display = 'flex';
+        pylonWeightResultEl.textContent = (pylonWeightKg * 1000).toFixed(0);
+    } else {
+        pylonResultItem.style.display = 'none';
+    }
+
     engineWeightResultEl.textContent = (engineWeightKg * 1000).toFixed(0);
     propWeightResultEl.textContent = (propWeightKg * 1000).toFixed(0);
     propPowerResultEl.textContent = power_consumed_watts.toFixed(1);
