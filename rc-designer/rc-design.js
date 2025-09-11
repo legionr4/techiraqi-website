@@ -358,6 +358,7 @@ const particleDensityInput = document.getElementById('particle-density');
 const particleSizeInput = document.getElementById('particle-size');
 const showAmbientWindInput = document.getElementById('show-ambient-wind');
 const airflowTransparencyInput = document.getElementById('airflow-transparency');
+const showSmokeInput = document.getElementById('show-smoke');
 const airflowTransparencyValueEl = document.getElementById('airflow-transparency-value');
 const fuselageColorInput = document.getElementById('fuselage-color');
 const wingColorInput = document.getElementById('wing-color');
@@ -497,6 +498,7 @@ let isPropSpinning = false; // متغير لتتبع حالة دوران الم�
 let propParticleSystem, propParticleCount = 400; // لتدفق هواء المروحة (تم تقليل العدد)
 let wingAirflowParticleSystem, wingAirflowParticleCount = 2500; // لتدفق الهواء العام
 let vortexParticleSystem, vortexParticleCount = 1000; // لدوامات أطراف الجناح
+let smokeParticleSystem, smokeParticleCount = 500; // لدخان محرك IC
 
 /**
  * Generates points for various airfoil shapes.
@@ -2716,6 +2718,7 @@ function createAirflowMaterial(color) {
 function setAirflowVisibility(isSpinning) {
     const showAmbient = showAmbientWindInput.checked;
 
+
     if (propParticleSystem) {
         propParticleSystem.visible = isSpinning;
     }
@@ -2730,6 +2733,15 @@ function setAirflowVisibility(isSpinning) {
     }
     if (vortexParticleSystem) {
         vortexParticleSystem.visible = isSpinning && showAmbient;
+    }
+
+    // التحكم في رؤية الدخان
+    if (smokeParticleSystem) {
+        const engineType = engineTypeInput.value;
+        const showSmoke = showSmokeInput.checked;
+        smokeParticleSystem.visible = isSpinning && engineType === 'ic' && showSmoke;
+    } else {
+        // This case should not happen if init is correct
     }
 }
 
@@ -2855,6 +2867,10 @@ togglePropSpinBtn.addEventListener('click', () => {
         togglePropSpinBtn.style.backgroundColor = '#e9ecef'; // اللون الافتراضي
         togglePropSpinBtn.style.color = '#333';
     }
+    setAirflowVisibility(isPropSpinning);
+});
+
+showSmokeInput.addEventListener('change', () => {
     setAirflowVisibility(isPropSpinning);
 });
 
@@ -3273,6 +3289,71 @@ function animate() {
             vortexParticleSystem.geometry.attributes.scale.needsUpdate = true;
             vortexParticleSystem.geometry.attributes.spiralData.needsUpdate = true;
         }
+
+        // --- تحديث دخان محرك IC ---
+        if (smokeParticleSystem && smokeParticleSystem.visible) {
+            const positions = smokeParticleSystem.geometry.attributes.position.array;
+            const opacities = smokeParticleSystem.geometry.attributes.customOpacity.array;
+            const scales = smokeParticleSystem.geometry.attributes.scale.array;
+            const lifeData = smokeParticleSystem.geometry.attributes.life.array;
+
+            // الحصول على نقطة الانبعاث من المحرك
+            const emissionPoint = new THREE.Vector3();
+            if (engineGroup.children.length > 0) {
+                engineGroup.children[0].getWorldPosition(emissionPoint);
+                // الانبعاث من الجزء الخلفي للمحرك
+                const engineLength = (getValidNumber(icEngineLengthInput) * planeParams.conversionFactor);
+                emissionPoint.x -= engineLength / 2;
+            }
+
+            const buoyancy = 0.3; // سرعة ارتفاع الدخان
+            const spread = 0.2;   // مدى انتشار الدخان
+
+            for (let i = 0; i < smokeParticleCount; i++) {
+                const i2 = i * 2;
+                const i3 = i * 3;
+
+                // تحديث عمر الجسيم
+                lifeData[i2] -= deltaTime;
+
+                // إذا انتهى عمر الجسيم، يتم إعادة إنشائه
+                if (lifeData[i2] <= 0) {
+                    positions[i3]     = emissionPoint.x + (Math.random() - 0.5) * 0.05;
+                    positions[i3 + 1] = emissionPoint.y + (Math.random() - 0.5) * 0.05;
+                    positions[i3 + 2] = emissionPoint.z + (Math.random() - 0.5) * 0.05;
+
+                    lifeData[i2] = lifeData[i2 + 1] = 2.0 + Math.random() * 2.0; // عمر افتراضي من 2-4 ثوانٍ
+                }
+
+                // تحديث الموضع
+                // 1. التحرك للخلف مع تدفق الهواء
+                positions[i3] -= mainAirSpeed * deltaTime;
+                // 2. الارتفاع للأعلى بسبب الحرارة
+                positions[i3 + 1] += buoyancy * deltaTime;
+                // 3. إضافة بعض الاضطراب العشوائي
+                positions[i3]     += (Math.random() - 0.5) * spread * deltaTime;
+                positions[i3 + 1] += (Math.random() - 0.5) * spread * deltaTime;
+                positions[i3 + 2] += (Math.random() - 0.5) * spread * deltaTime;
+
+                // تحديث الخصائص البصرية بناءً على العمر
+                const lifeRatio = Math.max(0, lifeData[i2] / lifeData[i2 + 1]);
+                
+                // التلاشي بمرور الوقت
+                opacities[i] = lifeRatio * 0.3 * densityFactor * planeParams.airflowTransparency; // الدخان ليس كثيفًا جدًا
+                // ينمو ثم يتلاشى
+                scales[i] = (1.0 - lifeRatio) * 5.0 * sizeFactor;
+            }
+
+            smokeParticleSystem.geometry.attributes.position.needsUpdate = true;
+            smokeParticleSystem.geometry.attributes.customOpacity.needsUpdate = true;
+            smokeParticleSystem.geometry.attributes.scale.needsUpdate = true;
+            smokeParticleSystem.geometry.attributes.life.needsUpdate = true;
+        }
+
+
+
+
+
     }
     else {
         lastVibrationRotation.set(0, 0, 0);
@@ -3373,10 +3454,35 @@ function initVortexParticles() {
     wingGroup.add(vortexParticleSystem);
 }
 
+/** Initializes the particle system for IC engine smoke. */
+function initSmokeParticles() {
+    const particleGeometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(smokeParticleCount * 3).fill(0);
+    const opacities = new Float32Array(smokeParticleCount).fill(0);
+    const scales = new Float32Array(smokeParticleCount).fill(0);
+    // Custom attribute for life: [currentLife, maxLife]
+    const lifeData = new Float32Array(smokeParticleCount * 2).fill(0);
+
+    particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    particleGeometry.setAttribute('customOpacity', new THREE.BufferAttribute(opacities, 1));
+    particleGeometry.setAttribute('scale', new THREE.BufferAttribute(scales, 1));
+    particleGeometry.setAttribute('life', new THREE.BufferAttribute(lifeData, 2));
+
+    // Use a different material for smoke
+    const smokeMaterial = createAirflowMaterial(0x999999); // Grayish color
+    smokeMaterial.blending = THREE.NormalBlending; // Normal blending looks better for smoke
+
+    smokeParticleSystem = new THREE.Points(particleGeometry, smokeMaterial);
+    smokeParticleSystem.visible = false;
+    planeGroup.add(smokeParticleSystem); // Add to plane group to move with it
+}
+
+
 // --- التشغيل الأولي ---
 initPropAirflowParticles();
 initWingAirflowParticles();
 initVortexParticles();
+initSmokeParticles();
 initCharts();
 updateUnitLabels();
 // استدعاء updateEngineUI أولاً لملء حقول المحرك بالقيم الافتراضية.
