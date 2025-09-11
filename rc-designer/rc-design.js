@@ -1,13 +1,15 @@
 // --- إعداد المشهد ثلاثي الأبعاد ---
 const canvas = document.getElementById('viewer-canvas');
+const viewerDiv = document.querySelector('.viewer'); // الحصول على الحاوية الرئيسية للعرض
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xeeeeee);
-const camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
+const camera = new THREE.PerspectiveCamera(75, viewerDiv.clientWidth / viewerDiv.clientHeight, 0.1, 1000);
 const clock = new THREE.Clock(); // لتتبع الوقت بين الإطارات
 camera.position.set(1.5, 1, 2);
 
 const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
-renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+// استخدام أبعاد الحاوية لضمان حجم صحيح عند التحميل
+renderer.setSize(viewerDiv.clientWidth, viewerDiv.clientHeight);
 
 // --- إضافة عناصر التحكم بالكاميرا ---
 const controls = new THREE.OrbitControls(camera, renderer.domElement);
