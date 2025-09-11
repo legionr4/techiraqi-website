@@ -250,6 +250,7 @@ const vStabChordInput = document.getElementById('v-stab-chord');
 const vTailAngleInput = document.getElementById('v-tail-angle');
 const hasElevatorInput = document.getElementById('has-elevator');
 const elevatorControls = document.getElementById('elevator-controls');
+const elevatorAirfoilTypeInput = document.getElementById('elevator-airfoil-type');
 const elevatorWidthInput = document.getElementById('elevator-width');
 const hasRudderInput = document.getElementById('has-rudder');
 const rudderControls = document.getElementById('rudder-controls');
@@ -257,6 +258,7 @@ const rudderWidthInput = document.getElementById('rudder-width');
 const tailSweepAngleInput = document.getElementById('tail-sweep-angle');
 const vStabSweepAngleInput = document.getElementById('vstab-sweep-angle');
 const tailTaperRatioInput = document.getElementById('tail-taper-ratio');
+const rudderAirfoilTypeInput = document.getElementById('rudder-airfoil-type');
 const tailAirfoilTypeInput = document.getElementById('tail-airfoil-type');
 const tailThicknessInput = document.getElementById('tail-thickness');
 const tailIncidenceAngleInput = document.getElementById('tail-incidence-angle');
@@ -1212,6 +1214,8 @@ function updatePlaneModel() {
     const hasRudder = hasRudderInput.checked;
     const rudderWidth = getValidNumber(rudderWidthInput) * conversionFactor;
 
+    const elevatorAirfoilType = elevatorAirfoilTypeInput.value;
+    const rudderAirfoilType = rudderAirfoilTypeInput.value;
     // --- تطبيق موضع وزاوية ميلان الذيل ---
     tailAssembly.position.x = tailPositionX;
     tailAssembly.position.y = 0; // Y position is handled by components inside
@@ -1288,7 +1292,7 @@ function updatePlaneModel() {
     if (hasElevator && tailType !== 'v-tail') {
         // إنشاء سطح مائل ومستدق لنصف الرافع
         const elevatorLength = getValidNumber(elevatorLengthInput) * conversionFactor;
-        const elevatorHalfGeom = createSurface(elevatorLength * 2, elevatorWidth, tailTaperRatio, tailSweepAngle, tailThickness, 'rectangular', false, true);
+        const elevatorHalfGeom = createSurface(elevatorLength * 2, elevatorWidth, tailTaperRatio, tailSweepAngle, tailThickness, elevatorAirfoilType, false, true);
         elevatorHalfGeom.translate(-elevatorWidth / 2, 0, 0); // تمدد للخلف من نقطة المفصل
         // إزاحة الرافع ليبدأ من جانب جسم الطائرة، مما يخلق فجوة في المنتصف
         elevatorHalfGeom.translate(0, 0, currentFuselageWidth / 2);
@@ -1318,7 +1322,7 @@ function updatePlaneModel() {
         // إنشاء سطح مائل ومستدق للدفة
         const rudderLength = getValidNumber(rudderLengthInput) * conversionFactor;
         // تصحيح: يجب أن تستخدم الدفة زاوية ميلان الذيل العمودي
-        const rudderGeom = createSurface(rudderLength, rudderWidth, tailTaperRatio, vStabSweepAngle, tailThickness, 'rectangular', true, true);
+        const rudderGeom = createSurface(rudderLength, rudderWidth, tailTaperRatio, vStabSweepAngle, tailThickness, rudderAirfoilType, true, true);
         rudderGeom.translate(-rudderWidth / 2, 0, 0); // تمدد للخلف من نقطة المفصل
 
         const rudder = new THREE.Mesh(rudderGeom, aileronMaterial);
@@ -1830,6 +1834,7 @@ function calculateAerodynamics() {
     const aileronPosition = getVal(aileronPositionInput);
     const aileronAirfoilType = getStr(aileronAirfoilTypeInput);
     const hasElevator = getCheck(hasElevatorInput);
+    const elevatorAirfoilType = getStr(elevatorAirfoilTypeInput);
     const elevatorLength = getVal(elevatorLengthInput);
     const elevatorWidth = getVal(elevatorWidthInput);
     const hasRudder = getCheck(hasRudderInput);
@@ -1925,6 +1930,21 @@ function calculateAerodynamics() {
         } else if (aileronAirfoilType === 'wedge') {
             cdp += 0.001; // أقل سحب
         }
+    }
+    // إضافة تأثير سحب الرافع والدفة
+    if (hasElevator) {
+        if (elevatorAirfoilType === 'flat_plate') {
+            cdp += 0.002; // السحب للرافع أصغر لأنه أصغر من الجنيح
+        } else if (elevatorAirfoilType === 'rectangular') {
+            cdp += 0.001;
+        } else if (elevatorAirfoilType === 'wedge') {
+            cdp += 0.0005;
+        }
+    }
+    if (hasRudder) {
+        if (rudderAirfoilType === 'flat_plate') cdp += 0.002;
+        else if (rudderAirfoilType === 'rectangular') cdp += 0.001;
+        else if (rudderAirfoilType === 'wedge') cdp += 0.0005;
     }
     const cd = cdp + cdi;
     const aeroDrag = 0.5 * cd * airDensity * Math.pow(airSpeed, 2) * totalWingArea;
@@ -2741,6 +2761,8 @@ pressureInput.addEventListener('input', () => {
 hasAileronInput.addEventListener('change', updateAll);
 aileronAirfoilTypeInput.addEventListener('change', updateAll);
 hasWingtipInput.addEventListener('change', updateAll);
+elevatorAirfoilTypeInput.addEventListener('change', updateAll);
+rudderAirfoilTypeInput.addEventListener('change', updateAll);
 wingtipShapeInput.addEventListener('change', updateAll);
 tailTypeInput.addEventListener('change', updateAll);
 hasElevatorInput.addEventListener('change', updateAll);
