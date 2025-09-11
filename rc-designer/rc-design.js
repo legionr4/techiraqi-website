@@ -456,6 +456,7 @@ const liftResultEl = document.getElementById('lift-result');
 const dragResultEl = document.getElementById('drag-result');
 const thrustResultEl = document.getElementById('thrust-result');
 const twrResultEl = document.getElementById('twr-result');
+const stallSpeedResultEl = document.getElementById('stall-speed-result');
 const wingAreaResultEl = document.getElementById('wing-area-result');
 const wingWeightResultEl = document.getElementById('wing-weight-result');
 const tailAreaResultEl = document.getElementById('tail-area-result');
@@ -1686,8 +1687,10 @@ function updatePlaneModel() {
         energySourceMesh.scale.set(length, height, width);
 
         // تحديث الموضع
-        const batteryPosition = getValidNumber(batteryPositionInput) * conversionFactor;
-        energySourceGroup.position.x = batteryPosition;
+        // تحويل الموضع من "المسافة من المقدمة" إلى إحداثيات النموذج
+        const batteryPositionFromNose = getValidNumber(batteryPositionInput) * conversionFactor;
+        const batteryPositionX = (fuselageLength / 2) - batteryPositionFromNose;
+        energySourceGroup.position.x = batteryPositionX;
 
     } else if (engineType === 'ic') {
         energySourceGroup.visible = true;
@@ -1701,8 +1704,9 @@ function updatePlaneModel() {
         energySourceMesh.scale.set(length, height, width);
 
         // تحديث الموضع
-        const tankPosition = getValidNumber(fuelTankPositionInput) * conversionFactor;
-        energySourceGroup.position.x = tankPosition;
+        const tankPositionFromNose = getValidNumber(fuelTankPositionInput) * conversionFactor;
+        const tankPositionX = (fuselageLength / 2) - tankPositionFromNose;
+        energySourceGroup.position.x = tankPositionX;
     }
 }
 
@@ -2091,6 +2095,24 @@ function calculateAerodynamics() {
     const weightInNewtons = totalWeightKg * 9.81;
     const twr = weightInNewtons > 0 ? (thrust / weightInNewtons) : 0;
 
+    // --- حساب سرعة الانهيار (Stall Speed) ---
+    // V_s = sqrt( (2 * W) / (Cl_max * rho * A) )
+    // تقدير معامل الرفع الأقصى (Cl_max) بناءً على شكل المقطع
+    let cl_max = 1.2; // قيمة افتراضية (شبه متماثل)
+    if (airfoilType === 'flat-bottom') {
+        cl_max = 1.5; // أعلى معامل رفع، جيد للتدريب
+    } else if (airfoilType === 'semi-symmetrical') {
+        cl_max = 1.3;
+    } else if (airfoilType === 'symmetrical') {
+        cl_max = 1.1; // أقل معامل رفع، جيد للاستعراض
+    } else if (airfoilType === 'rectangular') {
+        cl_max = 1.0; // بسيط وأقل كفاءة
+    }
+
+    let stallSpeed = 0;
+    if (totalWingArea > 0 && airDensity > 0 && cl_max > 0 && weightInNewtons > 0) {
+        stallSpeed = Math.sqrt((2 * weightInNewtons) / (cl_max * airDensity * totalWingArea));
+    }
     // --- حساب مركز الجاذبية (CG) والمركز الهوائي (AC) ---
     let totalMoment = 0;
     const conversionFactorToDisplay = 1 / conversionFactor; // للتحويل من متر إلى الوحدة المعروضة
@@ -2168,9 +2190,13 @@ function calculateAerodynamics() {
     addMoment(totalAccessoriesWeightKg, wingPositionX);
 
     if (engineType === 'electric') {
-        addMoment(batteryWeightGrams / 1000, getVal(batteryPositionInput));
+        const batteryPositionFromNose = getVal(batteryPositionInput);
+        const batteryPositionX = (fuselageLength / 2) - batteryPositionFromNose;
+        addMoment(batteryWeightGrams / 1000, batteryPositionX);
     } else { // ic
-        addMoment(energySourceWeightKg, getVal(fuelTankPositionInput));
+        const tankPositionFromNose = getVal(fuelTankPositionInput);
+        const tankPositionX = (fuselageLength / 2) - tankPositionFromNose;
+        addMoment(energySourceWeightKg, tankPositionX);
     }
 
     // عزم المحرك والمروحة بناءً على الموضع
@@ -2190,8 +2216,10 @@ function calculateAerodynamics() {
         addMoment(totalWingPropulsionWeight, wingEngineX);
 
         // --- حساب وزن وعزم حوامل المحركات (Pylons) ---
-        if (pylonLengthMeters > 0.001) {
-            const wingCenterY = (params.wingPosition === 'high' ? fuselageHeight / 2 : (params.wingPosition === 'low' ? -fuselageHeight / 2 : 0));
+        if (pylonLengthMeters > 0.001) {            
+            // Correctly get wing position from the input element
+            const wingPositionValue = getStr(wingPositionInput);
+            const wingCenterY = (wingPositionValue === 'high' ? fuselageHeight / 2 : (wingPositionValue === 'low' ? -fuselageHeight / 2 : 0));
             const engineYOffset = (wingEngineVerticalPos === 'above')
                 ? wingCenterY + (wingThickness / 2) + (engineDiameterMeters / 2)
                 : wingCenterY - (wingThickness / 2) - (engineDiameterMeters / 2);
@@ -2303,6 +2331,7 @@ function calculateAerodynamics() {
     propTorqueResultEl.textContent = torque_required_Nm.toFixed(3);
     totalWeightResultEl.textContent = (totalWeightKg * 1000).toFixed(0);
     twrResultEl.textContent = twr > 0 ? twr.toFixed(2) : '0.00';
+    stallSpeedResultEl.textContent = stallSpeed > 0 ? stallSpeed.toFixed(2) : '0.00';
 
     // عرض نتائج CG و AC (محسوبة من مقدمة الطائرة)
     const datum = fuselageLength / 2; // مقدمة الطائرة هي نقطة الصفر للمستخدم

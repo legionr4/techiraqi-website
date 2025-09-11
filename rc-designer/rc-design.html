@@ -670,8 +670,8 @@
                             <input type="number" id="battery-weight" value="180" step="10">
                         </div>
                         <div class="input-group">
-                            <label for="battery-position">الموضع من مركز الطائرة (<span class="unit-label">سم</span>)</label>
-                            <input type="number" id="battery-position" value="10" step="1" title="قيمة موجبة للأمام، سالبة للخلف">
+                            <label for="battery-position">الموضع من مقدمة الطائرة (<span class="unit-label">سم</span>)</label>
+                            <input type="number" id="battery-position" value="20" step="1" title="المسافة للخلف من مقدمة الطائرة.">
                         </div>
                     </div>
 
@@ -706,8 +706,8 @@
                             <input type="range" id="fuel-level" min="0" max="1" value="1" step="0.05">
                         </div>
                         <div class="input-group">
-                            <label for="fuel-tank-position">الموضع من مركز الطائرة (<span class="unit-label">سم</span>)</label>
-                            <input type="number" id="fuel-tank-position" value="5" step="1" title="قيمة موجبة للأمام، سالبة للخلف">
+                            <label for="fuel-tank-position">الموضع من مقدمة الطائرة (<span class="unit-label">سم</span>)</label>
+                            <input type="number" id="fuel-tank-position" value="15" step="1" title="المسافة للخلف من مقدمة الطائرة.">
                         </div>
                     </div>
                 </fieldset>
@@ -1005,6 +1005,10 @@
                 <div class="result-item">
                     <p>نسبة الدفع إلى الوزن:</p>
                     <span id="twr-result">0.00</span>
+                </div>
+                <div class="result-item" title="أقل سرعة يمكن للطائرة الطيران بها في وضع أفقي قبل أن تفقد الرفع.">
+                    <p><strong>سرعة الانهيار (م/ث):</strong></p>
+                    <span id="stall-speed-result">0.00</span>
                 </div>
                 <div class="result-item" style="border-top: 2px solid #90caf9; padding-top: 10px; margin-top: 10px;" title="موضع مركز الجاذبية من مقدمة الطائرة">
                     <p>موضع مركز الجاذبية (CG) (سم):</p>
