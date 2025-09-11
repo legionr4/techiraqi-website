@@ -1296,16 +1296,18 @@ function updatePlaneModel() {
     if (hasRudder && tailType !== 'v-tail') {
         // إنشاء سطح مائل ومستدق للدفة
         const rudderLength = getValidNumber(rudderLengthInput) * conversionFactor;
-        const rudderGeom = createSurface(rudderLength, rudderWidth, tailTaperRatio, tailSweepAngle, tailThickness, 'rectangular', true, true);
+        // تصحيح: يجب أن تستخدم الدفة زاوية ميلان الذيل العمودي
+        const rudderGeom = createSurface(rudderLength, rudderWidth, tailTaperRatio, vStabSweepAngle, tailThickness, 'rectangular', true, true);
         rudderGeom.translate(-rudderWidth / 2, 0, 0); // تمدد للخلف من نقطة المفصل
 
         const rudder = new THREE.Mesh(rudderGeom, aileronMaterial);
         rudder.name = 'rudder';
         const rudderPivot = new THREE.Group();
         rudderPivot.add(rudder);
-        // نضع المحور عند الحافة الخلفية للجزء الثابت من الذيل العمودي
+        // تصحيح: نضع المحور عند الحافة الخلفية للجزء الثابت من الذيل العمودي
         const vStabRootChordEffective = vStabChord - rudderWidth;
-        const pivotX = -vStabRootChordEffective;
+        // يجب أن يكون موضع المحور عند الحافة الخلفية للجزء الثابت من الذيل العمودي
+        const pivotX = -vStabRootChordEffective / 2;
         
         rudderPivot.position.set(pivotX, currentFuselageHeight / 2, 0); // تبدأ الهندسة من y=0، لذا نرفعها
 
@@ -2141,8 +2143,31 @@ function calculateAerodynamics() {
     const wingPositionX = (fuselageLength / 2) - wingPropDistance;
     const tailPositionX = wingPositionX - wingTailDistance;
 
-    // 2. المركز الهوائي (AC) - يقع عند 25% من الـ MAC
-    const ac_x = wingPositionX + mac_x_le + (0.25 * mac);
+    // 2. حساب النقطة المحايدة (Neutral Point - NP) للطائرة بأكملها
+    // هذه الطريقة أكثر دقة من استخدام المركز الهوائي للجناح فقط
+
+    // المركز الهوائي للجناح (Wing AC)
+    const X_ac_w = wingPositionX + mac_x_le + (0.25 * mac);
+
+    // المركز الهوائي للذيل الأفقي (Horizontal Tail AC)
+    const X_ac_h = tailPositionX - (0.25 * tailChord);
+
+    // مساحة الذيل الأفقي
+    const hStabArea = (tailType === 'conventional' || tailType === 't-tail') ? tailSpan * tailChord : 0;
+
+    // ميل منحنى الرفع للجناح والذيل
+    const CL_alpha_w = 2 * Math.PI * Math.cos(sweepRad);
+    const tailSweepRad = (getRaw(tailSweepAngleInput) * Math.PI / 180);
+    const CL_alpha_h = 2 * Math.PI * Math.cos(tailSweepRad);
+
+    // تأثير تدفق الهواء المنحدر (Downwash)
+    const de_da = (aspectRatio > 0) ? (2 * CL_alpha_w) / (Math.PI * aspectRatio) : 0;
+
+    // معامل حجم الذيل الأفقي
+    const V_h = (totalWingArea > 0 && mac > 0) ? (hStabArea * (X_ac_h - X_ac_w)) / (totalWingArea * mac) : 0;
+
+    // حساب النقطة المحايدة (NP)
+    const X_np = X_ac_w + (CL_alpha_h / CL_alpha_w) * (1 - de_da) * V_h * mac;
 
     // دالة مساعدة لحساب العزم
     const addMoment = (weightKg, positionX) => {
@@ -2258,11 +2283,11 @@ function calculateAerodynamics() {
     const cg_x = totalWeightKg > 0 ? totalMoment / totalWeightKg : 0;
 
     // 5. حساب الهامش الثابت
-    const staticMargin = mac > 0 ? ((ac_x - cg_x) / mac) * 100 : 0;
+    const staticMargin = mac > 0 ? ((X_np - cg_x) / mac) * 100 : 0;
 
     // تحديث الكرات في النموذج ثلاثي الأبعاد
     cgSphere.position.x = cg_x;
-    acSphere.position.x = ac_x;
+    acSphere.position.x = X_np; // الكرة الزرقاء تمثل الآن النقطة المحايدة
     // افترض أن CG و AC يقعان على المحور المركزي للطائرة
     cgSphere.position.y = 0;
     cgSphere.position.z = 0;
@@ -2353,7 +2378,7 @@ function calculateAerodynamics() {
     const ac_from_nose = ac_x - datum;
 
     cgPositionResultEl.textContent = (cg_from_nose * conversionFactorToDisplay).toFixed(1);
-    acPositionResultEl.textContent = (ac_from_nose * conversionFactorToDisplay).toFixed(1);
+    acPositionResultEl.textContent = ((X_np - datum) * conversionFactorToDisplay).toFixed(1);
     staticMarginResultEl.textContent = `${staticMargin.toFixed(1)}%`;
 
     // --- حساب استقرار الدوران (Roll Stability - Clβ) ---
