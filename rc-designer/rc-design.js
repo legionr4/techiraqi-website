@@ -1616,17 +1616,6 @@ function updatePlaneModel() {
             // تحديد طول الحامل في الاتجاه الأمامي-الخلفي (غير محدد من قبل المستخدم)
             const pylonForeAftLength = engineDiameterMeters * 0.6;
 
-            if (wingEngineForeAft === 'leading') {
-                engineCenterX = leadingEdgeX + pylonForeAftLength + (engineLengthMeters / 2);
-                propCenterX = engineCenterX + (engineLengthMeters / 2) + 0.01;
-                propModel = propProto.clone(); // مروحة سحب (Tractor)
-            } else { // 'trailing'
-                engineCenterX = trailingEdgeX - pylonForeAftLength - (engineLengthMeters / 2);
-                propCenterX = engineCenterX - (engineLengthMeters / 2) - 0.01;
-                propModel = propProto.clone();
-                propModel.rotation.y = Math.PI; // مروحة دفع (Pusher)
-            }
-
             // --- إنشاء حامل المحرك (Pylon) ---
             if (pylonHeightMeters > 0.001) {
                 const pylonWidth = engineDiameterMeters * 0.4; // عرض الحامل أنحف قليلاً من المحرك
@@ -1644,16 +1633,29 @@ function updatePlaneModel() {
                     pylonY = wingCenterY - (wingThickness / 2) - (pylonHeightMeters / 2);
                 }
 
-                // تصحيح: يتم الآن حساب موضع الحامل ليكون بين الجناح والمحرك
                 const pylonX = (wingEngineForeAft === 'leading') ? (leadingEdgeX + pylonForeAftLength / 2) : (trailingEdgeX - pylonForeAftLength / 2);
 
                 const rightPylon = new THREE.Mesh(pylonGeom, pylonMaterial);
                 rightPylon.position.set(pylonX, pylonY, posOnWingZ);
                 const leftPylon = rightPylon.clone();
                 leftPylon.position.z = -posOnWingZ;
-                // تصحيح: إضافة الحوامل إلى مجموعة محركات الجناح
                 wingEnginesGroup.add(rightPylon, leftPylon);
             }
+
+            // --- حساب موضع المحرك والمروحة بناءً على موضع الحامل ---
+            if (wingEngineForeAft === 'leading') {
+                // المحرك يقع أمام الحامل
+                engineCenterX = leadingEdgeX + pylonForeAftLength + (engineLengthMeters / 2);
+                propCenterX = engineCenterX + (engineLengthMeters / 2) + 0.01;
+                propModel = propProto.clone(); // مروحة سحب (Tractor)
+            } else { // 'trailing'
+                // المحرك يقع خلف الحامل
+                engineCenterX = trailingEdgeX - pylonForeAftLength - (engineLengthMeters / 2);
+                propCenterX = engineCenterX - (engineLengthMeters / 2) - 0.01;
+                propModel = propProto.clone();
+                propModel.rotation.y = Math.PI; // مروحة دفع (Pusher)
+            }
+
             // إنشاء ووضع المحركات والمراوح
             const rightEngine = engineProto.clone();
             const leftEngine = engineProto.clone();
