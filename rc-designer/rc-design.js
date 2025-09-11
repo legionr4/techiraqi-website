@@ -1995,8 +1995,9 @@ function calculateAerodynamics() {
     const cameraWeightGrams = getRaw(cameraWeightInput);
     const otherAccessoriesWeightGrams = getRaw(otherAccessoriesWeightInput);
     
-    // تصحيح: حساب وزن المحرك مع الأخذ في الاعتبار وجود محركين عند التركيب على الجناح
-    let engineWeightKg = (engineType === 'electric' ? getRaw(electricMotorWeightInput) : getRaw(icEngineWeightInput)) / 1000;
+    // تصحيح: قراءة وزن المحرك من الحقل الصحيح لكل نوع
+    let engineWeightGrams = (engineType === 'electric') ? getRaw(electricMotorWeightInput) : getRaw(icEngineWeightInput);
+    let engineWeightKg = engineWeightGrams / 1000;
     if (enginePlacement === 'wing') {
         engineWeightKg *= 2; // مضاعفة الوزن لوجود محركين
     }
