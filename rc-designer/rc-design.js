@@ -2014,7 +2014,7 @@ function calculateAerodynamics() {
         wingtipsArea = 2 * wingtipLength * wingtipWidth;
     }
 
-    // المساحة الكلية للجناح المستخدمة في حسابات الرفع والسحب
+    // المساحة الكلية للجناح
     const totalWingArea = mainWingArea + wingtipsArea;
 
     let totalTailArea = 0;
@@ -2123,10 +2123,8 @@ function calculateAerodynamics() {
     const prop_drag = airSpeed > 1 ? power_consumed_watts / airSpeed : 0; // تجنب القسمة على صفر
     const totalDrag = aeroDrag + prop_drag;
     // 4. حساب الوزن (Weight Calculation)
-    const wingVolume = mainWingArea * wingThickness; // Volume of main wing in m³
     const structureMaterialDensity = MATERIAL_DENSITIES[structureMaterial]; // Density in kg/m³
     const fuselageMaterialDensity = MATERIAL_DENSITIES[fuselageMaterialValue];
-    const wingWeightKg = wingVolume * structureMaterialDensity; // Weight in kg
 
     // حساب وزن أطراف الجناح (Wingtips)
     let wingtipWeightKg = 0;
@@ -2140,10 +2138,20 @@ function calculateAerodynamics() {
 
     // --- حساب وزن أسطح التحكم ---
     let aileronWeightKg = 0;
+    let aileronArea = 0;
     if (hasAileron) {
-        const singleAileronVolume = aileronLength * aileronWidth * aileronThickness;
-        aileronWeightKg = 2 * singleAileronVolume * structureMaterialDensity;
+        aileronArea = 2 * aileronLength * aileronWidth; // مساحة الجنيحين
+        const aileronVolume = aileronArea * aileronThickness;
+        aileronWeightKg = aileronVolume * structureMaterialDensity;
     }
+
+    // --- حساب وزن الجناح (بشكل دقيق) ---
+    // حساب وزن الجزء الثابت من الجناح (بدون الجنيحات)
+    const fixedWingArea = mainWingArea - aileronArea;
+    const fixedWingVolume = fixedWingArea * wingThickness;
+    const fixedWingWeightKg = fixedWingVolume * structureMaterialDensity;
+    // الوزن الإجمالي للجناح هو مجموع الجزء الثابت والجنيحات
+    const wingWeightKg = fixedWingWeightKg + aileronWeightKg;
 
     let elevatorWeightKg = 0;
     if (hasElevator && (tailType === 'conventional' || tailType === 't-tail')) {
@@ -2158,9 +2166,23 @@ function calculateAerodynamics() {
     }
     // ملاحظة: أسطح التحكم للذيل V تعتبر جزءًا من وزن الذيل الرئيسي حاليًا لتبسيط الحسابات.
 
+    // --- حساب وزن الذيل (بشكل دقيق) ---
+    let fixedTailWeightKg = 0;
+    if (tailType === 'conventional' || tailType === 't-tail') {
+        // حساب مساحة الأجزاء الثابتة من الذيل
+        const fixedHStabArea = tailSpan * (tailChord - (hasElevator ? elevatorWidth : 0));
+        const fixedVStabArea = vStabHeight * (vStabChord - (hasRudder ? rudderWidth : 0));
+        const fixedTailVolume = (fixedHStabArea + fixedVStabArea) * tailThickness;
+        fixedTailWeightKg = fixedTailVolume * structureMaterialDensity;
+    } else if (tailType === 'v-tail') {
+        // للذيل V، يتم حساب الوزن الكلي بناءً على المساحة الكلية والسماكة الرئيسية للتبسيط
+        // (يفترض أن أسطح التحكم مدمجة)
+        const vTailVolume = totalTailArea * tailThickness;
+        fixedTailWeightKg = vTailVolume * structureMaterialDensity;
+    }
 
-    const tailVolume = totalTailArea * tailThickness;
-    const tailWeightKg = tailVolume * structureMaterialDensity;
+    // الوزن الإجمالي للذيل هو مجموع الأجزاء الثابتة والمتحركة (الرافع والدفة)
+    const tailWeightKg = fixedTailWeightKg + elevatorWeightKg + rudderWeightKg;
 
     // حساب وزن الجسم
     let fuselageWeightKg = 0;
@@ -2321,7 +2343,7 @@ function calculateAerodynamics() {
         }
     }
 
-    const totalWeightKg = wingWeightKg + tailWeightKg + fuselageWeightKg + propWeightKg + landingGearWeightKg + engineWeightKg + energySourceWeightKg + cockpitWeightKg + totalAccessoriesWeightKg + wingtipWeightKg + aileronWeightKg + elevatorWeightKg + rudderWeightKg + pylonWeightKg; // Now includes correct pylon weight
+    const totalWeightKg = wingWeightKg + tailWeightKg + fuselageWeightKg + propWeightKg + landingGearWeightKg + engineWeightKg + energySourceWeightKg + cockpitWeightKg + totalAccessoriesWeightKg + wingtipWeightKg + pylonWeightKg;
 
     // 5. نسبة الدفع إلى الوزن (Thrust-to-Weight Ratio)
     const weightInNewtons = totalWeightKg * 9.81;
