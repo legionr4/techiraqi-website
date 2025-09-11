@@ -1594,14 +1594,15 @@ function updatePlaneModel() {
             const pylonHeightMeters = getValidNumber(enginePylonLengthInput) * conversionFactor;
 
             // حساب الموضع على امتداد الجناح
-            const posOnWingZ = wingEngineDistMeters + (currentFuselageWidth / 2);
-            const spanProgress = (posOnWingZ - currentFuselageWidth / 2) / halfSpan;
+            const localZ = wingEngineDistMeters;
+            const spanProgress = localZ / halfSpan;
 
             // حساب خصائص الجناح عند هذا الموضع
             const chordAtPylon = rootChord + (rootChord * taperRatio - rootChord) * spanProgress;
-            const sweepAtPylon = (posOnWingZ - currentFuselageWidth / 2) * Math.tan(sweepRad);
-            const leadingEdgeX = wingPositionX + sweepAtPylon + chordAtPylon / 2;
-            const trailingEdgeX = wingPositionX + sweepAtPylon - chordAtPylon / 2;
+            const sweepAtPylon = localZ * Math.tan(sweepRad);
+            // حساب إحداثيات الحافة الأمامية والخلفية محلياً بالنسبة لنقطة أصل الجناح
+            const leadingEdgeX_local = sweepAtPylon + chordAtPylon / 2;
+            const trailingEdgeX_local = sweepAtPylon - chordAtPylon / 2;
 
             // حساب الموضع العمودي للمحرك (أعلى/أسفل) مع الأخذ في الاعتبار ارتفاع الحامل
             let engineY_relative;
@@ -1627,22 +1628,20 @@ function updatePlaneModel() {
                 const pylonMaterial = new THREE.MeshStandardMaterial({ color: pylonColor, side: THREE.DoubleSide });
 
                 // حساب موضع الحامل
-                let pylonY_relative;
+                let pylonY_local;
 
                 if (wingEngineVerticalPos === 'above') {
-                    pylonY_relative = (wingThickness / 2) + (pylonHeightMeters / 2);
+                    pylonY_local = (wingThickness / 2) + (pylonHeightMeters / 2);
                 } else { // below
-                    pylonY_relative = -(wingThickness / 2) - (pylonHeightMeters / 2);
+                    pylonY_local = -(wingThickness / 2) - (pylonHeightMeters / 2);
                 }
 
-                // تصحيح: حساب موضع الحامل بالنسبة لمجموعة الجناح وليس للمشهد العام
-                const pylonX_relative = ((wingEngineForeAft === 'leading') ? (leadingEdgeX + pylonForeAftLength / 2) : (trailingEdgeX - pylonForeAftLength / 2)) - wingGroup.position.x;
+                // حساب موضع الحامل المحلي
+                const pylonX_local = (wingEngineForeAft === 'leading') ? (leadingEdgeX_local + pylonForeAftLength / 2) : (trailingEdgeX_local - pylonForeAftLength / 2);
 
                 const rightPylon = new THREE.Mesh(pylonGeom, pylonMaterial);
-                rightPylon.position.set(pylonX_relative, pylonY_relative, posOnWingZ);
-                const leftPylon = rightPylon.clone();
-
-                leftPylon.position.z = -posOnWingZ;
+                rightPylon.position.set(pylonX_local, pylonY_local, localZ);
+                const leftPylon = rightPylon.clone(); // يستنسخ الموضع المحلي الصحيح
 
                 // تصحيح: إضافة الحوامل إلى مجموعات المحركات الخاصة بكل جناح
                 rightWingEngineGroup.add(rightPylon);
@@ -1652,12 +1651,12 @@ function updatePlaneModel() {
             // --- حساب موضع المحرك والمروحة بناءً على موضع الحامل ---
             if (wingEngineForeAft === 'leading') {
                 // المحرك يقع أمام الحامل
-                engineCenterX = leadingEdgeX + pylonForeAftLength + (engineLengthMeters / 2);
+                engineCenterX = leadingEdgeX_local + pylonForeAftLength + (engineLengthMeters / 2);
                 propCenterX = engineCenterX + (engineLengthMeters / 2) + 0.01;
                 propModel = propProto.clone(); // مروحة سحب (Tractor)
             } else { // 'trailing'
                 // المحرك يقع خلف الحامل
-                engineCenterX = trailingEdgeX - pylonForeAftLength - (engineLengthMeters / 2);
+                engineCenterX = trailingEdgeX_local - pylonForeAftLength - (engineLengthMeters / 2);
                 propCenterX = engineCenterX - (engineLengthMeters / 2) - 0.01;
                 propModel = propProto.clone();
                 propModel.rotation.y = Math.PI; // مروحة دفع (Pusher)
@@ -1669,12 +1668,12 @@ function updatePlaneModel() {
             const rightProp = propModel.clone();
             const leftProp = propModel.clone();
 
-            // تصحيح: تحديد الموضع بالنسبة لمجموعة الجناح (wingGroup)
-            rightEngine.position.set(engineCenterX - wingGroup.position.x, engineY_relative, posOnWingZ - rightWing.position.z);
-            leftEngine.position.set(engineCenterX - wingGroup.position.x, engineY_relative, -posOnWingZ - leftWing.position.z);
+            // تصحيح: استخدام الإحداثيات المحلية لجميع المكونات
+            rightEngine.position.set(engineCenterX, engineY_relative, localZ);
+            leftEngine.position.set(engineCenterX, engineY_relative, localZ);
 
-            rightProp.position.set(propCenterX - wingGroup.position.x, engineY_relative, posOnWingZ - rightWing.position.z);
-            leftProp.position.set(propCenterX - wingGroup.position.x, engineY_relative, -posOnWingZ - leftWing.position.z);
+            rightProp.position.set(propCenterX, engineY_relative, localZ);
+            leftProp.position.set(propCenterX, engineY_relative, localZ);
 
             // Apply thrust angles to each component
             rightEngine.rotation.set(0, engineSideThrustAngle, engineThrustAngle);
