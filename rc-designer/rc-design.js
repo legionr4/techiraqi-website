@@ -1061,6 +1061,7 @@ function updatePlaneModel() {
     while(wingGroup.children.length > 0){ 
         wingGroup.remove(wingGroup.children[0]); 
     }
+    wingGroup.add(wingEnginesGroup); // إعادة إضافة مجموعة المحركات بعد مسح الجناح
 
     const halfSpan = wingSpan / 2;
     const rootChord = wingChord;
