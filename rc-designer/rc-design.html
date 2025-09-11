@@ -845,7 +845,7 @@
                         </div>
                         <div class="input-group">
                             <label for="main-gear-width">المسافة بين العجلات الرئيسية (<span class="unit-label">سم</span>)</label>
-                            <input type="number" id="main-gear-width" value="30" step="1">
+                            <input type="number" id="main-gear-width" value="15" step="1">
                         </div>
                     </div>
                 </fieldset>
@@ -880,6 +880,24 @@
                         <label for="toggle-prop-spin">تشغيل المحاكاة (الدوران والهواء)</label>
                         <button type="button" id="toggle-prop-spin" style="flex-basis: 45%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; background-color: #e9ecef;">تشغيل</button>
                     </div>
+                    <!-- أشرطة التحكم الجديدة -->
+                    <div class="input-group">
+                        <label for="aileron-control">تحكم الدوران (Roll): <span id="aileron-control-value">0.00</span></label>
+                        <input type="range" id="aileron-control" min="-1" max="1" value="0" step="0.05">
+                    </div>
+                    <div class="input-group">
+                        <label for="elevator-control">تحكم الانحدار (Pitch): <span id="elevator-control-value">0.00</span></label>
+                        <input type="range" id="elevator-control" min="-1" max="1" value="0" step="0.05">
+                    </div>
+                    <div class="input-group">
+                        <label for="rudder-control">تحكم الانعراج (Yaw): <span id="rudder-control-value">0.00</span></label>
+                        <input type="range" id="rudder-control" min="-1" max="1" value="0" step="0.05">
+                    </div>
+                    <div class="input-group">
+                        <label for="reset-controls-btn">إعادة تعيين وضعية الطائرة</label>
+                        <button type="button" id="reset-controls-btn" style="flex-basis: 45%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; background-color: #e9ecef;">إعادة تعيين</button>
+                    </div>
+                    <!-- نهاية أشرطة التحكم الجديدة -->
                     <div class="input-group">
                         <label for="show-ambient-wind">إظهار رياح المحيط والدوامات</label>
                         <input type="checkbox" id="show-ambient-wind" checked style="flex-basis: auto; margin-left: auto;">

@@ -465,6 +465,13 @@ const otherAccessoriesWeightInput = document.getElementById('other-accessories-w
 // CG/AC Inputs
 const showCgAcCheckbox = document.getElementById('show-cg-ac');
 
+// عناصر التحكم الجديدة
+const aileronControlSlider = document.getElementById('aileron-control');
+const elevatorControlSlider = document.getElementById('elevator-control');
+const rudderControlSlider = document.getElementById('rudder-control');
+const resetControlsBtn = document.getElementById('reset-controls-btn');
+
+
 
 
 
@@ -2550,6 +2557,42 @@ function calculateAerodynamics() {
     rollStabilityResultEl.textContent = total_Cl_beta.toFixed(3);
 }
 
+/**
+ * يقرأ قيم أشرطة التحكم ويطبق الدوران على أسطح التحكم المرئية.
+ */
+function updateControlSurfacesFromSliders() {
+    const aileronValue = parseFloat(aileronControlSlider.value);
+    const elevatorValue = parseFloat(elevatorControlSlider.value);
+    const rudderValue = parseFloat(rudderControlSlider.value);
+
+    // تحديث النصوص التي تعرض القيم
+    document.getElementById('aileron-control-value').textContent = aileronValue.toFixed(2);
+    document.getElementById('elevator-control-value').textContent = elevatorValue.toFixed(2);
+    document.getElementById('rudder-control-value').textContent = rudderValue.toFixed(2);
+
+    const maxDeflection = 0.4; // أقصى زاوية انحراف بالراديان (تقريبا 23 درجة)
+
+    const rightAileron = scene.getObjectByName('rightAileron');
+    const leftAileron = scene.getObjectByName('leftAileron');
+    if (rightAileron && leftAileron) {
+        rightAileron.parent.rotation.z = aileronValue * maxDeflection;
+        leftAileron.parent.rotation.z = -aileronValue * maxDeflection;
+    }
+
+    const rightElevator = scene.getObjectByName('rightElevator');
+    const leftElevator = scene.getObjectByName('leftElevator');
+    if (rightElevator && leftElevator) {
+        const rotationAmount = elevatorValue * maxDeflection;
+        rightElevator.parent.rotation.z = rotationAmount;
+        leftElevator.parent.rotation.z = rotationAmount;
+    }
+
+    const rudder = scene.getObjectByName('rudder');
+    if (rudder) {
+        rudder.parent.rotation.y = rudderValue * maxDeflection;
+    }
+}
+
 function initCharts() {
     const liftChartCanvas = document.getElementById('lift-chart');
     const dragChartCanvas = document.getElementById('drag-chart');
@@ -2918,6 +2961,19 @@ togglePropSpinBtn.addEventListener('click', () => {
     setAirflowVisibility(isPropSpinning);
 });
 
+// ربط الأحداث لأشرطة التحكم الجديدة
+aileronControlSlider.addEventListener('input', updateControlSurfacesFromSliders);
+elevatorControlSlider.addEventListener('input', updateControlSurfacesFromSliders);
+rudderControlSlider.addEventListener('input', updateControlSurfacesFromSliders);
+
+resetControlsBtn.addEventListener('click', () => {
+    aileronControlSlider.value = 0;
+    elevatorControlSlider.value = 0;
+    rudderControlSlider.value = 0;
+    updateControlSurfacesFromSliders();
+    planeGroup.rotation.set(0, 0, 0); // إعادة تعيين دوران جسم الطائرة أيضًا
+});
+
 showSmokeInput.addEventListener('change', () => {
     setAirflowVisibility(isPropSpinning);
 });
@@ -2937,81 +2993,6 @@ toggleChartsBtn.addEventListener('click', () => {
     }
 });
 
-// --- تفاعل الماوس مع الجنيحات ---
-const raycaster = new THREE.Raycaster();
-const mouse = new THREE.Vector2();
-
-// متغيرات لتتبع اتجاه حركة أسطح التحكم
-let aileronDirection = 1;
-let elevatorDirection = 1;
-let rudderDirection = 1;
-let ruddervatorDirection = 1;
-
-function onMouseClick(event) {
-    // حساب إحداثيات الماوس في الفضاء الطبيعي (-1 إلى +1)
-    const rect = renderer.domElement.getBoundingClientRect();
-    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-
-    raycaster.setFromCamera(mouse, camera);
-
-    // البحث عن الجنيحات في المشهد
-    const rightAileron = scene.getObjectByName('rightAileron');
-    const leftAileron = scene.getObjectByName('leftAileron');
-    const rightElevator = scene.getObjectByName('rightElevator');
-    const leftElevator = scene.getObjectByName('leftElevator');
-    const rudder = scene.getObjectByName('rudder');
-    const rightRuddervator = scene.getObjectByName('rightRuddervator');
-    const leftRuddervator = scene.getObjectByName('leftRuddervator');
-    
-    const objectsToIntersect = [];
-    if (rightAileron) objectsToIntersect.push(rightAileron);
-    if (leftAileron) objectsToIntersect.push(leftAileron);
-    if (rightElevator) objectsToIntersect.push(rightElevator);
-    if (leftElevator) objectsToIntersect.push(leftElevator);
-    if (rudder) objectsToIntersect.push(rudder);
-    if (rightRuddervator) objectsToIntersect.push(rightRuddervator);
-    if (leftRuddervator) objectsToIntersect.push(leftRuddervator);
-
-    if (objectsToIntersect.length === 0) return;
-
-    const intersects = raycaster.intersectObjects(objectsToIntersect, true);
-
-    if (intersects.length > 0) {
-        const clickedObject = intersects[0].object;
-        const deflectionAngle = 0.3; // زاوية الانحراف بالراديان (تقريبا 17 درجة)
-
-        if (clickedObject.name === 'rightElevator' || clickedObject.name === 'leftElevator') {
-            // تحريك نصفي الرافع معًا (للتحكم في الانحدار)
-            const rotationAmount = deflectionAngle * elevatorDirection;
-            if (rightElevator) rightElevator.parent.rotation.z = rotationAmount;
-            if (leftElevator) leftElevator.parent.rotation.z = rotationAmount;
-            elevatorDirection *= -1; // عكس الاتجاه للنقرة التالية
-        }
-        if (clickedObject.name === 'rudder') {
-            rudder.parent.rotation.y = deflectionAngle * rudderDirection; // الدفة تتحكم في الانعراج
-            rudderDirection *= -1; // عكس الاتجاه
-        }
-        if (clickedObject.name === 'rightRuddervator' || clickedObject.name === 'leftRuddervator') {
-            const rotationAmount = deflectionAngle * ruddervatorDirection;
-            if (rightRuddervator) rightRuddervator.parent.rotation.z = rotationAmount;
-            if (leftRuddervator) leftRuddervator.parent.rotation.z = rotationAmount;
-            ruddervatorDirection *= -1;
-        }
-
-        // تحريك الجنيحات بشكل معاكس
-        if (rightAileron && leftAileron) {
-            if (clickedObject.name === 'rightAileron' || clickedObject.name === 'leftAileron') {
-                const rotationAmount = deflectionAngle * aileronDirection;
-                rightAileron.parent.rotation.z = rotationAmount;
-                leftAileron.parent.rotation.z = -rotationAmount;
-                aileronDirection *= -1; // عكس الاتجاه
-            }
-        }
-    }
-}
-window.addEventListener('click', onMouseClick, false);
-
 // --- حلقة العرض ---
 function animate() {
     requestAnimationFrame(animate);
@@ -3029,7 +3010,7 @@ function animate() {
     planeGroup.position.set(0, 0, 0);
 
     if (isPropSpinning) {
-        
+
         // --- قراءة قيم المحرك مباشرة من المدخلات للتحديث الفوري ---
         const currentRpm = getValidNumber(propRpmInput);
         const currentPitch = getValidNumber(propPitchInput) * 0.0254; // to meters
@@ -3070,6 +3051,26 @@ function animate() {
         } else { // أمامي أو خلفي
             propellerGroup.rotation.x += rotationPerSecond * deltaTime;
         }
+
+        // --- التحكم في دوران جسم الطائرة بناءً على أشرطة التحكم ---
+        const aileronValue = parseFloat(aileronControlSlider.value);
+        const elevatorValue = parseFloat(elevatorControlSlider.value);
+        const rudderValue = parseFloat(rudderControlSlider.value);
+
+        // سرعات الدوران (راديان في الثانية)
+        const rollSpeed = aileronValue * -1.0; // عكس الاتجاه ليكون طبيعياً
+        const pitchSpeed = elevatorValue * -0.8; // عكس الاتجاه
+        const yawSpeed = rudderValue * -1.2; // عكس الاتجاه
+
+        // استخدام الكواتيرنيون لتجنب مشكلة قفل جيمبال (Gimbal Lock)
+        const deltaRotationQuaternion = new THREE.Quaternion()
+            .setFromEuler(new THREE.Euler(
+                pitchSpeed * deltaTime,
+                yawSpeed * deltaTime,
+                rollSpeed * deltaTime,
+                'XYZ' // ترتيب تطبيق الدورانات
+            ));
+        planeGroup.quaternion.multiplyQuaternions(deltaRotationQuaternion, planeGroup.quaternion);
 
         // --- تأثير اهتزاز الطائرة ---
         const minVibrationRpm = 4000;
@@ -3426,6 +3427,9 @@ function animate() {
     else {
         lastVibrationRotation.set(0, 0, 0);
     }
+    // إذا لم تكن المحاكاة قيد التشغيل، لا تقم بإعادة تعيين الدوران
+    // للسماح للمستخدم برؤية الوضعية الأخيرة التي تركها عليها.
+    // يتم إعادة التعيين الآن عبر زر "إعادة تعيين".
 
     controls.update(); // ضروري إذا تم تفعيل enableDamping
 
@@ -3558,6 +3562,7 @@ updateUnitLabels();
 // هذه الدالة ستقوم بدورها باستدعاء updateAll() لضمان تحديث كل شيء.
 updateAirDensity(); // Calculate initial density based on default temp/pressure
 updateEngineUI();
+updateControlSurfacesFromSliders(); // ضبط أسطح التحكم على الوضع الأولي (0)
 animate();
 
 // --- التعامل مع تغيير حجم النافذة ---
