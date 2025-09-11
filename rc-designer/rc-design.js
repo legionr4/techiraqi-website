@@ -1662,12 +1662,12 @@ function updatePlaneModel() {
             const rightProp = propModel.clone();
             const leftProp = propModel.clone();
 
-            // تصحيح: تحديد الموضع بالنسبة لمجموعة الجناح
-            rightEngine.position.set(engineCenterX - wingGroup.position.x, engineYOffset - wingGroup.position.y, posOnWingZ);
-            leftEngine.position.set(engineCenterX - wingGroup.position.x, engineYOffset - wingGroup.position.y, -posOnWingZ);
+            // تصحيح: تحديد الموضع بالنسبة لمجموعة الجناح (wingGroup)
+            rightEngine.position.set(engineCenterX - wingGroup.position.x, engineYOffset, posOnWingZ);
+            leftEngine.position.set(engineCenterX - wingGroup.position.x, engineYOffset, -posOnWingZ);
 
-            rightProp.position.set(propCenterX - wingGroup.position.x, engineYOffset - wingGroup.position.y, posOnWingZ);
-            leftProp.position.set(propCenterX - wingGroup.position.x, engineYOffset - wingGroup.position.y, -posOnWingZ);
+            rightProp.position.set(propCenterX - wingGroup.position.x, engineYOffset, posOnWingZ);
+            leftProp.position.set(propCenterX - wingGroup.position.x, engineYOffset, -posOnWingZ);
 
             // Apply thrust angles to each component
             rightEngine.rotation.set(0, engineSideThrustAngle, engineThrustAngle);
