@@ -2419,13 +2419,15 @@ function calculateAerodynamics() {
     } else if (enginePlacement === 'wing') {
         const totalWingPropulsionWeight = (engineWeightKg * 2) + (propWeightKg * 2);
         // حساب موضع المحرك على الجناح من المدخلات بدلاً من النموذج ثلاثي الأبعاد
-        const posOnWingZ = (getVal(engineWingDistanceInput)) + (fuselageWidth / 2);
-        const spanProgress = (posOnWingZ - fuselageWidth / 2) / (wingSpan / 2);
+        const posOnWingZ = (getVal(engineWingDistanceInput)) + (currentFuselageWidth / 2);
+        const spanProgress = (posOnWingZ - currentFuselageWidth / 2) / (wingSpan / 2);
         const chordAtPylon = wingChord + (wingChord * taperRatio - wingChord) * spanProgress;
-        const sweepAtPylon = (posOnWingZ - fuselageWidth / 2) * Math.tan(sweepRad);
+        const sweepAtPylon = (posOnWingZ - currentFuselageWidth / 2) * Math.tan(sweepRad);
         const leadingEdgeX = wingPositionX + sweepAtPylon + chordAtPylon / 2;
         const trailingEdgeX = wingPositionX + sweepAtPylon - chordAtPylon / 2;
-        const wingEngineX = (wingEngineForeAft === 'leading') ? (leadingEdgeX + pylonLengthMeters + (engineLengthMeters / 2)) : (trailingEdgeX - pylonLengthMeters - (engineLengthMeters / 2));
+        // تصحيح: استخدام طول الحامل الأفقي بدلاً من ارتفاعه العمودي لحساب الموضع
+        const pylonForeAftLength = engineDiameterMeters * 0.6;
+        const wingEngineX = (wingEngineForeAft === 'leading') ? (leadingEdgeX + pylonForeAftLength + (engineLengthMeters / 2)) : (trailingEdgeX - pylonForeAftLength - (engineLengthMeters / 2));
         addMoment(totalWingPropulsionWeight, wingEngineX);
 
         // --- حساب وزن وعزم حوامل المحركات (Pylons) ---
