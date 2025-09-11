@@ -475,6 +475,7 @@ const aileronControlSlider = document.getElementById('aileron-control');
 const elevatorControlSlider = document.getElementById('elevator-control');
 const rudderControlSlider = document.getElementById('rudder-control');
 const engineSound = document.getElementById('engine-sound');
+const toggleSoundBtn = document.getElementById('toggle-sound-btn');
 const resetControlsBtn = document.getElementById('reset-controls-btn');
 const liftResultEl = document.getElementById('lift-result');
 const dragResultEl = document.getElementById('drag-result');
@@ -3025,6 +3026,16 @@ togglePropSpinBtn.addEventListener('click', () => {
     setAirflowVisibility(isPropSpinning);
 });
 
+toggleSoundBtn.addEventListener('click', () => {
+    engineSound.muted = !engineSound.muted;
+    if (engineSound.muted) {
+        toggleSoundBtn.textContent = 'تشغيل الصوت';
+        toggleSoundBtn.style.backgroundColor = '#ffc107';
+    } else {
+        toggleSoundBtn.textContent = 'كتم الصوت';
+        toggleSoundBtn.style.backgroundColor = '#e9ecef';
+    }
+});
 // ربط الأحداث لأشرطة التحكم الجديدة
 aileronControlSlider.addEventListener('input', updateControlSurfacesFromSliders);
 elevatorControlSlider.addEventListener('input', updateControlSurfacesFromSliders);
@@ -3086,9 +3097,10 @@ function animate() {
             const rpmRatio = Math.max(0, Math.min(1, (currentRpm - minRpm) / (maxRpm - minRpm)));
 
             // ربط سرعة الدوران بمستوى الصوت (مثلاً من 0.2 إلى 1.0)
-            const minVolume = 0.2;
-            const maxVolume = 1.0;
-            engineSound.volume = minVolume + (rpmRatio * (maxVolume - minVolume));
+            // تم تعطيل هذا السطر مؤقتاً لحل مشكلة تعارض محتملة مع حدة الصوت
+            // const minVolume = 0.2;
+            // const maxVolume = 1.0;
+            // engineSound.volume = minVolume + (rpmRatio * (maxVolume - minVolume));
 
             // ربط سرعة الدوران بسرعة التشغيل (حدة الصوت) (مثلاً من 0.8 إلى 2.0)
             const minPlaybackRate = 0.7;
