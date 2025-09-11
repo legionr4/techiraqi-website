@@ -291,6 +291,7 @@ const aileronLengthInput = document.getElementById('aileron-length');
 const aileronWidthInput = document.getElementById('aileron-width');
 const aileronThicknessInput = document.getElementById('aileron-thickness');
 const aileronPositionInput = document.getElementById('aileron-position');
+const aileronAirfoilTypeInput = document.getElementById('aileron-airfoil-type');
 const elevatorLengthInput = document.getElementById('elevator-length');
 const rudderLengthInput = document.getElementById('rudder-length');
 const aileronControls = document.getElementById('aileron-controls');
@@ -531,8 +532,20 @@ function generateAirfoil(chord, thickness, airfoilType, numPoints = 15) {
 
         // Center horizontally and flip
         points.forEach(p => { p.x = (chord / 2) - p.x; });
-    } else { // Symmetrical and Semi-symmetrical
-        let bottomFactor = (airfoilType === 'semi-symmetrical') ? 0.6 : 1.0;
+    }
+    // Add simpler shapes for control surfaces
+    else if (airfoilType === 'wedge') {
+        points.push(new THREE.Vector2(chord / 2, thickness / 2)); // Top leading edge
+        points.push(new THREE.Vector2(chord / 2, -thickness / 2)); // Bottom leading edge
+        points.push(new THREE.Vector2(-chord / 2, 0)); // Trailing edge point
+    }
+    else if (airfoilType === 'flat_plate') {
+        points.push(new THREE.Vector2(chord / 2, thickness / 2));
+        points.push(new THREE.Vector2(chord / 2, -thickness / 2));
+        points.push(new THREE.Vector2(-chord / 2, -thickness / 2));
+        points.push(new THREE.Vector2(-chord / 2, thickness / 2));
+    } else { // Default to Symmetrical and Semi-symmetrical
+        const bottomFactor = (airfoilType === 'semi-symmetrical') ? 0.6 : 1.0;
         // Top surface
         for (let i = 0; i <= numPoints; i++) {
             const x_norm = i / numPoints;
@@ -1129,11 +1142,13 @@ function updatePlaneModel() {
         const aileronWidth = getValidNumber(aileronWidthInput) * conversionFactor;
         const aileronThickness = getValidNumber(aileronThicknessInput) * conversionFactor;
         const aileronPosition = getValidNumber(aileronPositionInput) * conversionFactor;
+        const aileronAirfoilType = aileronAirfoilTypeInput.value;
 
-        // Aileron geometry is a simple box. We translate it so its origin (pivot point) is at the center of its leading edge.
-        const aileronGeom = new THREE.BoxGeometry(aileronWidth, aileronThickness, aileronLength);
+        // Create aileron geometry using the createSurface function for consistency
+        // We use it to create a non-tapered, non-swept surface.
+        const aileronGeom = createSurface(aileronLength, aileronWidth, 1.0, 0, aileronThickness, aileronAirfoilType, true, true);
         aileronGeom.translate(-aileronWidth / 2, 0, 0); // Move the geometry so the hinge is at x=0 and it extends backwards
-
+        aileronGeom.rotateX(Math.PI / 2); // Rotate to align span with Z-axis
         // Create the aileron meshes
         const rightAileron = new THREE.Mesh(aileronGeom, aileronMaterial);
         rightAileron.name = 'rightAileron'; // Name for raycasting
@@ -1813,6 +1828,7 @@ function calculateAerodynamics() {
     const aileronWidth = getVal(aileronWidthInput);
     const aileronThickness = getVal(aileronThicknessInput);
     const aileronPosition = getVal(aileronPositionInput);
+    const aileronAirfoilType = getStr(aileronAirfoilTypeInput);
     const hasElevator = getCheck(hasElevatorInput);
     const elevatorLength = getVal(elevatorLengthInput);
     const elevatorWidth = getVal(elevatorWidthInput);
@@ -1896,7 +1912,20 @@ function calculateAerodynamics() {
         }
     }
     const cdi = (aspectRatio > 0) ? (Math.pow(cl, 2) / (Math.PI * aspectRatio * oswaldEfficiency)) : 0;
-    const cdp = 0.025; // معامل سحب طفيلي مفترض (لجسم الطائرة والذيل وغيرها)
+    
+    // --- حساب السحب الطفيلي (Parasitic Drag) ---
+    let cdp = 0.025; // معامل سحب طفيلي أساسي (لجسم الطائرة والذيل وغيرها)
+    
+    // إضافة تأثير سحب الجنيحات بناءً على شكلها
+    if (hasAileron) {
+        if (aileronAirfoilType === 'flat_plate') {
+            cdp += 0.005; // أعلى سحب
+        } else if (aileronAirfoilType === 'rectangular') {
+            cdp += 0.003; // سحب متوسط
+        } else if (aileronAirfoilType === 'wedge') {
+            cdp += 0.001; // أقل سحب
+        }
+    }
     const cd = cdp + cdi;
     const aeroDrag = 0.5 * cd * airDensity * Math.pow(airSpeed, 2) * totalWingArea;
 
@@ -2710,6 +2739,7 @@ pressureInput.addEventListener('input', () => {
 });
 
 hasAileronInput.addEventListener('change', updateAll);
+aileronAirfoilTypeInput.addEventListener('change', updateAll);
 hasWingtipInput.addEventListener('change', updateAll);
 wingtipShapeInput.addEventListener('change', updateAll);
 tailTypeInput.addEventListener('change', updateAll);
