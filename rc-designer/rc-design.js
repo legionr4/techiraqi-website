@@ -1515,6 +1515,16 @@ function updatePlaneModel() {
     // 1. إزالة النماذج القديمة
     while (engineGroup.children.length > 0) engineGroup.remove(engineGroup.children[0]);
     while (propellerGroup.children.length > 0) propellerGroup.remove(propellerGroup.children[0]);
+    // تصحيح: مسح محركات الجناح القديمة قبل إعادة بنائها
+    const rightWingEngineGrp = scene.getObjectByName("rightWingEngineGroup");
+    if (rightWingEngineGrp) {
+        while(rightWingEngineGrp.children.length > 0) rightWingEngineGrp.remove(rightWingEngineGrp.children[0]);
+    }
+    const leftWingEngineGrp = scene.getObjectByName("leftWingEngineGroup");
+    if (leftWingEngineGrp) {
+        while(leftWingEngineGrp.children.length > 0) leftWingEngineGrp.remove(leftWingEngineGrp.children[0]);
+    }
+
 
     // إعادة تعيين موضع ودوران المجموعات قبل تطبيق القيم الجديدة
     engineGroup.position.set(0, 0, 0);
@@ -3191,20 +3201,25 @@ function animate() {
         // --- دوران المروحة ---
         if (enginePlacement === 'wing') { // This logic was duplicated, removing the duplicate
             const wingPropRotation = wingPropRotationInput.value;
-            // تصحيح: البحث عن المراوح مباشرة في المشهد باستخدام أسمائها لضمان عملها دائمًا
-            const rightProp = scene.getObjectByName("wingProp_right");
-            const leftProp = scene.getObjectByName("wingProp_left");
+            // البحث عن مجموعات المحركات بالاسم
+            const rightWingEngineGrp = scene.getObjectByName("rightWingEngineGroup");
+            const leftWingEngineGrp = scene.getObjectByName("leftWingEngineGroup");
 
-            if (rightProp && leftProp) {
-                if (wingPropRotation === 'counter') {
-                    rightProp.rotation.x += rotationPerSecond * deltaTime;
-                    leftProp.rotation.x -= rotationPerSecond * deltaTime; // تدور في الاتجاه المعاكس
-                } else { // 'same'
-                    rightProp.rotation.x += rotationPerSecond * deltaTime;
-                    leftProp.rotation.x += rotationPerSecond * deltaTime;
+            if (rightWingEngineGrp && leftWingEngineGrp) {
+                // العثور على المروحة (وهي Group) داخل كل مجموعة محرك
+                const rightProp = rightWingEngineGrp.getObjectByName("wingProp_right");
+                const leftProp = leftWingEngineGrp.getObjectByName("wingProp_left");
+
+                if (rightProp && leftProp) {
+                    if (wingPropRotation === 'counter') {
+                        rightProp.rotation.x += rotationPerSecond * deltaTime;
+                        leftProp.rotation.x -= rotationPerSecond * deltaTime; // تدور في الاتجاه المعاكس
+                    } else { // 'same'
+                        rightProp.rotation.x += rotationPerSecond * deltaTime;
+                        leftProp.rotation.x += rotationPerSecond * deltaTime;
+                    }
                 }
             }
-
         } else { // أمامي أو خلفي
             propellerGroup.rotation.x += rotationPerSecond * deltaTime;
         }
