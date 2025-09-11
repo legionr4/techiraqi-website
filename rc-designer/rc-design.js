@@ -358,6 +358,8 @@ const particleDensityInput = document.getElementById('particle-density');
 const particleSizeInput = document.getElementById('particle-size');
 const showAmbientWindInput = document.getElementById('show-ambient-wind');
 const airflowTransparencyInput = document.getElementById('airflow-transparency');
+const toggleChartsBtn = document.getElementById('toggle-charts-btn');
+const chartsContainer = document.getElementById('charts-container');
 const showSmokeInput = document.getElementById('show-smoke');
 const airflowTransparencyValueEl = document.getElementById('airflow-transparency-value');
 const fuselageColorInput = document.getElementById('fuselage-color');
@@ -2922,6 +2924,17 @@ showAmbientWindInput.addEventListener('change', () => {
     setAirflowVisibility(isPropSpinning);
 });
 
+// Event listener for toggling charts visibility
+toggleChartsBtn.addEventListener('click', () => {
+    const isHidden = chartsContainer.style.display === 'none';
+    chartsContainer.style.display = isHidden ? 'grid' : 'none'; // Use 'grid' as defined in CSS
+    toggleChartsBtn.textContent = isHidden ? 'إخفاء' : 'إظهار';
+
+    if (isHidden) {
+        updateCharts(); // Force update to render correctly when shown
+    }
+});
+
 // --- تفاعل الماوس مع الجنيحات ---
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
@@ -3537,6 +3550,7 @@ initWingAirflowParticles();
 initVortexParticles();
 initSmokeParticles();
 initCharts();
+chartsContainer.style.display = 'none'; // Hide charts initially
 updateUnitLabels();
 // استدعاء updateEngineUI أولاً لملء حقول المحرك بالقيم الافتراضية.
 // هذه الدالة ستقوم بدورها باستدعاء updateAll() لضمان تحديث كل شيء.
