@@ -2995,7 +2995,7 @@ function animate() {
             const opacities = propParticleSystem.geometry.attributes.customOpacity.array;
             const scales = propParticleSystem.geometry.attributes.scale.array;
             const spiralData = propParticleSystem.geometry.attributes.spiralData.array;
-            const emissionRadius = propDiameter / 2;
+            const emissionRadius = planeParams.propDiameter / 2;
             const travelDistance = 5.0; // مسافة ثابتة لرحلة الجسيمات
 
             if (enginePlacement === 'wing') {
@@ -3103,7 +3103,7 @@ function animate() {
             const deflectionFactor = 8.0; // How strongly the surface deflects air
 
             const startX = 2.0; // Corresponds to emission point in init
-            const endX = -fuselageLength / 2 - 1.0;
+            const endX = -planeParams.fuselageLength / 2 - 1.0;
             const travelDistance = startX - endX;
 
             for (let i = 0; i < wingAirflowParticleCount; i++) {
@@ -3118,8 +3118,8 @@ function animate() {
 
                 // --- Aileron Influence ---
                 const aileronZoneX = -0.1; // Approx X position of ailerons
-                const aileronZStart = fuselageWidth / 2 + aileronPosition;
-                const aileronZEnd = aileronZStart + aileronLength;
+                const aileronZStart = planeParams.fuselageWidth / 2 + planeParams.aileronPosition;
+                const aileronZEnd = aileronZStart + planeParams.aileronLength;
                 if (Math.abs(px - aileronZoneX) < 0.2) {
                     // Right Aileron
                     if (pz > aileronZStart && pz < aileronZEnd) {
@@ -3132,9 +3132,9 @@ function animate() {
                 }
 
                 // --- Elevator Influence ---
-                const elevatorZoneX = -fuselageLength / 2;
-                const elevatorZStart = fuselageWidth / 2;
-                const elevatorZEnd = elevatorZStart + elevatorLength;
+                const elevatorZoneX = -planeParams.fuselageLength / 2;
+                const elevatorZStart = planeParams.fuselageWidth / 2;
+                const elevatorZEnd = elevatorZStart + planeParams.elevatorLength;
                 if (Math.abs(px - elevatorZoneX) < 0.2) {
                     if (Math.abs(pz) > elevatorZStart && Math.abs(pz) < elevatorZEnd) {
                         velocities[i3 + 1] -= elevatorRot * deflectionFactor;
@@ -3142,9 +3142,9 @@ function animate() {
                 }
 
                 // --- Rudder Influence ---
-                const rudderZoneX = -fuselageLength / 2;
-                const rudderYStart = fuselageHeight / 2;
-                const rudderYEnd = rudderYStart + rudderLength;
+                const rudderZoneX = -planeParams.fuselageLength / 2;
+                const rudderYStart = planeParams.fuselageHeight / 2;
+                const rudderYEnd = rudderYStart + planeParams.rudderLength;
                 if (Math.abs(px - rudderZoneX) < 0.2 && Math.abs(pz) < 0.2) {
                      if (py > rudderYStart && py < rudderYEnd) {
                         velocities[i3 + 2] -= rudderRot * deflectionFactor; // This was a bug, it should affect z-velocity
@@ -3166,7 +3166,7 @@ function animate() {
 
                 // Reset particle if it goes too far behind
                 if (positions[i3] < endX) {
-                    const emissionWidth = wingSpan * 1.2;
+                    const emissionWidth = planeParams.wingSpan * 1.2;
                     const emissionHeight = 2;
                     positions[i3] = startX; // Reset in front of the plane
                     positions[i3 + 1] = (Math.random() - 0.5) * emissionHeight;
@@ -3190,7 +3190,7 @@ function animate() {
             const vortexRotationSpeed = 15; // How fast the particles spiral
             const travelLength = 5.0; // How far back the vortices travel before resetting
 
-            const tipZ = (wingSpan / 2) + (fuselageWidth / 2);
+            const tipZ = (planeParams.wingSpan / 2) + (planeParams.fuselageWidth / 2);
             const tipY = wingGroup.position.y;
 
             for (let i = 0; i < vortexParticleCount; i++) {
