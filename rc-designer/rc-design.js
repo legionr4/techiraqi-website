@@ -2870,6 +2870,10 @@ function setAirflowVisibility(isSpinning) {
 }
 
 function updateAll() {
+    // لا تقم بتحديث النموذج بالكامل أثناء دوران المروحة،
+    // لأن هذا يعيد إنشاء كائن المروحة ويعيد تعيين دورانه إلى الصفر.
+    if (isPropSpinning) return;
+
     try {
         updatePlaneModel();
         calculateAerodynamics(); // استدعاء دالة الحسابات التي تقرأ الآن القيم مباشرة
