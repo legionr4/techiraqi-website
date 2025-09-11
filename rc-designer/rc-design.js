@@ -279,6 +279,7 @@ const taperRatioInput = document.getElementById('taper-ratio');
 const dihedralAngleInput = document.getElementById('dihedral-angle');
 
 const hasWingtipInput = document.getElementById('has-wingtip');
+const wingtipAirfoilTypeInput = document.getElementById('wingtip-airfoil-type');
 const wingtipShapeInput = document.getElementById('wingtip-shape');
 const wingtipLengthInput = document.getElementById('wingtip-length');
 const wingtipWidthInput = document.getElementById('wingtip-width');
@@ -286,6 +287,8 @@ const wingtipThicknessInput = document.getElementById('wingtip-thickness');
 const wingtipPositionInput = document.getElementById('wingtip-position');
 const wingtipAngleInput = document.getElementById('wingtip-angle');
 const wingtipTwistAngleInput = document.getElementById('wingtip-twist-angle');
+const wingtipTaperRatioInput = document.getElementById('wingtip-taper-ratio');
+const wingtipSweepAngleInput = document.getElementById('wingtip-sweep-angle');
 const wingtipControls =  document.getElementById('wingtip-controls');
 
 const hasAileronInput = document.getElementById('has-aileron');
@@ -378,6 +381,8 @@ const vStabSweepValueEl = document.getElementById('vstab-sweep-value');
 const tailIncidenceValueEl = document.getElementById('tail-incidence-value');
 const tailDihedralValueEl = document.getElementById('tail-dihedral-value');
 const tailTaperValueEl = document.getElementById('tail-taper-value');
+const wingtipTaperValueEl = document.getElementById('wingtip-taper-value');
+const wingtipSweepValueEl = document.getElementById('wingtip-sweep-value');
 const particleDensityValueEl = document.getElementById('particle-density-value');
 const particleSizeValueEl = document.getElementById('particle-size-value');
 const vibrationValueEl = document.getElementById('vibration-value');
@@ -398,13 +403,15 @@ const mainGearWidthInput = document.getElementById('main-gear-width');
 
 // Engine Inputs
 const engineTypeInput = document.getElementById('engine-type');
+const enginePlacementInput = document.getElementById('engine-placement');
+const engineVerticalPositionInput = document.getElementById('engine-vertical-position');
 const electricEngineOptions = document.getElementById('electric-engine-options');
 const icEngineOptions = document.getElementById('ic-engine-options');
 const electricMotorTypeInput = document.getElementById('electric-motor-type');
 const icEngineTypeInput = document.getElementById('ic-engine-type');
 
 // Electric Engine Inputs
-const enginePlacementInput = document.getElementById('engine-placement');
+const engineVerticalPositionGroup = document.getElementById('engine-vertical-position-group');
 const wingEnginePlacementOptions = document.getElementById('wing-engine-placement-options');
 const engineWingDistanceInput = document.getElementById('engine-wing-distance');
 const engineWingVerticalPosInput = document.getElementById('engine-wing-vertical-pos');
@@ -484,6 +491,7 @@ const propTorqueResultEl = document.getElementById('prop-torque-result');
 const cgPositionResultEl = document.getElementById('cg-position-result');
 const acPositionResultEl = document.getElementById('ac-position-result');
 const staticMarginResultEl = document.getElementById('static-margin-result');
+const pitchingMomentResultEl = document.getElementById('pitching-moment-result');
 
 const planeParams = {}; // Object to hold cached plane parameters for the animation loop
 
@@ -942,6 +950,7 @@ function updatePlaneModel() {
 
     // إظهار/إخفاء خيارات موضع محرك الجناح
     const enginePlacement = enginePlacementInput.value;
+    engineVerticalPositionGroup.style.display = (enginePlacement === 'front' || enginePlacement === 'rear') ? 'flex' : 'none';
     wingEnginePlacementOptions.style.display = enginePlacement === 'wing' ? 'block' : 'none';
 
 
@@ -1081,60 +1090,41 @@ function updatePlaneModel() {
     wingGroup.add(rightWing, leftWing);
      // Wingtip
     if (hasWingtipInput.checked) {
-        const wingtipShapeType = wingtipShapeInput.value;
+        const wingtipAirfoilType = wingtipAirfoilTypeInput.value;
         const wingtipLength = getValidNumber(wingtipLengthInput) * conversionFactor;
         const wingtipWidth = getValidNumber(wingtipWidthInput) * conversionFactor;
         const wingtipThickness = getValidNumber(wingtipThicknessInput) * conversionFactor;
         const wingtipPosition = getValidNumber(wingtipPositionInput) * conversionFactor;
         const wingtipAngle = getValidNumber(wingtipAngleInput) * Math.PI / 180; // Convert to radians
         const wingtipTwistAngle = getValidNumber(wingtipTwistAngleInput) * Math.PI / 180; // Convert to radians
+        const wingtipTaperRatio = getValidNumber(wingtipTaperRatioInput);
+        const wingtipSweepAngle = getValidNumber(wingtipSweepAngleInput);
+        
+        // إنشاء طرف الجناح باستخدام دالة createSurface للحصول على مقطع هوائي صحيح
+        // نفترض عدم وجود استدقاق أو ميلان لطرف الجناح نفسه للتبسيط
+        const wingtipGeometry = createSurface(wingtipLength, wingtipWidth, wingtipTaperRatio, wingtipSweepAngle, wingtipThickness, wingtipAirfoilType, true, true);
+        wingtipGeometry.translate(0, wingtipLength / 2, 0); // Center the geometry vertically
 
-        let wingletShape = new THREE.Shape();
-
-        if (wingtipShapeType === 'blended') {
-            // شكل منحني وسلس
-            wingletShape.moveTo(-wingtipWidth / 2, 0);
-            wingletShape.lineTo(wingtipWidth / 2, 0);
-            wingletShape.quadraticCurveTo(wingtipWidth / 2, wingtipLength * 0.8, 0, wingtipLength);
-            wingletShape.quadraticCurveTo(-wingtipWidth / 2, wingtipLength * 0.8, -wingtipWidth / 2, 0);
-        } else { // 'canted' or default
-            // شكل مائل (مستطيل)
-            wingletShape.moveTo(-wingtipWidth / 2, 0);
-            wingletShape.lineTo(wingtipWidth / 2, 0);
-            wingletShape.lineTo(wingtipWidth / 2, wingtipLength);
-            wingletShape.lineTo(-wingtipWidth / 2, wingtipLength);
-        }
-
-        const extrudeSettings = {
-            depth: wingtipThickness,
-            bevelEnabled: false,
-        };
-
-        const wingtipGeometry = new THREE.ExtrudeGeometry(wingletShape, extrudeSettings);
         const wingtipMaterial = new THREE.MeshStandardMaterial({ color: wingMaterial.color, side: THREE.DoubleSide });
         const rightWingtip = new THREE.Mesh(wingtipGeometry, wingtipMaterial);
 
         // Position the wingtip at the end of the main wing
-        const tipSection = wingGeometry.attributes.position.array.slice(tipStartIndex * 3, (tipStartIndex + pointsPerSection) * 3);
-        const tipCentroid = new THREE.Vector3(0, 0, 0);
-        for (let i = 0; i < tipSection.length; i += 3) {
-            tipCentroid.x += tipSection[i];
-            tipCentroid.y += tipSection[i + 1];
-            tipCentroid.z += tipSection[i + 2]; // Corrected: Added Z coordinate to the calculation
-        }
-        tipCentroid.divideScalar(pointsPerSection);
-        rightWingtip.position.copy(tipCentroid);
+        const tipChord = rootChord * taperRatio;
+        const tipSweep = halfSpan * Math.tan(sweepRad);
+        const tipX = tipSweep - (tipChord / 2) + (wingtipWidth / 2); // Attach to the trailing edge of the wing tip
+        const tipZ = halfSpan + (currentFuselageWidth / 2); // Position at the end of the wing span
+
+        rightWingtip.position.set(tipX, 0, tipZ);
 
         // Apply the cant angle (up/down rotation)
         rightWingtip.rotation.x = wingtipAngle;
         rightWingtip.rotation.y = wingtipTwistAngle; // Apply twist/toe angle
 
         const leftWingtip = rightWingtip.clone();
-        leftWingtip.rotation.x = wingtipAngle; // Corrected: Both should have the same angle
-        leftWingtip.rotation.y = wingtipTwistAngle; // The negative Z scale on the parent wing will correctly mirror this rotation
+        leftWingtip.position.z *= -1;
+        leftWingtip.scale.z = -1; // Mirror the geometry
 
-        rightWing.add(rightWingtip);
-        leftWing.add(leftWingtip);
+        wingGroup.add(rightWingtip, leftWingtip);
 
     }
 
@@ -1462,6 +1452,7 @@ function updatePlaneModel() {
     const engineType = engineTypeInput.value;
     let engineLengthMeters = 0;
     let engineDiameterMeters = 0;
+    const engineVerticalPosition = getValidNumber(engineVerticalPositionInput) * conversionFactor;
     if (engineType === 'electric') {
         engineLengthMeters = getValidNumber(electricMotorLengthInput) * conversionFactor;
         engineDiameterMeters = getValidNumber(electricMotorDiameterInput) * conversionFactor;
@@ -1495,20 +1486,24 @@ function updatePlaneModel() {
         if (engineProto) {
             const engine = engineProto.clone();
             engine.position.x = fuselageLength / 2 + engineLengthMeters / 2;
+            engine.position.y = engineVerticalPosition;
             engineGroup.add(engine);
         }
         propellerGroup.add(propProto.clone());
         propellerGroup.position.x = fuselageLength / 2 + engineLengthMeters + 0.01;
+        propellerGroup.position.y = engineVerticalPosition;
     } else if (enginePlacement === 'rear') {
         if (engineProto) {
             const engine = engineProto.clone();
             engine.position.x = -fuselageLength / 2 - engineLengthMeters / 2;
+            engine.position.y = engineVerticalPosition;
             engineGroup.add(engine);
         }
         const pusherProp = propProto.clone();
         pusherProp.rotation.y = Math.PI; // تدوير المروحة 180 درجة
         propellerGroup.add(pusherProp);
         propellerGroup.position.x = -fuselageLength / 2 - engineLengthMeters - 0.01;
+        propellerGroup.position.y = engineVerticalPosition;
     } else if (enginePlacement === 'wing') {
         if (engineProto) {
             // قراءة جميع خيارات تركيب الجناح
@@ -1800,6 +1795,7 @@ function calculateAerodynamics() {
     const tailThickness = getVal(tailThicknessInput);
     const hasWingtip = getCheck(hasWingtipInput);
     const wingtipShape = getStr(wingtipShapeInput);
+    const wingtipAirfoilType = getStr(wingtipAirfoilTypeInput);
     const wingtipLength = getVal(wingtipLengthInput);
     const wingtipWidth = getVal(wingtipWidthInput);
     const wingtipThickness = getVal(wingtipThicknessInput);
@@ -1811,6 +1807,7 @@ function calculateAerodynamics() {
     const cockpitPosition = getVal(cockpitPositionInput);
     const engineType = getStr(engineTypeInput);
     const hasLandingGear = getCheck(hasLandingGearInput);
+    const engineVerticalPosition = getVal(engineVerticalPositionInput);
     const wheelDiameter = getVal(wheelDiameterInput);
     const wheelThickness = getVal(wheelThicknessInput);
     const strutLength = getVal(strutLengthInput);
@@ -1915,6 +1912,13 @@ function calculateAerodynamics() {
         } else { // canted
             oswaldEfficiency = 0.85; // الأطراف المائلة توفر تحسينًا معتدلًا
         }
+        // إضافة تأثير سحب إضافي بناءً على شكل مقطع طرف الجناح
+        if (wingtipAirfoilType === 'rectangular') {
+            cdp += 0.002;
+        } else if (wingtipAirfoilType === 'wedge') {
+            cdp += 0.001;
+        }
+        // 'symmetrical' is considered the baseline and adds no extra drag compared to the main wing
     }
     const cdi = (aspectRatio > 0) ? (Math.pow(cl, 2) / (Math.PI * aspectRatio * oswaldEfficiency)) : 0;
     
@@ -1974,6 +1978,14 @@ function calculateAerodynamics() {
     // حساب سحب المروحة وإضافته إلى السحب الكلي
     const prop_drag = airSpeed > 1 ? power_consumed_watts / airSpeed : 0; // تجنب القسمة على صفر
     const totalDrag = aeroDrag + prop_drag;
+
+    // --- حساب عزم الانحدار من الدفع (Pitching Moment from Thrust) ---
+    // يفترض أن مركز الجاذبية يقع على المحور Y=0
+    let pitchingMomentFromThrust = 0;
+    if (enginePlacement === 'front' || enginePlacement === 'rear') {
+        // القوة العمودية للأعلى (موجبة) تولد عزمًا سالبًا (nose-down)
+        pitchingMomentFromThrust = thrust * -engineVerticalPosition;
+    }
     // 4. حساب الوزن (Weight Calculation)
     const wingVolume = mainWingArea * wingThickness; // Volume of main wing in m³
     const structureMaterialDensity = MATERIAL_DENSITIES[structureMaterial]; // Density in kg/m³
@@ -2219,13 +2231,20 @@ function calculateAerodynamics() {
     const CL_alpha_h = 2 * Math.PI * Math.cos(tailSweepRad);
 
     // تأثير تدفق الهواء المنحدر (Downwash)
-    const de_da = (aspectRatio > 0) ? (2 * CL_alpha_w) / (Math.PI * aspectRatio) : 0;
+    const de_da = (aspectRatio > 0) ? (2 * CL_alpha_w) / (Math.PI * aspectRatio) : 0; // d(epsilon)/d(alpha)
+
+    // مساهمة جسم الطائرة في الرفع (تقريبية)
+    // K is a factor related to the fuselage shape, typically around 2.0 for cylindrical bodies
+    const K_fuselage = 2.0;
+    const fuselageCrossSectionalArea = fuselageWidth * fuselageHeight;
+    const CL_alpha_fus = (totalWingArea > 0) ? K_fuselage * (fuselageCrossSectionalArea / totalWingArea) : 0;
+    const CL_alpha_total = CL_alpha_w + CL_alpha_fus; // Total lift curve slope for wing-body
 
     // معامل حجم الذيل الأفقي
-    const V_h = (totalWingArea > 0 && mac > 0) ? (hStabArea * (X_ac_h - X_ac_w)) / (totalWingArea * mac) : 0;
+    const V_h = (totalWingArea > 0 && mac > 0) ? (hStabArea * (X_ac_h - X_ac_w)) / (totalWingArea * mac) : 0; // Horizontal tail volume coefficient
 
     // حساب النقطة المحايدة (NP)
-    const X_np = X_ac_w + (CL_alpha_h / CL_alpha_w) * (1 - de_da) * V_h * mac;
+    const X_np = X_ac_w + (CL_alpha_h / CL_alpha_total) * (1 - de_da) * V_h * mac;
 
     // دالة مساعدة لحساب العزم
     const addMoment = (weightKg, positionX) => {
@@ -2481,6 +2500,13 @@ function calculateAerodynamics() {
 
     const total_Cl_beta = Cl_beta_dihedral + Cl_beta_sweep + Cl_beta_position + Cl_beta_vtail + Cl_beta_h_dihedral;
     rollStabilityResultEl.textContent = total_Cl_beta.toFixed(3);
+
+    // عرض عزم الانحدار
+    const pitchingMomentItem = document.getElementById('pitching-moment-result-item');
+    pitchingMomentResultEl.textContent = pitchingMomentFromThrust.toFixed(3);
+    // إظهار الحقل فقط إذا كان المحرك أماميًا أو خلفيًا
+    pitchingMomentItem.style.display = (enginePlacement === 'front' || enginePlacement === 'rear') ? 'flex' : 'none';
+
 }
 
 function initCharts() {
@@ -2761,6 +2787,7 @@ pressureInput.addEventListener('input', () => {
 hasAileronInput.addEventListener('change', updateAll);
 aileronAirfoilTypeInput.addEventListener('change', updateAll);
 hasWingtipInput.addEventListener('change', updateAll);
+wingtipAirfoilTypeInput.addEventListener('change', updateAll);
 elevatorAirfoilTypeInput.addEventListener('change', updateAll);
 rudderAirfoilTypeInput.addEventListener('change', updateAll);
 wingtipShapeInput.addEventListener('change', updateAll);
@@ -2805,6 +2832,8 @@ tailSweepAngleInput.addEventListener('input', () => tailSweepValueEl.textContent
 tailIncidenceAngleInput.addEventListener('input', () => tailIncidenceValueEl.textContent = parseFloat(tailIncidenceAngleInput.value).toFixed(1));
 tailDihedralAngleInput.addEventListener('input', () => tailDihedralValueEl.textContent = tailDihedralAngleInput.value);
 vStabSweepAngleInput.addEventListener('input', () => vStabSweepValueEl.textContent = vStabSweepAngleInput.value);
+wingtipTaperRatioInput.addEventListener('input', () => wingtipTaperValueEl.textContent = parseFloat(wingtipTaperRatioInput.value).toFixed(2));
+wingtipSweepAngleInput.addEventListener('input', () => wingtipSweepValueEl.textContent = wingtipSweepAngleInput.value);
 tailTaperRatioInput.addEventListener('input', () => tailTaperValueEl.textContent = parseFloat(tailTaperRatioInput.value).toFixed(2));
 particleDensityInput.addEventListener('input', () => particleDensityValueEl.textContent = Math.round(particleDensityInput.value * 100));
 fuselageTaperRatioInput.addEventListener('input', () => fuselageTaperValueEl.textContent = parseFloat(fuselageTaperRatioInput.value).toFixed(2));

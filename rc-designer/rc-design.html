@@ -256,6 +256,14 @@
 
                     <div id="wingtip-controls" style="margin-top: 10px; display:none;">
                         <div class="input-group">
+                            <label for="wingtip-airfoil-type">شكل مقطع الطرف</label>
+                            <select id="wingtip-airfoil-type">
+                                <option value="symmetrical" selected>متماثل (Symmetrical)</option>
+                                <option value="rectangular">مستطيل (Rectangular)</option>
+                                <option value="wedge">إسفين (Wedge)</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
                             <label for="wingtip-shape">شكل طرف الجناح</label>
                             <select id="wingtip-shape">
                                 <option value="canted" selected>مائل (Canted)</option>
@@ -286,6 +294,14 @@
                         <div class="input-group">
                             <label for="wingtip-twist-angle">زاوية الالتواء (Toe/Twist) (°):</label>
                             <input type="number" id="wingtip-twist-angle" value="0" step="1" min="-15" max="15">
+                        </div>
+                        <div class="input-group">
+                            <label for="wingtip-taper-ratio">نسبة استدقاق الطرف: <span id="wingtip-taper-value">1.00</span></label>
+                            <input type="range" id="wingtip-taper-ratio" min="0.2" max="1.0" value="1.0" step="0.05">
+                        </div>
+                        <div class="input-group">
+                            <label for="wingtip-sweep-angle">زاوية ميلان الطرف: <span id="wingtip-sweep-value">0</span>°</label>
+                            <input type="range" id="wingtip-sweep-angle" min="-30" max="30" value="0" step="1">
                         </div>
                     </div>
 
@@ -569,6 +585,11 @@
                             <option value="rear">خلفي (Pusher)</option>
                             <option value="wing">على الجناح (Wing-mounted)</option>
                         </select>
+                    </div>
+                    <!-- Engine Vertical Position for Front/Rear Mount -->
+                    <div class="input-group" id="engine-vertical-position-group">
+                        <label for="engine-vertical-position">الموضع العمودي للمحرك (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="engine-vertical-position" value="0" step="0.5" title="قيمة موجبة للأعلى، سالبة للأسفل من المحور المركزي">
                     </div>
                     <!-- Wing Mount Options -->
                     <div id="wing-engine-placement-options" style="display:none;">
@@ -1061,6 +1082,10 @@
                 <div class="result-item" title="مقياس استقرار الطائرة الجانبي (Roll). القيمة السالبة تعني أن الطائرة مستقرة وتميل للعودة إلى الوضع الأفقي.">
                     <p><strong>معامل استقرار الدوران (Clβ):</strong></p>
                     <span id="roll-stability-result">-0.00</span>
+                </div>
+                <div class="result-item" id="pitching-moment-result-item" title="العزم الذي يولده المحرك حول مركز الجاذبية. القيمة السالبة تعني ميلان للأسفل (nose-down)، والموجبة للأعلى (nose-up).">
+                    <p><strong>عزم الانحدار من الدفع (N.m):</strong></p>
+                    <span id="pitching-moment-result">0.00</span>
                 </div>
             </div>
         </div>
