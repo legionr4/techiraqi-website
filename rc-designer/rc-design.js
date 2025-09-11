@@ -380,6 +380,7 @@ const engineColorInput = document.getElementById('engine-color');
 const pylonColorInput = document.getElementById('pylon-color');
 const airflowColorInput = document.getElementById('airflow-color');
 const vortexColorInput = document.getElementById('vortex-color');
+const smokeColorInput = document.getElementById('smoke-color');
 const strutColorInput = document.getElementById('strut-color');
 const wheelColorInput = document.getElementById('wheel-color');
 const backgroundColorInput = document.getElementById('background-color');
@@ -917,6 +918,7 @@ function updatePlaneModel() {
     const pylonColor = pylonColorInput.value;
     const vortexColor = vortexColorInput.value;
     const airflowColor = airflowColorInput.value;
+    const smokeColor = smokeColorInput.value;
     const backgroundColor = backgroundColorInput.value;
 
 
@@ -943,6 +945,9 @@ function updatePlaneModel() {
     }
     if (vortexParticleSystem && vortexParticleSystem.material.uniforms.color) {
         vortexParticleSystem.material.uniforms.color.value.set(vortexColor);
+    }
+    if (smokeParticleSystem && smokeParticleSystem.material.uniforms.color) {
+        smokeParticleSystem.material.uniforms.color.value.set(smokeColor);
     }
     scene.background.set(backgroundColor);
 
@@ -2961,7 +2966,16 @@ fuselageTailShapeInput.addEventListener('change', updateAll);
 hasCockpitInput.addEventListener('change', updateAll);
 fuelTankMaterialInput.addEventListener('change', updateAll);
 fuelTypeInput.addEventListener('change', updateAll);
-fuelLevelInput.addEventListener('input', debouncedUpdate);
+fuelLevelInput.addEventListener('input', debouncedUpdate); 
+
+fuelTypeInput.addEventListener('change', () => {
+    const fuelType = fuelTypeInput.value;
+    if (fuelType === 'methanol_nitro') {
+        smokeColorInput.value = '#CCCCCC'; // دخان أبيض-رمادي فاتح
+    } else { // gasoline
+        smokeColorInput.value = '#555555'; // دخان رمادي أغمق
+    }
+});
 electricMotorTypeInput.addEventListener('change', updateEngineUI);
 icEngineTypeInput.addEventListener('change', updateEngineUI);
 enginePlacementInput.addEventListener('change', updateAll);
@@ -3557,11 +3571,19 @@ function animate() {
             const opacities = heatHazeParticleSystem.geometry.attributes.customOpacity.array;
             const scales = heatHazeParticleSystem.geometry.attributes.scale.array;
             const lifeData = heatHazeParticleSystem.geometry.attributes.life.array;
-            
-            const emissionPoint = engineGroup.position.clone(); // استخدام موضع مجموعة المحرك كنقطة انبعاث
 
             const buoyancy = 0.5; // سرعة ارتفاع الحرارة
             const shimmerStrength = 0.4; // قوة التراقص الجانبي
+
+            const enginePlacement = enginePlacementInput.value;
+            const emissionPoints = [];
+
+            if (enginePlacement === 'wing') {
+                const engines = wingEnginesGroup.children.filter(c => c.type === 'Mesh' && c.geometry.type === 'CylinderGeometry');
+                engines.forEach(engine => emissionPoints.push(engine.position.clone()));
+            } else {
+                emissionPoints.push(engineGroup.position.clone());
+            }
 
             for (let i = 0; i < heatHazeParticleCount; i++) {
                 const i2 = i * 2;
@@ -3570,6 +3592,9 @@ function animate() {
                 lifeData[i2] -= deltaTime;
 
                 if (lifeData[i2] <= 0) {
+                    // توزيع الجسيمات على نقاط الانبعاث
+                    const emissionPoint = emissionPoints[i % emissionPoints.length];
+
                     positions[i3]     = emissionPoint.x + (Math.random() - 0.5) * 0.1;
                     positions[i3 + 1] = emissionPoint.y + (Math.random() - 0.5) * 0.1;
                     positions[i3 + 2] = emissionPoint.z + (Math.random() - 0.5) * 0.1;
@@ -3600,21 +3625,32 @@ function animate() {
             const scales = smokeParticleSystem.geometry.attributes.scale.array;
             const lifeData = smokeParticleSystem.geometry.attributes.life.array;
 
-            // الحصول على نقطة الانبعاث من المحرك
-            const emissionPoint = new THREE.Vector3();
-            if (engineGroup.children.length > 0) {
-                engineGroup.children[0].getWorldPosition(emissionPoint);
-                // الانبعاث من الجزء الخلفي للمحرك
-                const engineLength = (getValidNumber(icEngineLengthInput) * planeParams.conversionFactor);
-                emissionPoint.x -= engineLength / 2;
-            }
-
             const buoyancy = 0.3; // سرعة ارتفاع الدخان
             const spread = 0.2;   // مدى انتشار الدخان
+
+            const enginePlacement = enginePlacementInput.value;
+            const emissionPoints = [];
+            const engineLength = (getValidNumber(icEngineLengthInput) * planeParams.conversionFactor);
+
+            if (enginePlacement === 'wing') {
+                const engines = wingEnginesGroup.children.filter(c => c.type === 'Mesh' && c.geometry.type === 'CylinderGeometry');
+                engines.forEach(engine => {
+                    const pos = engine.position.clone();
+                    pos.x -= engineLength / 2; // الانبعاث من نهاية المحرك
+                    emissionPoints.push(pos);
+                });
+            } else {
+                const pos = engineGroup.position.clone();
+                pos.x -= engineLength / 2; // الانبعاث من نهاية المحرك
+                emissionPoints.push(pos);
+            }
 
             for (let i = 0; i < smokeParticleCount; i++) {
                 const i2 = i * 2;
                 const i3 = i * 3;
+
+                // توزيع الجسيمات على نقاط الانبعاث
+                const emissionPoint = emissionPoints[i % emissionPoints.length];
 
                 // تحديث عمر الجسيم
                 lifeData[i2] -= deltaTime;
