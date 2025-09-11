@@ -2983,6 +2983,8 @@ function animate() {
                 }
             });
 
+        } else { // أمامي أو خلفي
+            propellerGroup.rotation.x += rotationPerSecond * deltaTime;
         }
 
         // --- كل تحديثات الجزيئات تحدث فقط عند تشغيل المروحة ---
