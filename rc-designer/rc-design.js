@@ -1554,7 +1554,8 @@ function updatePlaneModel() {
             const wingEngineDistMeters = getValidNumber(engineWingDistanceInput) * conversionFactor;
             const wingEngineVerticalPos = engineWingVerticalPosInput.value;
             const wingEngineForeAft = engineWingForeAftInput.value;
-            const pylonLengthMeters = getValidNumber(enginePylonLengthInput) * conversionFactor;
+            // "طول" الحامل من المدخلات هو في الواقع ارتفاعه العمودي
+            const pylonHeightMeters = getValidNumber(enginePylonLengthInput) * conversionFactor;
 
             // حساب الموضع على امتداد الجناح
             const posOnWingZ = wingEngineDistMeters + (currentFuselageWidth / 2);
@@ -1566,48 +1567,50 @@ function updatePlaneModel() {
             const leadingEdgeX = wingPositionX + sweepAtPylon + chordAtPylon / 2;
             const trailingEdgeX = wingPositionX + sweepAtPylon - chordAtPylon / 2;
 
-            // حساب الموضع العمودي (أعلى/أسفل)
+            // حساب الموضع العمودي للمحرك (أعلى/أسفل) مع الأخذ في الاعتبار ارتفاع الحامل
             const wingCenterY = wingGroup.position.y;
             let engineYOffset;
             if (wingEngineVerticalPos === 'above') {
-                engineYOffset = wingCenterY + (wingThickness / 2) + (engineDiameterMeters / 2);
+                engineYOffset = wingCenterY + (wingThickness / 2) + pylonHeightMeters + (engineDiameterMeters / 2);
             } else { // 'below'
-                engineYOffset = wingCenterY - (wingThickness / 2) - (engineDiameterMeters / 2);
+                engineYOffset = wingCenterY - (wingThickness / 2) - pylonHeightMeters - (engineDiameterMeters / 2);
             }
 
             // حساب الموضع الأفقي (أمامي/خلفي) وإعداد المروحة
             let engineCenterX, propCenterX;
             let propModel;
+            // تحديد طول الحامل في الاتجاه الأمامي-الخلفي (غير محدد من قبل المستخدم)
+            const pylonForeAftLength = engineDiameterMeters * 0.6;
+
             if (wingEngineForeAft === 'leading') {
-                engineCenterX = leadingEdgeX + pylonLengthMeters + (engineLengthMeters / 2);
+                engineCenterX = leadingEdgeX + pylonForeAftLength + (engineLengthMeters / 2);
                 propCenterX = engineCenterX + (engineLengthMeters / 2) + 0.01;
                 propModel = propProto.clone(); // مروحة سحب (Tractor)
             } else { // 'trailing'
-                engineCenterX = trailingEdgeX - pylonLengthMeters - (engineLengthMeters / 2);
+                engineCenterX = trailingEdgeX - pylonForeAftLength - (engineLengthMeters / 2);
                 propCenterX = engineCenterX - (engineLengthMeters / 2) - 0.01;
                 propModel = propProto.clone();
                 propModel.rotation.y = Math.PI; // مروحة دفع (Pusher)
             }
 
             // --- إنشاء حامل المحرك (Pylon) ---
-            const pylonHeight = Math.abs(engineYOffset - wingCenterY) - (wingThickness / 2) - (engineDiameterMeters / 2);
-            if (pylonHeight > 0.001 && pylonLengthMeters > 0.001) {
+            if (pylonHeightMeters > 0.001) {
                 const pylonWidth = engineDiameterMeters * 0.4; // عرض الحامل أنحف قليلاً من المحرك
-                const pylonGeom = new THREE.BoxGeometry(pylonLengthMeters, pylonHeight, pylonWidth);
+                const pylonGeom = new THREE.BoxGeometry(pylonForeAftLength, pylonHeightMeters, pylonWidth);
                 
                 // حساب موضع الحامل
                 let pylonX, pylonY;
                 
                 if (wingEngineForeAft === 'leading') {
-                    pylonX = leadingEdgeX + pylonLengthMeters / 2;
+                    pylonX = leadingEdgeX + pylonForeAftLength / 2;
                 } else { // trailing
-                    pylonX = trailingEdgeX - pylonLengthMeters / 2;
+                    pylonX = trailingEdgeX - pylonForeAftLength / 2;
                 }
 
                 if (wingEngineVerticalPos === 'above') {
-                    pylonY = wingCenterY + (wingThickness / 2) + (pylonHeight / 2);
+                    pylonY = wingCenterY + (wingThickness / 2) + (pylonHeightMeters / 2);
                 } else { // below
-                    pylonY = wingCenterY - (wingThickness / 2) - (pylonHeight / 2);
+                    pylonY = wingCenterY - (wingThickness / 2) - (pylonHeightMeters / 2);
                 }
 
                 const rightPylon = new THREE.Mesh(pylonGeom, engineMaterial); // استخدام نفس مادة المحرك
@@ -1928,7 +1931,7 @@ function calculateAerodynamics() {
     const cameraWeightGrams = getRaw(cameraWeightInput);
     const otherAccessoriesWeightGrams = getRaw(otherAccessoriesWeightInput);
     const engineWeightKg = (engineType === 'electric' ? getRaw(electricMotorWeightInput) : getRaw(icEngineWeightInput)) / 1000;
-    const pylonLengthMeters = getVal(enginePylonLengthInput);
+    const pylonHeightMeters = getVal(enginePylonLengthInput);
     const engineDiameterMeters = (engineType === 'electric' ? getVal(electricMotorDiameterInput) : getVal(icEngineDiameterInput));
     const wingEngineVerticalPos = getStr(engineWingVerticalPosInput);
     const wingEngineForeAft = getStr(engineWingForeAftInput);
@@ -2413,25 +2416,19 @@ function calculateAerodynamics() {
         addMoment(totalWingPropulsionWeight, wingEngineX);
 
         // --- حساب وزن وعزم حوامل المحركات (Pylons) ---
-        if (pylonLengthMeters > 0.001) {
-            const wingPositionValue = getStr(wingPositionInput);
-            const wingCenterY = (wingPositionValue === 'high' ? fuselageHeight / 2 : (wingPositionValue === 'low' ? -fuselageHeight / 2 : 0));
-            
-            const engineYOffset = (wingEngineVerticalPos === 'above')
-                ? wingCenterY + (wingThickness / 2) + pylonLengthMeters + (engineDiameterMeters / 2)
-                : wingCenterY - (wingThickness / 2) - pylonLengthMeters - (engineDiameterMeters / 2);
+        if (pylonHeightMeters > 0.001) {
+            // يجب أن تكون هذه القيمة متسقة مع ما هو موجود في updatePlaneModel
+            const pylonForeAftLength = engineDiameterMeters * 0.6;
 
-            const pylonHeight = Math.abs(engineYOffset - wingCenterY) - (wingThickness / 2) - (engineDiameterMeters / 2);
-            
-            if (pylonHeight > 0.001) {
+            if (pylonForeAftLength > 0) {
                 const pylonWidth = engineDiameterMeters * 0.4; // Consistent with 3D model
-                const pylonVolume = pylonLengthMeters * pylonHeight * pylonWidth;
+                const pylonVolume = pylonForeAftLength * pylonHeightMeters * pylonWidth;
                 const pylonMaterialDensity = MATERIAL_DENSITIES['plastic']; // Assume plastic for now
                 const totalPylonWeightKg = pylonVolume * pylonMaterialDensity * 2; // For both pylons
                 pylonWeightKg = totalPylonWeightKg; // Store it
                 
                 // Calculate pylon X position for moment
-                const pylonX = (wingEngineForeAft === 'leading') ? (leadingEdgeX + pylonLengthMeters / 2) : (trailingEdgeX - pylonLengthMeters / 2);
+                const pylonX = (wingEngineForeAft === 'leading') ? (leadingEdgeX + pylonForeAftLength / 2) : (trailingEdgeX - pylonForeAftLength / 2);
                 addMoment(pylonWeightKg, pylonX);
             }
         }
