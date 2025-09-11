@@ -275,6 +275,7 @@ const wingPositionInput = document.getElementById('wing-position');
 const airfoilTypeInput = document.getElementById('airfoil-type');
 const sweepAngleInput = document.getElementById('sweep-angle');
 const taperRatioInput = document.getElementById('taper-ratio');
+const dihedralAngleInput = document.getElementById('dihedral-angle');
 
 const hasWingtipInput = document.getElementById('has-wingtip');
 const wingtipShapeInput = document.getElementById('wingtip-shape');
@@ -357,6 +358,7 @@ const fuselageColorInput = document.getElementById('fuselage-color');
 const wingColorInput = document.getElementById('wing-color');
 const tailColorInput = document.getElementById('tail-color');
 const aileronColorInput = document.getElementById('aileron-color');
+const rollStabilityResultEl = document.getElementById('roll-stability-result');
 const propColorInput = document.getElementById('prop-color');
 const cockpitColorInput = document.getElementById('cockpit-color');
 const engineColorInput = document.getElementById('engine-color');
@@ -367,6 +369,7 @@ const backgroundColorInput = document.getElementById('background-color');
 // عناصر عرض قيم شريط التمرير
 const sweepValueEl = document.getElementById('sweep-value');
 const taperValueEl = document.getElementById('taper-value');
+const dihedralValueEl = document.getElementById('dihedral-value');
 const fuelLevelValueEl = document.getElementById('fuel-level-value');
 const tailSweepValueEl = document.getElementById('tail-sweep-value');
 const tailTaperValueEl = document.getElementById('tail-taper-value');
@@ -792,6 +795,7 @@ function updatePlaneModel() {
     const wingPosition = wingPositionInput.value;
     const airfoilType = airfoilTypeInput.value;
     const sweepAngle = getValidNumber(sweepAngleInput);
+    const dihedralAngle = getValidNumber(dihedralAngleInput);
     const taperRatio = getValidNumber(taperRatioInput);
 
 
@@ -1045,6 +1049,12 @@ function updatePlaneModel() {
     const rightWing = new THREE.Mesh(wingGeometry, wingMaterial);
     const leftWing = rightWing.clone();
     leftWing.scale.z = -1; // عكس الجناح الأيسر
+
+    // --- تطبيق زاوية الديhedral ---
+    // يتم الدوران حول المحور X (المحور الممتد من مقدمة الجناح لمؤخرته)
+    const dihedralRad = dihedralAngle * (Math.PI / 180);
+    rightWing.rotation.x = dihedralRad;
+    leftWing.rotation.x = dihedralRad; // الانعكاس في المقياس Z سيتكفل بجعل الجناح الآخر يرتفع أيضًا
 
     wingGroup.add(rightWing, leftWing);
      // Wingtip
@@ -1741,6 +1751,7 @@ function calculateAerodynamics() {
     const tailType = getStr(tailTypeInput);
     const tailThickness = getVal(tailThicknessInput);
     const hasWingtip = getCheck(hasWingtipInput);
+    const wingtipShape = getStr(wingtipShapeInput);
     const wingtipLength = getVal(wingtipLengthInput);
     const wingtipWidth = getVal(wingtipWidthInput);
     const wingtipThickness = getVal(wingtipThicknessInput);
@@ -1768,6 +1779,17 @@ function calculateAerodynamics() {
     const fuselageRearDiameter = getVal(fuselageRearDiameterInput);
     const fuselageWidth = getVal(fuselageWidthInput);
     const fuselageHeight = getVal(fuselageHeightInput);
+    const hasAileron = getCheck(hasAileronInput);
+    const aileronLength = getVal(aileronLengthInput);
+    const aileronWidth = getVal(aileronWidthInput);
+    const aileronThickness = getVal(aileronThicknessInput);
+    const aileronPosition = getVal(aileronPositionInput);
+    const hasElevator = getCheck(hasElevatorInput);
+    const elevatorLength = getVal(elevatorLengthInput);
+    const elevatorWidth = getVal(elevatorWidthInput);
+    const hasRudder = getCheck(hasRudderInput);
+    const rudderLength = getVal(rudderLengthInput);
+    const rudderWidth = getVal(rudderWidthInput);
     const showCgAc = getCheck(showCgAcCheckbox);
     const batteryWeightGrams = getRaw(batteryWeightInput);
     const fuelTankLength = getVal(fuelTankLengthInput);
@@ -1833,7 +1855,17 @@ function calculateAerodynamics() {
     // D = 0.5 * Cd * rho * V^2 * A
     // Cd = Cdp + Cdi (سحب طفيلي + سحب مستحث)
     const aspectRatio = totalWingArea > 0 ? Math.pow(wingSpan, 2) / totalWingArea : 0;
-    const oswaldEfficiency = 0.8; // كفاءة أوزوالد (قيمة مفترضة)
+
+    // --- تعديل كفاءة أوزوالد بناءً على وجود وشكل أطراف الجناح ---
+    // أطراف الجناح تقلل من السحب المستحث عن طريق زيادة نسبة العرض إلى الارتفاع الفعالة.
+    let oswaldEfficiency = 0.8; // قيمة أساسية بدون أطراف
+    if (hasWingtip) {
+        if (wingtipShape === 'blended') {
+            oswaldEfficiency = 0.90; // الأطراف المدمجة أكثر كفاءة
+        } else { // canted
+            oswaldEfficiency = 0.85; // الأطراف المائلة توفر تحسينًا معتدلًا
+        }
+    }
     const cdi = (aspectRatio > 0) ? (Math.pow(cl, 2) / (Math.PI * aspectRatio * oswaldEfficiency)) : 0;
     const cdp = 0.025; // معامل سحب طفيلي مفترض (لجسم الطائرة والذيل وغيرها)
     const cd = cdp + cdi;
@@ -1880,6 +1912,26 @@ function calculateAerodynamics() {
     // عرض وزن أطراف الجناح في النتائج
     document.getElementById('wingtip-weight-result').textContent = (wingtipWeightKg * 1000).toFixed(0);
     document.getElementById('wingtip-weight-result').parentElement.style.display = hasWingtip ? 'flex' : 'none';
+
+    // --- حساب وزن أسطح التحكم ---
+    let aileronWeightKg = 0;
+    if (hasAileron) {
+        const singleAileronVolume = aileronLength * aileronWidth * aileronThickness;
+        aileronWeightKg = 2 * singleAileronVolume * structureMaterialDensity;
+    }
+
+    let elevatorWeightKg = 0;
+    if (hasElevator && (tailType === 'conventional' || tailType === 't-tail')) {
+        const singleElevatorVolume = elevatorLength * elevatorWidth * tailThickness;
+        elevatorWeightKg = 2 * singleElevatorVolume * structureMaterialDensity;
+    }
+
+    let rudderWeightKg = 0;
+    if (hasRudder && (tailType === 'conventional' || tailType === 't-tail')) {
+        const rudderVolume = rudderLength * rudderWidth * tailThickness;
+        rudderWeightKg = rudderVolume * structureMaterialDensity;
+    }
+    // ملاحظة: أسطح التحكم للذيل V تعتبر جزءًا من وزن الذيل الرئيسي حاليًا لتبسيط الحسابات.
 
 
     const tailVolume = totalTailArea * tailThickness;
@@ -2033,7 +2085,7 @@ function calculateAerodynamics() {
     const totalAccessoriesWeightGrams = receiverWeightGrams + servoWeightGrams + cameraWeightGrams + otherAccessoriesWeightGrams;
     const totalAccessoriesWeightKg = totalAccessoriesWeightGrams / 1000;
 
-    const totalWeightKg = wingWeightKg + tailWeightKg + fuselageWeightKg + propWeightKg + landingGearWeightKg + engineWeightKg + energySourceWeightKg + cockpitWeightKg + totalAccessoriesWeightKg + wingtipWeightKg;
+    const totalWeightKg = wingWeightKg + tailWeightKg + fuselageWeightKg + propWeightKg + landingGearWeightKg + engineWeightKg + energySourceWeightKg + cockpitWeightKg + totalAccessoriesWeightKg + wingtipWeightKg + aileronWeightKg + elevatorWeightKg + rudderWeightKg;
 
     // 5. نسبة الدفع إلى الوزن (Thrust-to-Weight Ratio)
     const weightInNewtons = totalWeightKg * 9.81;
@@ -2068,6 +2120,30 @@ function calculateAerodynamics() {
     addMoment(fuselageWeightKg, 0); // مركز الجسم عند نقطة الأصل (0)
     addMoment(wingWeightKg, wingPositionX + mac_x_le + (0.4 * mac)); // مركز الجناح عند ~40% MAC
     addMoment(tailWeightKg, tailPositionX - (tailChord * 0.4)); // مركز الذيل عند ~40% من وتره
+
+    // --- عزم أسطح التحكم ---
+    if (hasAileron && aileronWeightKg > 0) {
+        const halfSpan = wingSpan / 2;
+        // حساب الموضع X لمركز ثقل الجنيح
+        const aileronCenterZ = halfSpan - aileronPosition - (aileronLength / 2);
+        const chordAtAileronCenter = wingChord + (wingChord * taperRatio - wingChord) * (aileronCenterZ / halfSpan);
+        const sweepAtAileronCenter = aileronCenterZ * Math.tan(sweepRad);
+        // مركز ثقل الجنيح يقع عند الحافة الخلفية للجناح، ويتحرك للأمام بمقدار نصف عرضه
+        const aileronCgX = (wingPositionX + sweepAtAileronCenter - (chordAtAileronCenter / 2)) + (aileronWidth / 2);
+        addMoment(aileronWeightKg, aileronCgX);
+    }
+
+    if (hasElevator && elevatorWeightKg > 0) {
+        // مركز ثقل الرافع يقع عند الحافة الخلفية للمثبت الأفقي، ويتحرك للأمام بمقدار نصف عرضه
+        const elevatorCgX = (tailPositionX - (tailChord / 2)) + (elevatorWidth / 2);
+        addMoment(elevatorWeightKg, elevatorCgX);
+    }
+
+    if (hasRudder && rudderWeightKg > 0) {
+        // مركز ثقل الدفة يقع عند الحافة الخلفية للمثبت العمودي، ويتحرك للأمام بمقدار نصف عرضه
+        const rudderCgX = (tailPositionX - (vStabChord / 2)) + (rudderWidth / 2);
+        addMoment(rudderWeightKg, rudderCgX);
+    }
 
     // عزم أطراف الجناح (يُضاف فقط إذا كانت مُفعّلة)
     if (hasWingtip) {
@@ -2236,6 +2312,27 @@ function calculateAerodynamics() {
     cgPositionResultEl.textContent = (cg_from_nose * conversionFactorToDisplay).toFixed(1);
     acPositionResultEl.textContent = (ac_from_nose * conversionFactorToDisplay).toFixed(1);
     staticMarginResultEl.textContent = `${staticMargin.toFixed(1)}%`;
+
+    // --- حساب استقرار الدوران (Roll Stability - Clβ) ---
+    const Cl_alpha = airfoilLiftFactor * 2 * Math.PI * Math.cos(sweepRad);
+
+    // 1. تأثير زاوية الديhedral (الأكثر أهمية)
+    const dihedralRad = dihedralAngle * (Math.PI / 180);
+    const Cl_beta_dihedral = - (Cl_alpha / 4) * dihedralRad; // تقريب شائع يأخذ في الاعتبار تأثير الجناح ثلاثي الأبعاد
+
+    // 2. تأثير زاوية ميلان الجناح (Sweep)
+    // الميلان الإيجابي للخلف يقلل من الاستقرار (Cl_beta أكثر إيجابية)
+    const Cl_beta_sweep = 0.00015 * sweepAngle; // قيمة تجريبية تقريبية
+
+    // 3. تأثير موضع الجناح (High/Low Wing)
+    let Cl_beta_position = 0;
+    if (wingPosition === 'high') {
+        Cl_beta_position = -0.005; // الجناح العلوي يزيد الاستقرار
+    } else if (wingPosition === 'low') {
+        Cl_beta_position = 0.005; // الجناح السفلي يقلل الاستقرار
+    }
+    const total_Cl_beta = Cl_beta_dihedral + Cl_beta_sweep + Cl_beta_position;
+    rollStabilityResultEl.textContent = total_Cl_beta.toFixed(3);
 }
 
 function initCharts() {
@@ -2474,6 +2571,7 @@ enginePylonLengthInput.addEventListener('input', debouncedUpdate);
 // تحديث عرض قيم شريط التمرير
 sweepAngleInput.addEventListener('input', () => sweepValueEl.textContent = sweepAngleInput.value);
 taperRatioInput.addEventListener('input', () => taperValueEl.textContent = parseFloat(taperRatioInput.value).toFixed(2));
+dihedralAngleInput.addEventListener('input', () => dihedralValueEl.textContent = dihedralAngleInput.value);
 fuelLevelInput.addEventListener('input', () => fuelLevelValueEl.textContent = Math.round(fuelLevelInput.value * 100));
 tailSweepAngleInput.addEventListener('input', () => tailSweepValueEl.textContent = tailSweepAngleInput.value);
 tailTaperRatioInput.addEventListener('input', () => tailTaperValueEl.textContent = parseFloat(tailTaperRatioInput.value).toFixed(2));
