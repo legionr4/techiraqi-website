@@ -734,10 +734,6 @@ function updatePlaneParameters() {
     planeParams.elevatorLength = getValidNumber(elevatorLengthInput) * conversionFactor;
     planeParams.rudderLength = getValidNumber(rudderLengthInput) * conversionFactor;
     planeParams.vStabHeight = getValidNumber(vStabHeightInput) * conversionFactor;
-    planeParams.userParticleDensity = getValidNumber(particleDensityInput);
-    planeParams.userParticleSize = getValidNumber(particleSizeInput);
-    planeParams.userVibrationIntensity = getValidNumber(vibrationIntensityInput);
-    planeParams.airflowTransparency = getValidNumber(airflowTransparencyInput);
 
     // Cache fuselage dimensions
     const fuselageShape = fuselageShapeInput.value;
@@ -2974,9 +2970,14 @@ function animate() {
         // سرعة الهواء الرئيسية يتم حسابها الآن ديناميكيًا من المروحة
         const mainAirSpeed = (planeParams.propRpm / 60) * planeParams.propPitch;
 
-        // --- قراءة قيم التحكم في الجسيمات ---
-        const densityFactor = planeParams.userParticleDensity * 2; // مضاعفة لجعل 50% هو الافتراضي
-        const sizeFactor = planeParams.userParticleSize * 2;       // مضاعفة لجعل 50% هو الافتراضي
+        // --- قراءة قيم التحكم في الجسيمات مباشرة من المدخلات للتحديث الفوري ---
+        const userParticleDensity = getValidNumber(particleDensityInput);
+        const userParticleSize = getValidNumber(particleSizeInput);
+        const userVibrationIntensity = getValidNumber(vibrationIntensityInput);
+        const airflowTransparency = getValidNumber(airflowTransparencyInput);
+
+        const densityFactor = userParticleDensity * 2; // مضاعفة لجعل 50% هو الافتراضي
+        const sizeFactor = userParticleSize * 2;       // مضاعفة لجعل 50% هو الافتراضي
 
         const enginePlacement = enginePlacementInput.value;
         const rotationPerSecond = (planeParams.propRpm / 60) * Math.PI * 2;
@@ -3014,7 +3015,7 @@ function animate() {
         }
 
         // تطبيق شدة الاهتزاز التي يحددها المستخدم
-        vibrationMagnitude *= planeParams.userVibrationIntensity;
+        vibrationMagnitude *= userVibrationIntensity;
 
         // اهتزاز الموضع (يتم إعادة تعيينه كل إطار لذا نستخدم `+=`)
         const maxPosOffset = 0.002;
@@ -3105,7 +3106,7 @@ function animate() {
                         const ageRatio = Math.max(0, Math.min(1, currentTravel / travelDistance));
                         const effectStrength = Math.sin(ageRatio * Math.PI);
 
-                        opacities[i] = effectStrength * 0.25 * densityFactor * planeParams.airflowTransparency;
+                        opacities[i] = effectStrength * 0.25 * densityFactor * airflowTransparency;
                         scales[i] = effectStrength * 0.5 * sizeFactor;
                     }
                 }
@@ -3134,7 +3135,7 @@ function animate() {
                     const ageRatio = Math.max(0, Math.min(1, currentTravel / travelDistance));
                     const effectStrength = Math.sin(ageRatio * Math.PI);
 
-                    opacities[i] = effectStrength * 0.25 * densityFactor * planeParams.airflowTransparency;
+                    opacities[i] = effectStrength * 0.25 * densityFactor * airflowTransparency;
                     scales[i] = effectStrength * 0.5 * sizeFactor;
                 }
             }
@@ -3218,7 +3219,7 @@ function animate() {
                 const ageRatio = Math.max(0, Math.min(1, currentTravel / travelDistance));
                 const effectStrength = Math.sin(ageRatio * Math.PI); // Smooth fade-in and fade-out
 
-                opacities[i] = effectStrength * 0.15 * densityFactor * planeParams.airflowTransparency; // جعلها شفافة جداً
+                opacities[i] = effectStrength * 0.15 * densityFactor * airflowTransparency; // جعلها شفافة جداً
                 scales[i] = effectStrength * 0.4 * sizeFactor;    // جعلها دقيقة جداً
 
                 // Reset particle if it goes too far behind
@@ -3276,8 +3277,8 @@ function animate() {
                 const ageRatio = Math.min(1, age / travelLength);
                 const effectStrength = Math.sin(ageRatio * Math.PI);
 
-                opacities[i] = effectStrength * Math.min(1, vortexStrength * 2.5) * densityFactor * planeParams.airflowTransparency; // تقليل الشفافية
-                scales[i] = effectStrength * 0.8 * sizeFactor;                                // تقليل الحجم
+                opacities[i] = effectStrength * Math.min(1, vortexStrength * 2.5) * densityFactor * airflowTransparency; // تقليل الشفافية
+                scales[i] = effectStrength * 0.8 * sizeFactor; // تقليل الحجم
 
                 // Reset particle
                 if (age > travelLength || age < 0) {
@@ -3339,7 +3340,7 @@ function animate() {
                 const lifeRatio = Math.max(0, lifeData[i2] / lifeData[i2 + 1]);
                 
                 // التلاشي بمرور الوقت
-                opacities[i] = lifeRatio * 0.3 * densityFactor * planeParams.airflowTransparency; // الدخان ليس كثيفًا جدًا
+                opacities[i] = lifeRatio * 0.3 * densityFactor * airflowTransparency; // الدخان ليس كثيفًا جدًا
                 // ينمو ثم يتلاشى
                 scales[i] = (1.0 - lifeRatio) * 5.0 * sizeFactor;
             }
