@@ -51,7 +51,7 @@ const engineMaterial = new THREE.MeshStandardMaterial({ color: 0x666666 }); // A
 
 // مجموعة محركات الجناح
 const wingEnginesGroup = new THREE.Group();
-planeGroup.add(wingEnginesGroup);
+wingGroup.add(wingEnginesGroup); // تصحيح: يجب أن تكون تابعة لمجموعة الجناح
 
 // مجموعة عجلات الهبوط
 const landingGearGroup = new THREE.Group();
@@ -282,6 +282,8 @@ const sweepAngleInput = document.getElementById('sweep-angle');
 const taperRatioInput = document.getElementById('taper-ratio');
 const dihedralAngleInput = document.getElementById('dihedral-angle');
 
+const wingIncidenceAngleInput = document.getElementById('wing-incidence-angle');
+
 const hasWingtipInput = document.getElementById('has-wingtip');
 const wingtipAirfoilTypeInput = document.getElementById('wingtip-airfoil-type');
 const wingtipShapeInput = document.getElementById('wingtip-shape');
@@ -389,6 +391,7 @@ const backgroundColorInput = document.getElementById('background-color');
 const sweepValueEl = document.getElementById('sweep-value');
 const taperValueEl = document.getElementById('taper-value');
 const dihedralValueEl = document.getElementById('dihedral-value');
+const wingIncidenceValueEl = document.getElementById('wing-incidence-value');
 const fuelLevelValueEl = document.getElementById('fuel-level-value');
 const tailSweepValueEl = document.getElementById('tail-sweep-value');
 const vStabSweepValueEl = document.getElementById('vstab-sweep-value');
@@ -841,6 +844,7 @@ function updatePlaneModel() {
     const airfoilType = airfoilTypeInput.value;
     const sweepAngle = getValidNumber(sweepAngleInput);
 
+    const wingIncidenceAngle = getValidNumber(wingIncidenceAngleInput);
     // قراءة قيم المحرك والمروحة
     const engineVerticalPosition = getValidNumber(engineVerticalPositionInput) * conversionFactor;
     const engineThrustAngle = getValidNumber(engineThrustAngleInput) * (Math.PI / 180); // to radians
@@ -1241,6 +1245,9 @@ function updatePlaneModel() {
     if (wingPosition === 'high') wingGroup.position.y = currentFuselageHeight / 2;
     else if (wingPosition === 'mid') wingGroup.position.y = 0;
     else if (wingPosition === 'low') wingGroup.position.y = -currentFuselageHeight / 2;
+
+    // تطبيق زاوية ميلان الجناح (Incidence)
+    wingGroup.rotation.z = wingIncidenceAngle * (Math.PI / 180);
 
     // --- تحديث الأبعاد الأخرى ---
     // --- إعادة بناء مجموعة الذيل بالكامل ---
@@ -1646,7 +1653,9 @@ function updatePlaneModel() {
                 rightPylon.position.set(pylonX, pylonY, posOnWingZ);
                 const leftPylon = rightPylon.clone();
                 leftPylon.position.z = -posOnWingZ;
-                wingEnginesGroup.add(rightPylon, leftPylon);
+                // تم التعديل: إضافة كل حامل إلى الجناح الخاص به مباشرة
+                rightWing.add(rightPylon);
+                leftWing.add(leftPylon);
             }
             // إنشاء ووضع المحركات والمراوح
             const rightEngine = engineProto.clone();
@@ -1654,11 +1663,12 @@ function updatePlaneModel() {
             const rightProp = propModel.clone();
             const leftProp = propModel.clone();
 
-            rightEngine.position.set(engineCenterX, engineYOffset, posOnWingZ);
-            leftEngine.position.set(engineCenterX, engineYOffset, -posOnWingZ);
+            // تم التعديل: تحديد الموضع بالنسبة للجناح وليس للطائرة ككل
+            rightEngine.position.set(engineCenterX, engineYOffset, posOnWingZ - (currentFuselageWidth / 2));
+            leftEngine.position.set(engineCenterX, engineYOffset, posOnWingZ - (currentFuselageWidth / 2)); // Z موجب لأن الجناح الأيسر معكوس
 
-            rightProp.position.set(propCenterX, engineYOffset, posOnWingZ);
-            leftProp.position.set(propCenterX, engineYOffset, -posOnWingZ);
+            rightProp.position.set(propCenterX, engineYOffset, posOnWingZ - (currentFuselageWidth / 2));
+            leftProp.position.set(propCenterX, engineYOffset, posOnWingZ - (currentFuselageWidth / 2));
 
             // Apply thrust angles to each component
             rightEngine.rotation.set(0, engineSideThrustAngle, engineThrustAngle);
@@ -1672,7 +1682,9 @@ function updatePlaneModel() {
                 leftProp.rotation.y += Math.PI;
             }
 
-            wingEnginesGroup.add(rightEngine, leftEngine, rightProp, leftProp);
+            // تم التعديل: إضافة كل مكون إلى الجناح الخاص به
+            rightWing.add(rightEngine, rightProp);
+            leftWing.add(leftEngine, leftProp);
         }
     }
     // --- Landing Gear ---
@@ -3011,6 +3023,7 @@ pylonMaterialInput.addEventListener('change', () => {
 sweepAngleInput.addEventListener('input', () => sweepValueEl.textContent = sweepAngleInput.value);
 taperRatioInput.addEventListener('input', () => taperValueEl.textContent = parseFloat(taperRatioInput.value).toFixed(2));
 dihedralAngleInput.addEventListener('input', () => dihedralValueEl.textContent = dihedralAngleInput.value);
+wingIncidenceAngleInput.addEventListener('input', () => wingIncidenceValueEl.textContent = parseFloat(wingIncidenceAngleInput.value).toFixed(1));
 fuelLevelInput.addEventListener('input', () => fuelLevelValueEl.textContent = Math.round(fuelLevelInput.value * 100));
 tailSweepAngleInput.addEventListener('input', () => tailSweepValueEl.textContent = tailSweepAngleInput.value);
 tailIncidenceAngleInput.addEventListener('input', () => tailIncidenceValueEl.textContent = parseFloat(tailIncidenceAngleInput.value).toFixed(1));
