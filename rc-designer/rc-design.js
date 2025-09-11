@@ -3091,8 +3091,8 @@ function animate() {
             engineSound.volume = minVolume + (rpmRatio * (maxVolume - minVolume));
 
             // ربط سرعة الدوران بسرعة التشغيل (حدة الصوت) (مثلاً من 0.8 إلى 2.0)
-            const minPlaybackRate = 0.8;
-            const maxPlaybackRate = 2.0;
+            const minPlaybackRate = 0.7;
+            const maxPlaybackRate = 2.5;
             engineSound.playbackRate = minPlaybackRate + (rpmRatio * (maxPlaybackRate - minPlaybackRate));
         }
 
