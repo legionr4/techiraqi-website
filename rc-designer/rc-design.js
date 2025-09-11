@@ -1137,8 +1137,8 @@ function updatePlaneModel() {
     // --- تطبيق زاوية الديhedral ---
     // يتم الدوران حول المحور X (المحور الممتد من مقدمة الجناح لمؤخرته)
     const dihedralRad = dihedralAngle * (Math.PI / 180);
-    rightWing.rotation.x = dihedralRad;
-    leftWing.rotation.x = dihedralRad; // الانعكاس في المقياس Z سيتكفل بجعل الجناح الآخر يرتفع أيضًا
+    rightWing.rotation.x = -dihedralRad; // إشارة سالبة لرفع الجناح للأعلى عند قيمة موجبة
+    leftWing.rotation.x = -dihedralRad; // نفس الدوران، لأن الانعكاس في المقياس Z يعكس التأثير تلقائيًا
 
     // تحديد موضع الجناحين ليبدآ من جانبي جسم الطائرة
     rightWing.position.z = currentFuselageWidth / 2;
