@@ -362,6 +362,7 @@ const pressureInput = document.getElementById('pressure');
 const particleDensityInput = document.getElementById('particle-density');
 const particleSizeInput = document.getElementById('particle-size');
 const showAmbientWindInput = document.getElementById('show-ambient-wind');
+const showVorticesInput = document.getElementById('show-vortices');
 const airflowTransparencyInput = document.getElementById('airflow-transparency');
 const toggleChartsBtn = document.getElementById('toggle-charts-btn');
 const chartsContainer = document.getElementById('charts-container');
@@ -2884,7 +2885,8 @@ function setAirflowVisibility(isSpinning) {
         }
     }
     if (vortexParticleSystem) {
-        vortexParticleSystem.visible = isSpinning && showAmbient;
+        const showVortices = showVorticesInput.checked;
+        vortexParticleSystem.visible = isSpinning && showVortices;
     }
 
     // التحكم في رؤية الدخان
@@ -3071,6 +3073,10 @@ showSmokeInput.addEventListener('change', () => {
 });
 
 showHeatHazeInput.addEventListener('change', () => {
+    setAirflowVisibility(isPropSpinning);
+});
+
+showVorticesInput.addEventListener('change', () => {
     setAirflowVisibility(isPropSpinning);
 });
 
@@ -3425,6 +3431,10 @@ function animate() {
             const scales = vortexParticleSystem.geometry.attributes.scale.array;
             const spiralData = vortexParticleSystem.geometry.attributes.spiralData.array;
             const lifeData = vortexParticleSystem.geometry.attributes.life.array;
+
+            // قراءة انحراف أسطح التحكم
+            const aileronDeflection = Math.abs(parseFloat(aileronControlSlider.value));
+            const elevatorDeflection = Math.abs(parseFloat(elevatorControlSlider.value));
             
             // Vortex strength is proportional to the lift coefficient (read from cached params)
             const baseVortexStrength = Math.max(0, planeParams.cl) * 0.25; // زيادة التأثير قليلاً
@@ -3442,6 +3452,11 @@ function animate() {
 
             const vStabTipY = tailAssembly.position.y + (getValidNumber(vStabHeightInput) * planeParams.conversionFactor);
             const vStabTipX = tailAssembly.position.x - (getValidNumber(vStabChordInput) * planeParams.conversionFactor * 0.25);
+            
+            const aileronTipZ = planeParams.wingSpan / 2 - planeParams.aileronPosition;
+            const aileronTipX = wingTipX; // تقريب
+            const aileronTipY = wingTipY;
+
 
             for (let i = 0; i < vortexParticleCount; i++) {
                 const i2 = i * 2;
@@ -3450,24 +3465,44 @@ function animate() {
                 let emitterX, emitterY, emitterZ, side, currentVortexStrength;
 
                 // تقسيم الجسيمات بين المصادر المختلفة
-                if (i < 1000) { // دوامات الجناح
+                if (i < 800) { // دوامات الجناح الرئيسية
                     emitterX = wingTipX;
                     emitterY = wingTipY;
                     emitterZ = wingTipZ;
-                    side = (i < 500) ? 1 : -1;
+                    side = (i < 400) ? 1 : -1;
                     currentVortexStrength = baseVortexStrength;
-                } else if (i < 2000) { // دوامات الذيل الأفقي
+                } else if (i < 1600) { // دوامات الذيل الأفقي
                     emitterX = tailTipX;
                     emitterY = tailTipY;
                     emitterZ = tailTipZ;
-                    side = (i < 1500) ? 1 : -1;
+                    side = (i < 1200) ? 1 : -1;
                     currentVortexStrength = baseVortexStrength * 0.4; // دوامات الذيل أضعف
-                } else { // دوامة الذيل العمودي
+                } else if (i < 2000) { // دوامة الذيل العمودي
                     emitterX = vStabTipX;
                     emitterY = vStabTipY;
                     emitterZ = 0;
                     side = 1; // جانب واحد فقط
                     currentVortexStrength = baseVortexStrength * 0.3; // أضعف
+                } else if (i < 2500) { // دوامات جسم الطائرة
+                    emitterX = -planeParams.fuselageLength / 2;
+                    emitterY = 0;
+                    emitterZ = planeParams.fuselageWidth / 2;
+                    side = (i < 2250) ? 1 : -1;
+                    currentVortexStrength = baseVortexStrength * 0.1; // ضعيفة جداً
+                } else { // دوامات أسطح التحكم
+                    if (i < 3000) { // دوامات الجنيحات
+                        emitterX = aileronTipX;
+                        emitterY = aileronTipY;
+                        emitterZ = aileronTipZ;
+                        side = (i < 2750) ? 1 : -1;
+                        currentVortexStrength = baseVortexStrength * 0.5 * aileronDeflection; // تعتمد على مقدار الانحراف
+                    } else { // دوامات الرافع
+                        emitterX = tailTipX;
+                        emitterY = tailTipY;
+                        emitterZ = tailTipZ;
+                        side = (i < 3250) ? 1 : -1;
+                        currentVortexStrength = baseVortexStrength * 0.3 * elevatorDeflection;
+                    }
                 }
 
                 // إعادة تعيين الجسيم إذا كان قديمًا
@@ -3522,11 +3557,8 @@ function animate() {
             const opacities = heatHazeParticleSystem.geometry.attributes.customOpacity.array;
             const scales = heatHazeParticleSystem.geometry.attributes.scale.array;
             const lifeData = heatHazeParticleSystem.geometry.attributes.life.array;
-
-            const emissionPoint = new THREE.Vector3();
-            if (engineGroup.children.length > 0) {
-                engineGroup.children[0].getWorldPosition(emissionPoint);
-            }
+            
+            const emissionPoint = engineGroup.position.clone(); // استخدام موضع مجموعة المحرك كنقطة انبعاث
 
             const buoyancy = 0.5; // سرعة ارتفاع الحرارة
             const shimmerStrength = 0.4; // قوة التراقص الجانبي
@@ -3703,8 +3735,8 @@ function initWingAirflowParticles() {
 
 /** Initializes the particle system for wingtip vortex simulation. */
 function initVortexParticles() {
-    // زيادة عدد الجسيمات لاستيعاب الدوامات الجديدة (الجناح، الذيل الأفقي، الذيل العمودي)
-    vortexParticleCount = 2500; // 1000 للجناح, 1000 للذيل الأفقي, 500 للذيل العمودي
+    // زيادة عدد الجسيمات لاستيعاب جميع المصادر الجديدة
+    vortexParticleCount = 3500; // 1000 للجناح, 1000 للذيل, 500 للجسم, 1000 لأسطح التحكم
 
     const particleGeometry = new THREE.BufferGeometry();
     const positions = new Float32Array(vortexParticleCount * 3).fill(0);
