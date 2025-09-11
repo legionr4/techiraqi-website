@@ -1556,6 +1556,7 @@ function updatePlaneModel() {
             const wingEngineDistMeters = getValidNumber(engineWingDistanceInput) * conversionFactor;
             const wingEngineVerticalPos = engineWingVerticalPosInput.value;
             const wingEngineForeAft = engineWingForeAftInput.value;
+            // "طول" الحامل من المدخلات هو في الواقع ارتفاعه العمودي
             const pylonHeightMeters = getValidNumber(enginePylonLengthInput) * conversionFactor;
 
             // حساب الموضع على امتداد الجناح
@@ -1568,7 +1569,7 @@ function updatePlaneModel() {
             const leadingEdgeX = wingPositionX + sweepAtPylon + chordAtPylon / 2;
             const trailingEdgeX = wingPositionX + sweepAtPylon - chordAtPylon / 2;
 
-            // حساب الموضع العمودي (أعلى/أسفل)
+            // حساب الموضع العمودي للمحرك (أعلى/أسفل) مع الأخذ في الاعتبار ارتفاع الحامل
             const wingCenterY = wingGroup.position.y;
             let engineYOffset;
             if (wingEngineVerticalPos === 'above') {
@@ -1580,12 +1581,15 @@ function updatePlaneModel() {
             // حساب الموضع الأفقي (أمامي/خلفي) وإعداد المروحة
             let engineCenterX, propCenterX;
             let propModel;
+            // تحديد طول الحامل في الاتجاه الأمامي-الخلفي (غير محدد من قبل المستخدم)
+            const pylonForeAftLength = engineDiameterMeters * 0.6;
+
             if (wingEngineForeAft === 'leading') {
-                engineCenterX = leadingEdgeX + pylonLengthMeters + (engineLengthMeters / 2);
+                engineCenterX = leadingEdgeX + pylonForeAftLength + (engineLengthMeters / 2);
                 propCenterX = engineCenterX + (engineLengthMeters / 2) + 0.01;
                 propModel = propProto.clone(); // مروحة سحب (Tractor)
             } else { // 'trailing'
-                engineCenterX = trailingEdgeX - pylonLengthMeters - (engineLengthMeters / 2);
+                engineCenterX = trailingEdgeX - pylonForeAftLength - (engineLengthMeters / 2);
                 propCenterX = engineCenterX - (engineLengthMeters / 2) - 0.01;
                 propModel = propProto.clone();
                 propModel.rotation.y = Math.PI; // مروحة دفع (Pusher)
