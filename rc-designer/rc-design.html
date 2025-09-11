@@ -244,6 +244,13 @@
 
                     <div id="wingtip-controls" style="margin-top: 10px; display:none;">
                         <div class="input-group">
+                            <label for="wingtip-shape">شكل طرف الجناح</label>
+                            <select id="wingtip-shape">
+                                <option value="canted" selected>مائل (Canted)</option>
+                                <option value="blended">منحني (Blended)</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
                             <label for="wingtip-length">طول الطرف (<span class="unit-label">سم</span>):</label>
                             <input type="number" id="wingtip-length" value="10" step="1">
                         </div>
@@ -263,6 +270,10 @@
                         <div class="input-group">
                             <label for="wingtip-angle">زاوية الطرف (°):</label>
                             <input type="number" id="wingtip-angle" value="45" step="5">
+                        </div>
+                        <div class="input-group">
+                            <label for="wingtip-twist-angle">زاوية الالتواء (Toe/Twist) (°):</label>
+                            <input type="number" id="wingtip-twist-angle" value="0" step="1" min="-15" max="15">
                         </div>
                     </div>
 

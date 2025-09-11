@@ -282,11 +282,13 @@ const sweepAngleInput = document.getElementById('sweep-angle');
 const taperRatioInput = document.getElementById('taper-ratio');
 
 const hasWingtipInput = document.getElementById('has-wingtip');
+const wingtipShapeInput = document.getElementById('wingtip-shape');
 const wingtipLengthInput = document.getElementById('wingtip-length');
 const wingtipWidthInput = document.getElementById('wingtip-width');
 const wingtipThicknessInput = document.getElementById('wingtip-thickness');
 const wingtipPositionInput = document.getElementById('wingtip-position');
 const wingtipAngleInput = document.getElementById('wingtip-angle');
+const wingtipTwistAngleInput = document.getElementById('wingtip-twist-angle');
 const wingtipControls =  document.getElementById('wingtip-controls');
 
 const hasAileronInput = document.getElementById('has-aileron');
@@ -1052,25 +1054,36 @@ function updatePlaneModel() {
     wingGroup.add(rightWing, leftWing);
      // Wingtip
     if (hasWingtipInput.checked) {
+        const wingtipShapeType = wingtipShapeInput.value;
         const wingtipLength = getValidNumber(wingtipLengthInput) * conversionFactor;
         const wingtipWidth = getValidNumber(wingtipWidthInput) * conversionFactor;
         const wingtipThickness = getValidNumber(wingtipThicknessInput) * conversionFactor;
         const wingtipPosition = getValidNumber(wingtipPositionInput) * conversionFactor;
         const wingtipAngle = getValidNumber(wingtipAngleInput) * Math.PI / 180; // Convert to radians
+        const wingtipTwistAngle = getValidNumber(wingtipTwistAngleInput) * Math.PI / 180; // Convert to radians
 
-        const wingtipShape = new THREE.Shape();
-        wingtipShape.moveTo(-wingtipWidth / 2, 0);
-        wingtipShape.lineTo(wingtipWidth / 2, 0);
-        wingtipShape.lineTo(wingtipWidth / 2, wingtipLength);
-        wingtipShape.lineTo(-wingtipWidth / 2, wingtipLength);
-        wingtipShape.closePath();
+        let wingletShape = new THREE.Shape();
+
+        if (wingtipShapeType === 'blended') {
+            // شكل منحني وسلس
+            wingletShape.moveTo(-wingtipWidth / 2, 0);
+            wingletShape.lineTo(wingtipWidth / 2, 0);
+            wingletShape.quadraticCurveTo(wingtipWidth / 2, wingtipLength * 0.8, 0, wingtipLength);
+            wingletShape.quadraticCurveTo(-wingtipWidth / 2, wingtipLength * 0.8, -wingtipWidth / 2, 0);
+        } else { // 'canted' or default
+            // شكل مائل (مستطيل)
+            wingletShape.moveTo(-wingtipWidth / 2, 0);
+            wingletShape.lineTo(wingtipWidth / 2, 0);
+            wingletShape.lineTo(wingtipWidth / 2, wingtipLength);
+            wingletShape.lineTo(-wingtipWidth / 2, wingtipLength);
+        }
 
         const extrudeSettings = {
             depth: wingtipThickness,
             bevelEnabled: false,
         };
 
-        const wingtipGeometry = new THREE.ExtrudeGeometry(wingtipShape, extrudeSettings);
+        const wingtipGeometry = new THREE.ExtrudeGeometry(wingletShape, extrudeSettings);
         const wingtipMaterial = new THREE.MeshStandardMaterial({ color: wingMaterial.color, side: THREE.DoubleSide });
         const rightWingtip = new THREE.Mesh(wingtipGeometry, wingtipMaterial);
 
@@ -1087,9 +1100,11 @@ function updatePlaneModel() {
 
         // Apply the cant angle (up/down rotation)
         rightWingtip.rotation.x = wingtipAngle;
+        rightWingtip.rotation.y = wingtipTwistAngle; // Apply twist/toe angle
 
         const leftWingtip = rightWingtip.clone();
         leftWingtip.rotation.x = wingtipAngle; // Corrected: Both should have the same angle
+        leftWingtip.rotation.y = wingtipTwistAngle; // The negative Z scale on the parent wing will correctly mirror this rotation
 
         rightWing.add(rightWingtip);
         leftWing.add(leftWingtip);
@@ -2391,6 +2406,7 @@ pressureInput.addEventListener('input', () => {
 
 hasAileronInput.addEventListener('change', updateAll);
 hasWingtipInput.addEventListener('change', updateAll);
+wingtipShapeInput.addEventListener('change', updateAll);
 tailTypeInput.addEventListener('change', updateAll);
 hasElevatorInput.addEventListener('change', updateAll);
 hasRetractableGearInput.addEventListener('change', updateAll);
