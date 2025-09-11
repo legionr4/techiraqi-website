@@ -1993,7 +1993,13 @@ function calculateAerodynamics() {
     const servoWeightGrams = getRaw(servoWeightInput) * getRaw(servoCountInput);
     const cameraWeightGrams = getRaw(cameraWeightInput);
     const otherAccessoriesWeightGrams = getRaw(otherAccessoriesWeightInput);
-    const engineWeightKg = (engineType === 'electric' ? getRaw(electricMotorWeightInput) : getRaw(icEngineWeightInput)) / 1000;
+    
+    // تصحيح: حساب وزن المحرك مع الأخذ في الاعتبار وجود محركين عند التركيب على الجناح
+    let engineWeightKg = (engineType === 'electric' ? getRaw(electricMotorWeightInput) : getRaw(icEngineWeightInput)) / 1000;
+    if (enginePlacement === 'wing') {
+        engineWeightKg *= 2; // مضاعفة الوزن لوجود محركين
+    }
+
     const pylonHeightMeters = getVal(enginePylonLengthInput);
     const pylonMaterial = getStr(pylonMaterialInput);
     const engineDiameterMeters = (engineType === 'electric' ? getVal(electricMotorDiameterInput) : getVal(icEngineDiameterInput));
@@ -2305,26 +2311,36 @@ function calculateAerodynamics() {
 
     let energySourceWeightKg = 0;
     if (engineType === 'electric') {
+        // إظهار وزن البطارية وإخفاء مساحة الخزان
+        document.getElementById('energy-source-weight-item').style.display = 'flex';
+        document.getElementById('fuel-tank-area-item').style.display = 'none';
+
         energySourceWeightKg = batteryWeightGrams / 1000; // This is correct
-        energySourceWeightResultEl.parentElement.style.display = 'flex';
-    } else { // ic
-        // حساب وزن خزان الوقود بناءً على المستوى والنوع
+    } else { // ic - محرك ميكانيكي
+        // إظهار وزن الخزان ومساحته
+        document.getElementById('energy-source-weight-item').style.display = 'flex';
+        document.getElementById('fuel-tank-area-item').style.display = 'flex';
+
+        // حساب وزن مصدر الطاقة (الوقود + الخزان) بشكل دقيق
         const tankMaterialDensity = MATERIAL_DENSITIES[tankMaterial];
         const fuelDensity = FUEL_DENSITIES[fuelType] || FUEL_DENSITIES['methanol_nitro'];
 
-        // حساب وزن الوقود الحالي
+        // 1. حساب وزن الوقود الفعلي بناءً على السعة والمستوى
         const currentFuelVolumeMl = tankCapacityMl * fuelLevel;
         const currentFuelVolumeM3 = currentFuelVolumeMl / 1e6; // تحويل من مل (سم^3) إلى م^3
         const fuelWeightKg = currentFuelVolumeM3 * fuelDensity;
 
-        // حساب وزن هيكل الخزان (تقريبي بناءً على المساحة السطحية وسمك الجدار)
+        // 2. حساب وزن هيكل الخزان نفسه بناءً على أبعاده ومادته
         const surfaceArea = 2 * ((tankLength * tankWidth) + (tankLength * tankHeight) + (tankWidth * tankHeight));
         const wallThickness = 0.002; // افتراض سمك جدار 2 مم
         const shellVolume = surfaceArea * wallThickness;
         const shellWeightKg = shellVolume * tankMaterialDensity;
 
+        // 3. الوزن الإجمالي لمصدر الطاقة هو مجموع وزن الوقود ووزن الخزان
         energySourceWeightKg = fuelWeightKg + shellWeightKg;
-        energySourceWeightResultEl.parentElement.style.display = 'flex'; // إظهار نتيجة وزن الخزان
+
+        // تحديث حقل مساحة السطح
+        document.getElementById('fuel-tank-area-result').textContent = (surfaceArea * 10000).toFixed(0); // تحويل من م² إلى سم²
     }
 
     // حساب وزن الملحقات الإضافية
