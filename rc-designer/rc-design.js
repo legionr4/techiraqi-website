@@ -2333,7 +2333,7 @@ function calculateAerodynamics() {
         const fuelWeightKg = currentFuelVolumeM3 * fuelDensity;
 
         // 2. حساب وزن هيكل الخزان نفسه بناءً على أبعاده ومادته
-        const surfaceArea = 2 * ((tankLength * tankWidth) + (tankLength * tankHeight) + (tankWidth * tankHeight));
+        const surfaceArea = 2 * ((fuelTankLength * fuelTankWidth) + (fuelTankLength * fuelTankHeight) + (fuelTankWidth * fuelTankHeight));
         const wallThickness = 0.002; // افتراض سمك جدار 2 مم
         const shellVolume = surfaceArea * wallThickness;
         const shellWeightKg = shellVolume * tankMaterialDensity;
