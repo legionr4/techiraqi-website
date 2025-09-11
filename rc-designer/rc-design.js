@@ -1230,7 +1230,7 @@ function updatePlaneModel() {
         leftHStab.scale.z = -1;
 
         const vStabGeom = createSurface(vStabHeight, vStabChordEffective, tailTaperRatio, vStabSweepAngle, tailThickness, tailAirfoilType, true);
-        const vStab = new THREE.Mesh(vStabGeom, fuselageMaterial);
+        const vStab = new THREE.Mesh(vStabGeom, tailMaterial);
         vStab.position.x = -vStabChordEffective / 2; // Position relative to tailAssembly
         vStab.position.y = currentFuselageHeight / 2;
 
@@ -1251,7 +1251,7 @@ function updatePlaneModel() {
         leftHStab.scale.z = -1;
 
         const vStabGeom = createSurface(vStabHeight, vStabChordEffective, tailTaperRatio, vStabSweepAngle, tailThickness, tailAirfoilType, true);
-        const vStab = new THREE.Mesh(vStabGeom, fuselageMaterial);
+        const vStab = new THREE.Mesh(vStabGeom, tailMaterial);
         vStab.position.x = -vStabChordEffective / 2;
         // رفع المثبت العمودي ليجلس فوق جسم الطائرة
         vStab.position.y = currentFuselageHeight / 2;
