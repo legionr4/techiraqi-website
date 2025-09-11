@@ -365,6 +365,7 @@ const showAmbientWindInput = document.getElementById('show-ambient-wind');
 const airflowTransparencyInput = document.getElementById('airflow-transparency');
 const toggleChartsBtn = document.getElementById('toggle-charts-btn');
 const chartsContainer = document.getElementById('charts-container');
+const showHeatHazeInput = document.getElementById('show-heat-haze');
 const showSmokeInput = document.getElementById('show-smoke');
 const airflowTransparencyValueEl = document.getElementById('airflow-transparency-value');
 const fuselageColorInput = document.getElementById('fuselage-color');
@@ -516,6 +517,7 @@ let propParticleSystem, propParticleCount = 400; // لتدفق هواء المر
 let wingAirflowParticleSystem, wingAirflowParticleCount = 2500; // لتدفق الهواء العام
 let vortexParticleSystem, vortexParticleCount = 1000; // لدوامات أطراف الجناح
 let smokeParticleSystem, smokeParticleCount = 500; // لدخان محرك IC
+let heatHazeParticleSystem, heatHazeParticleCount = 300; // لتأثير الحرارة
 
 /**
  * Generates points for various airfoil shapes.
@@ -3068,6 +3070,10 @@ showSmokeInput.addEventListener('change', () => {
     setAirflowVisibility(isPropSpinning);
 });
 
+showHeatHazeInput.addEventListener('change', () => {
+    setAirflowVisibility(isPropSpinning);
+});
+
 showAmbientWindInput.addEventListener('change', () => {
     setAirflowVisibility(isPropSpinning);
 });
@@ -3510,6 +3516,51 @@ function animate() {
             vortexParticleSystem.geometry.attributes.life.needsUpdate = true; // تحديث بيانات العمر
         }
 
+        // --- تحديث تأثير حرارة المحرك ---
+        if (heatHazeParticleSystem && heatHazeParticleSystem.visible) {
+            const positions = heatHazeParticleSystem.geometry.attributes.position.array;
+            const opacities = heatHazeParticleSystem.geometry.attributes.customOpacity.array;
+            const scales = heatHazeParticleSystem.geometry.attributes.scale.array;
+            const lifeData = heatHazeParticleSystem.geometry.attributes.life.array;
+
+            const emissionPoint = new THREE.Vector3();
+            if (engineGroup.children.length > 0) {
+                engineGroup.children[0].getWorldPosition(emissionPoint);
+            }
+
+            const buoyancy = 0.5; // سرعة ارتفاع الحرارة
+            const shimmerStrength = 0.4; // قوة التراقص الجانبي
+
+            for (let i = 0; i < heatHazeParticleCount; i++) {
+                const i2 = i * 2;
+                const i3 = i * 3;
+
+                lifeData[i2] -= deltaTime;
+
+                if (lifeData[i2] <= 0) {
+                    positions[i3]     = emissionPoint.x + (Math.random() - 0.5) * 0.1;
+                    positions[i3 + 1] = emissionPoint.y + (Math.random() - 0.5) * 0.1;
+                    positions[i3 + 2] = emissionPoint.z + (Math.random() - 0.5) * 0.1;
+                    lifeData[i2] = lifeData[i2 + 1] = 0.5 + Math.random() * 0.5; // عمر قصير جداً
+                }
+
+                // تحديث الموضع
+                positions[i3]     -= mainAirSpeed * deltaTime * 0.5; // تتحرك للخلف ببطء
+                positions[i3 + 1] += buoyancy * deltaTime; // ترتفع للأعلى
+                positions[i3 + 2] += (Math.random() - 0.5) * shimmerStrength * deltaTime; // تراقص جانبي
+
+                // تحديث الخصائص البصرية
+                const lifeRatio = Math.max(0, lifeData[i2] / lifeData[i2 + 1]);
+                opacities[i] = Math.sin(lifeRatio * Math.PI) * 0.05 * densityFactor * airflowTransparency; // شفاف جداً
+                scales[i] = (1.0 - lifeRatio) * 3.0 * sizeFactor;
+            }
+
+            heatHazeParticleSystem.geometry.attributes.position.needsUpdate = true;
+            heatHazeParticleSystem.geometry.attributes.customOpacity.needsUpdate = true;
+            heatHazeParticleSystem.geometry.attributes.scale.needsUpdate = true;
+            heatHazeParticleSystem.geometry.attributes.life.needsUpdate = true;
+        }
+
         // --- تحديث دخان محرك IC ---
         if (smokeParticleSystem && smokeParticleSystem.visible) {
             const positions = smokeParticleSystem.geometry.attributes.position.array;
@@ -3705,12 +3756,35 @@ function initSmokeParticles() {
     planeGroup.add(smokeParticleSystem); // Add to plane group to move with it
 }
 
+/** Initializes the particle system for IC engine heat haze effect. */
+function initHeatHazeParticles() {
+    const particleGeometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(heatHazeParticleCount * 3).fill(0);
+    const opacities = new Float32Array(heatHazeParticleCount).fill(0);
+    const scales = new Float32Array(heatHazeParticleCount).fill(0);
+    const lifeData = new Float32Array(heatHazeParticleCount * 2).fill(0);
+
+    particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    particleGeometry.setAttribute('customOpacity', new THREE.BufferAttribute(opacities, 1));
+    particleGeometry.setAttribute('scale', new THREE.BufferAttribute(scales, 1));
+    particleGeometry.setAttribute('life', new THREE.BufferAttribute(lifeData, 2));
+
+    // A very faint, almost white material
+    const heatMaterial = createAirflowMaterial(0xDDDDDD);
+    heatMaterial.blending = THREE.NormalBlending; // Normal blending is better for a distortion effect
+
+    heatHazeParticleSystem = new THREE.Points(particleGeometry, heatMaterial);
+    heatHazeParticleSystem.visible = false;
+    planeGroup.add(heatHazeParticleSystem);
+}
+
 
 // --- التشغيل الأولي ---
 initPropAirflowParticles();
 initWingAirflowParticles();
 initVortexParticles();
 initSmokeParticles();
+initHeatHazeParticles();
 initCharts();
 chartsContainer.style.display = 'none'; // Hide charts initially
 updateUnitLabels();
