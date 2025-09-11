@@ -2959,7 +2959,19 @@ cameraWeightInput.addEventListener('input', debouncedUpdate);
 otherAccessoriesWeightInput.addEventListener('input', debouncedUpdate);
 enginePylonLengthInput.addEventListener('input', debouncedUpdate);
 
-pylonMaterialInput.addEventListener('change', updateAll);
+pylonMaterialInput.addEventListener('change', () => {
+    const material = pylonMaterialInput.value;
+    let defaultColor;
+    if (material === 'aluminum') {
+        defaultColor = '#afb8c1'; // Silvery gray
+    } else if (material === 'carbon_fiber') {
+        defaultColor = '#444444'; // Dark gray
+    } else { // plastic
+        defaultColor = '#555555'; // Default plastic gray
+    }
+    pylonColorInput.value = defaultColor;
+    updateAll(); // تحديث النموذج والحسابات
+});
 
 
 // تحديث عرض قيم شريط التمرير
