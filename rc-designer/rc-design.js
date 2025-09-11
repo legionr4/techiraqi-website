@@ -746,6 +746,9 @@ function updatePlaneParameters() {
     planeParams.userParticleSize = getValidNumber(particleSizeInput);
     planeParams.userVibrationIntensity = getValidNumber(vibrationIntensityInput);
     planeParams.airflowTransparency = getValidNumber(airflowTransparencyInput);
+    // تخزين إعدادات المحرك التي يتم استخدامها في حلقة الرسوم المتحركة لتجنب الوصول إلى DOM
+    planeParams.enginePlacement = enginePlacementInput.value;
+    planeParams.wingPropRotation = wingPropRotationInput.value;
 
     // Cache fuselage dimensions
     const fuselageShape = fuselageShapeInput.value;
@@ -3098,12 +3101,12 @@ function animate() {
         const densityFactor = planeParams.userParticleDensity * 2; // مضاعفة لجعل 50% هو الافتراضي
         const sizeFactor = planeParams.userParticleSize * 2;       // مضاعفة لجعل 50% هو الافتراضي
 
-        const enginePlacement = enginePlacementInput.value;
+        const enginePlacement = planeParams.enginePlacement;
         const rotationPerSecond = (planeParams.propRpm / 60) * Math.PI * 2;
 
         // --- دوران المروحة ---
         if (enginePlacement === 'wing') {
-            const wingPropRotation = wingPropRotationInput.value;
+            const wingPropRotation = planeParams.wingPropRotation;
             const props = wingEnginesGroup.children.filter(c => c.type === 'Group');
 
             props.forEach(prop => {
