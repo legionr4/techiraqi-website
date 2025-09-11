@@ -1670,6 +1670,10 @@ function updatePlaneModel() {
             const rightProp = propModel.clone();
             const leftProp = propModel.clone();
 
+            // تصحيح: إضافة أسماء فريدة للمراوح للعثور عليها بسهولة في حلقة الرسوم المتحركة
+            rightProp.name = "wingProp_right";
+            leftProp.name = "wingProp_left";
+
             // تصحيح: استخدام الإحداثيات المحلية لجميع المكونات
             rightEngine.position.set(engineCenterX, engineY_relative, localZ);
             leftEngine.position.set(engineCenterX, engineY_relative, localZ);
@@ -3187,25 +3191,20 @@ function animate() {
         // --- دوران المروحة ---
         if (enginePlacement === 'wing') { // This logic was duplicated, removing the duplicate
             const wingPropRotation = wingPropRotationInput.value;
-            // البحث عن مجموعات المحركات بالاسم
-            const rightWingEngineGrp = scene.getObjectByName("rightWingEngineGroup");
-            const leftWingEngineGrp = scene.getObjectByName("leftWingEngineGroup");
+            // تصحيح: البحث عن المراوح مباشرة في المشهد باستخدام أسمائها لضمان عملها دائمًا
+            const rightProp = scene.getObjectByName("wingProp_right");
+            const leftProp = scene.getObjectByName("wingProp_left");
 
-            if (rightWingEngineGrp && leftWingEngineGrp) {
-                // العثور على المروحة (وهي Group) داخل كل مجموعة محرك
-                const rightProp = rightWingEngineGrp.children.find(c => c.type === 'Group' && c.children.length > 1);
-                const leftProp = leftWingEngineGrp.children.find(c => c.type === 'Group' && c.children.length > 1);
-
-                if (rightProp && leftProp) {
-                    if (wingPropRotation === 'counter') {
-                        rightProp.rotation.x += rotationPerSecond * deltaTime;
-                        leftProp.rotation.x -= rotationPerSecond * deltaTime; // تدور في الاتجاه المعاكس
-                    } else { // 'same'
-                        rightProp.rotation.x += rotationPerSecond * deltaTime;
-                        leftProp.rotation.x += rotationPerSecond * deltaTime;
-                    }
+            if (rightProp && leftProp) {
+                if (wingPropRotation === 'counter') {
+                    rightProp.rotation.x += rotationPerSecond * deltaTime;
+                    leftProp.rotation.x -= rotationPerSecond * deltaTime; // تدور في الاتجاه المعاكس
+                } else { // 'same'
+                    rightProp.rotation.x += rotationPerSecond * deltaTime;
+                    leftProp.rotation.x += rotationPerSecond * deltaTime;
                 }
             }
+
         } else { // أمامي أو خلفي
             propellerGroup.rotation.x += rotationPerSecond * deltaTime;
         }
