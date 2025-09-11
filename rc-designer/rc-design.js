@@ -294,6 +294,7 @@ const wingtipTwistAngleInput = document.getElementById('wingtip-twist-angle');
 const wingtipTaperRatioInput = document.getElementById('wingtip-taper-ratio');
 const wingtipSweepAngleInput = document.getElementById('wingtip-sweep-angle');
 const wingtipControls =  document.getElementById('wingtip-controls');
+const wingtipResultsContainer = document.getElementById('wingtip-results-container');
 
 const hasAileronInput = document.getElementById('has-aileron');
 const aileronLengthInput = document.getElementById('aileron-length');
@@ -929,8 +930,10 @@ function updatePlaneModel() {
      // Wingtip Controls visibility
     if(hasWingtipInput.checked){
         wingtipControls.style.display = 'block';
+        wingtipResultsContainer.style.display = 'block';
     }else{
          wingtipControls.style.display = 'none';
+         wingtipResultsContainer.style.display = 'none';
     }
 
     // Aileron Controls visibility
@@ -2075,9 +2078,8 @@ function calculateAerodynamics() {
         const singleWingtipVolume = wingtipLength * wingtipWidth * wingtipThickness;
         wingtipWeightKg = 2 * singleWingtipVolume * structureMaterialDensity; // لليمين واليسار
     }
-    // عرض وزن أطراف الجناح في النتائج
+    // عرض وزن أطراف الجناح في النتائج (تم إصلاح الخطأ هنا)
     document.getElementById('wingtip-weight-result').textContent = (wingtipWeightKg * 1000).toFixed(0);
-    document.getElementById('wingtip-weight-result').parentElement.style.display = hasWingtip ? 'flex' : 'none';
 
     // --- حساب وزن أسطح التحكم ---
     let aileronWeightKg = 0;

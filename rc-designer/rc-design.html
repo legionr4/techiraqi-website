@@ -314,6 +314,14 @@
                             <input type="range" id="wingtip-sweep-angle" min="-30" max="30" value="0" step="1">
                         </div>
                     </div>
+                    <!-- Wingtip Results (Moved here to be part of the main fieldset) -->
+                    <div id="wingtip-results-container" class="fieldset-results" style="display: none;">
+                        <div class="result-item">
+                            <p>وزن أطراف الجناح (جرام):</p>
+                            <span id="wingtip-weight-result">0</span>
+                        </div>
+                    </div>
+
 
                     <!-- Wing Results -->
                     <div class="fieldset-results">
@@ -1232,7 +1240,7 @@
 <!-- Audio Element for Engine Sound -->
 <audio id="engine-sound" loop preload="auto">
     <!-- ملاحظة: يجب توفير هذا الملف الصوتي في المسار الصحيح -->
-    <source src="../assets/sounds/engine_loop.mp3" type="audio/mpeg">
+    <source src="../assets/sounds/engineloop.mp3" type="audio/mpeg">
     متصفحك لا يدعم عنصر الصوت.
 </audio>
 
