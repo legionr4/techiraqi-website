@@ -2312,16 +2312,16 @@ function calculateAerodynamics() {
 
     let energySourceWeightKg = 0;
     if (engineType === 'electric') {
-        // إظهار وزن البطارية وإخفاء مساحة الخزان
-        document.getElementById('energy-source-weight-item').style.display = 'flex';
-        document.getElementById('fuel-tank-area-item').style.display = 'none';
+        // إظهار/إخفاء الحقول المناسبة
+        document.getElementById('energy-source-weight-item').style.display = 'flex'; // إظهار وزن البطارية
+        document.getElementById('fuel-tank-area-item').style.display = 'none'; // إخفاء مساحة الخزان
 
         energySourceWeightKg = batteryWeightGrams / 1000; // This is correct
     } else { // ic - محرك ميكانيكي
-        // إظهار وزن الخزان ومساحته
-        document.getElementById('energy-source-weight-item').style.display = 'flex';
-        document.getElementById('fuel-tank-area-item').style.display = 'flex';
-
+        // إظهار/إخفاء الحقول المناسبة
+        document.getElementById('energy-source-weight-item').style.display = 'flex'; // إظهار وزن الخزان
+        document.getElementById('fuel-tank-area-item').style.display = 'flex'; // إظهار مساحة الخزان
+        
         // حساب وزن مصدر الطاقة (الوقود + الخزان) بشكل دقيق
         const tankMaterialDensity = MATERIAL_DENSITIES[tankMaterial];
         const fuelDensity = FUEL_DENSITIES[fuelType] || FUEL_DENSITIES['methanol_nitro'];
