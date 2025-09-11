@@ -1639,6 +1639,11 @@ function updatePlaneModel() {
                 const rightPylon = new THREE.Mesh(pylonGeom, pylonMaterial);
                 rightPylon.position.set(pylonX_relative, pylonY_relative, posOnWingZ);
                 const leftPylon = rightPylon.clone();
+
+                // تطبيق زاوية الديhedral على الحوامل
+                rightPylon.rotation.x = dihedralRad;
+                leftPylon.rotation.x = -dihedralRad;
+
                 leftPylon.position.z = -posOnWingZ;
                 wingEnginesGroup.add(rightPylon, leftPylon);
             }
@@ -1671,10 +1676,10 @@ function updatePlaneModel() {
             leftProp.position.set(propCenterX - wingGroup.position.x, engineY_relative, -posOnWingZ);
 
             // Apply thrust angles to each component
-            rightEngine.rotation.set(0, engineSideThrustAngle, engineThrustAngle);
-            leftEngine.rotation.set(0, engineSideThrustAngle, engineThrustAngle);
-            rightProp.rotation.set(0, engineSideThrustAngle, engineThrustAngle);
-            leftProp.rotation.set(0, engineSideThrustAngle, engineThrustAngle);
+            rightEngine.rotation.set(dihedralRad, engineSideThrustAngle, engineThrustAngle);
+            leftEngine.rotation.set(-dihedralRad, engineSideThrustAngle, engineThrustAngle);
+            rightProp.rotation.set(dihedralRad, engineSideThrustAngle, engineThrustAngle);
+            leftProp.rotation.set(-dihedralRad, engineSideThrustAngle, engineThrustAngle);
 
             // For pusher props on the wing, add the 180 deg rotation
             if (wingEngineForeAft === 'trailing') {
