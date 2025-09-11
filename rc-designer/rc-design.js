@@ -3186,9 +3186,9 @@ function animate() {
             const opacities = vortexParticleSystem.geometry.attributes.customOpacity.array;
             const scales = vortexParticleSystem.geometry.attributes.scale.array;
             const spiralData = vortexParticleSystem.geometry.attributes.spiralData.array;
-
-            // Vortex strength is proportional to the lift coefficient
-            const vortexStrength = Math.max(0, cl) * 0.2; // Adjust multiplier for visual effect
+            
+            // Vortex strength is proportional to the lift coefficient (read from cached params)
+            const vortexStrength = Math.max(0, planeParams.cl) * 0.2; // Adjust multiplier for visual effect
             const vortexRotationSpeed = 15; // How fast the particles spiral
             const travelLength = 5.0; // How far back the vortices travel before resetting
 
