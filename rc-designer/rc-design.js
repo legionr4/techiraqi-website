@@ -459,6 +459,7 @@ const twrResultEl = document.getElementById('twr-result');
 const wingAreaResultEl = document.getElementById('wing-area-result');
 const wingWeightResultEl = document.getElementById('wing-weight-result');
 const tailAreaResultEl = document.getElementById('tail-area-result');
+const wingtipWeightResultEl = document.getElementById('wingtip-weight-result'); // عنصر جديد
 const tailWeightResultEl = document.getElementById('tail-weight-result');
 const fuselageWeightResultEl = document.getElementById('fuselage-weight-result');
 const fuselageAreaResultEl = document.getElementById('fuselage-area-result');
@@ -1800,7 +1801,7 @@ function calculateAerodynamics(params) {
         airfoilLiftFactor = 0.85; // أقل كفاءة
     }
     const cl = airfoilLiftFactor * 2 * Math.PI * alphaRad;
-    const lift = 0.5 * cl * airDensity * Math.pow(airSpeed, 2) * mainWingArea;
+    const lift = 0.5 * cl * airDensity * Math.pow(airSpeed, 2) * totalWingArea;
 
     // 2. قوة السحب (Drag)
     // D = 0.5 * Cd * rho * V^2 * A
@@ -1810,11 +1811,11 @@ function calculateAerodynamics(params) {
     const cdi = (aspectRatio > 0) ? (Math.pow(cl, 2) / (Math.PI * aspectRatio * oswaldEfficiency)) : 0;
     const cdp = 0.025; // معامل سحب طفيلي مفترض (لجسم الطائرة والذيل وغيرها)
     const cd = cdp + cdi;
-    const aeroDrag = 0.5 * cd * airDensity * Math.pow(airSpeed, 2) * mainWingArea;
+    const aeroDrag = 0.5 * cd * airDensity * Math.pow(airSpeed, 2) * totalWingArea;
     
     // 3. قوة الدفع (Thrust) وأداء المروحة
     const propDiameterMeters = propDiameter; // تم تحويله بالفعل
-    const propPitchMeters = propPitch * 0.0254;
+    const propPitchMeters = params.propPitch * 0.0254; // تحويل خطوة المروحة من بوصة إلى متر
     const n_rps = propRpm / 60; // revolutions per second
 
     // سرعة خطوة المروحة (السرعة النظرية للهواء)
@@ -2002,7 +2003,7 @@ function calculateAerodynamics(params) {
     const totalAccessoriesWeightGrams = receiverWeightGrams + servoWeightGrams + cameraWeightGrams + otherAccessoriesWeightGrams;
     const totalAccessoriesWeightKg = totalAccessoriesWeightGrams / 1000;
 
-    const totalWeightKg = wingWeightKg + tailWeightKg + fuselageWeightKg + propWeightKg + landingGearWeightKg + engineWeightKg + energySourceWeightKg + cockpitWeightKg + totalAccessoriesWeightKg + wingtipWeightKg;
+    const totalWeightKg = totalWingWeightKg + tailWeightKg + fuselageWeightKg + propWeightKg + landingGearWeightKg + engineWeightKg + energySourceWeightKg + cockpitWeightKg + totalAccessoriesWeightKg;
 
     // 5. نسبة الدفع إلى الوزن (Thrust-to-Weight Ratio)
     const weightInNewtons = totalWeightKg * 9.81;
@@ -2131,8 +2132,10 @@ function calculateAerodynamics(params) {
     liftResultEl.textContent = lift > 0 ? lift.toFixed(2) : '0.00';
     dragResultEl.textContent = totalDrag > 0 ? totalDrag.toFixed(2) : '0.00';
     thrustResultEl.textContent = thrust > 0 ? thrust.toFixed(2) : '0.00';
-    wingAreaResultEl.textContent = mainWingArea > 0 ? `${mainWingArea.toFixed(2)}` : '0.00';
-    wingWeightResultEl.textContent = (wingWeightKg * 1000).toFixed(0);
+    wingAreaResultEl.textContent = totalWingArea > 0 ? `${totalWingArea.toFixed(2)}` : '0.00';
+    wingWeightResultEl.textContent = (totalWingWeightKg * 1000).toFixed(0);
+    wingtipWeightResultEl.textContent = (wingtipWeightKg * 1000).toFixed(0);
+    wingtipWeightResultEl.parentElement.style.display = hasWingtip ? 'flex' : 'none';
     tailAreaResultEl.textContent = totalTailArea > 0 ? totalTailArea.toFixed(2) : '0.00';
     tailWeightResultEl.textContent = (tailWeightKg * 1000).toFixed(0);
     fuselageAreaResultEl.textContent = fuselageSurfaceArea > 0 ? fuselageSurfaceArea.toFixed(2) : '0.00';
