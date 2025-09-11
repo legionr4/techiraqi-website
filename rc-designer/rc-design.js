@@ -374,6 +374,7 @@ const rollStabilityResultEl = document.getElementById('roll-stability-result');
 const propColorInput = document.getElementById('prop-color');
 const cockpitColorInput = document.getElementById('cockpit-color');
 const engineColorInput = document.getElementById('engine-color');
+const pylonColorInput = document.getElementById('pylon-color');
 const strutColorInput = document.getElementById('strut-color');
 const wheelColorInput = document.getElementById('wheel-color');
 const backgroundColorInput = document.getElementById('background-color');
@@ -912,6 +913,7 @@ function updatePlaneModel() {
     const wingColor = wingColorInput.value;
     const fuselageOpacity = getValidNumber(fuselageOpacityInput);
     const tailColor = tailColorInput.value;
+    const pylonColor = pylonColorInput.value;
     const backgroundColor = backgroundColorInput.value;
 
 
@@ -921,6 +923,7 @@ function updatePlaneModel() {
     wingMaterial.color.set(wingColor);
     tailMaterial.color.set(tailColor);
     aileronMaterial.color.set(aileronColorInput.value);
+    // The pylon material is created locally, so no global update needed here.
     engineMaterial.color.set(engineColorInput.value);
     cockpitMaterial.color.set(cockpitColorInput.value);
     propMaterial.color.set(propColorInput.value);
@@ -1600,16 +1603,7 @@ function updatePlaneModel() {
                 const pylonWidth = engineDiameterMeters * 0.4; // عرض الحامل أنحف قليلاً من المحرك
                 const pylonGeom = new THREE.BoxGeometry(pylonForeAftLength, pylonHeightMeters, pylonWidth);
                 
-                // New: Create pylon material based on selection
-                const pylonMaterialValue = pylonMaterialInput.value;
-                let pylonColor;
-                if (pylonMaterialValue === 'aluminum') {
-                    pylonColor = 0xafb8c1; // Silvery gray
-                } else if (pylonMaterialValue === 'carbon_fiber') {
-                    pylonColor = 0x444444; // Dark gray
-                } else { // plastic
-                    pylonColor = 0x555555; // Default plastic gray
-                }
+                // استخدام لون الحامل من أداة اختيار الألوان
                 const pylonMaterial = new THREE.MeshStandardMaterial({ color: pylonColor, side: THREE.DoubleSide });
                 
                 // حساب موضع الحامل
