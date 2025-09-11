@@ -1919,6 +1919,7 @@ function calculateAerodynamics() {
     const hasRudder = getCheck(hasRudderInput);
     const rudderLength = getVal(rudderLengthInput);
     const rudderWidth = getVal(rudderWidthInput);
+    const rudderAirfoilType = getStr(rudderAirfoilTypeInput);
     const showCgAc = getCheck(showCgAcCheckbox);
     const batteryWeightGrams = getRaw(batteryWeightInput);
     const fuelTankLength = getVal(fuelTankLengthInput);
