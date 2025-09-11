@@ -625,13 +625,6 @@
                             <label for="engine-pylon-length">مسافة الحامل عن الجناح (<span class="unit-label">سم</span>)</label>
                             <input type="number" id="engine-pylon-length" value="2" step="0.5">
                         </div>
-                        <div class="input-group">
-                            <label for="wing-prop-rotation">اتجاه دوران المراوح</label>
-                            <select id="wing-prop-rotation">
-                                <option value="counter" selected>متعاكس (Counter-rotating)</option>
-                                <option value="same">نفس الاتجاه (Same Direction)</option>
-                            </select>
-                        </div>
                     </div>
 
                     <!-- Electric Engine Options -->
@@ -910,6 +903,14 @@
                     <div class="input-group">
                         <label for="vibration-intensity">شدة اهتزاز المحرك: <span id="vibration-value">100</span>%</label>
                         <input type="range" id="vibration-intensity" min="0" max="1" value="1" step="0.1">
+                    </div>
+                    <!-- تم نقله هنا - يظهر فقط عند اختيار محركات الجناح -->
+                    <div class="input-group" id="wing-prop-rotation-group" style="display: none;">
+                        <label for="wing-prop-rotation">اتجاه دوران المراوح (للجناح)</label>
+                        <select id="wing-prop-rotation">
+                            <option value="counter" selected>متعاكس (Counter-rotating)</option>
+                            <option value="same">نفس الاتجاه (Same Direction)</option>
+                        </select>
                     </div>
                 </fieldset>
 

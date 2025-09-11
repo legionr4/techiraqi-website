@@ -961,6 +961,12 @@ function updatePlaneModel() {
     // إخفاء حقل الموضع العمودي للمحرك عند التركيب على الجناح لأنه غير مستخدم في هذه الحالة
     document.getElementById('engine-vertical-position-group').style.display = enginePlacement === 'wing' ? 'none' : 'flex';
 
+    // إظهار/إخفاء خيار اتجاه دوران مروحة الجناح في قسم المحاكاة
+    const wingPropRotationGroup = document.getElementById('wing-prop-rotation-group');
+    if (wingPropRotationGroup) {
+        wingPropRotationGroup.style.display = enginePlacement === 'wing' ? 'flex' : 'none';
+    }
+
 
     // Landing Gear Controls visibility
     landingGearControls.style.display = hasLandingGearInput.checked ? 'block' : 'none';
