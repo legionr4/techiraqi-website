@@ -591,6 +591,21 @@
                         <label for="engine-vertical-position">الموضع العمودي للمحرك (<span class="unit-label">سم</span>)</label>
                         <input type="number" id="engine-vertical-position" value="0" step="0.5" title="قيمة موجبة للأعلى، سالبة للأسفل من المحور المركزي">
                     </div>
+                    <!-- New Engine Thrust Angle -->
+                    <div class="input-group" id="engine-thrust-angle-group">
+                        <label for="engine-thrust-angle">زاوية ميلان المحرك (°)</label>
+                        <input type="number" id="engine-thrust-angle" value="-2" step="0.5" min="-10" max="10" title="قيمة سالبة للميلان للأسفل (Downthrust)، وهو الشائع.">
+                    </div>
+                    <!-- New Engine Side Thrust Angle -->
+                    <div class="input-group" id="engine-side-thrust-angle-group">
+                        <label for="engine-side-thrust-angle">زاوية الميلان الجانبي (°)</label>
+                        <input type="number" id="engine-side-thrust-angle" value="2" step="0.5" min="-10" max="10" title="قيمة موجبة للميلان لليمين (Right Thrust)، وهو الشائع لتعويض عزم الدوران.">
+                    </div>
+                    <!-- New Engine Side Thrust Angle -->
+                    <div class="input-group" id="engine-side-thrust-angle-group">
+                        <label for="engine-side-thrust-angle">زاوية الميلان الجانبي (°)</label>
+                        <input type="number" id="engine-side-thrust-angle" value="2" step="0.5" min="-10" max="10" title="قيمة موجبة للميلان لليمين (Right Thrust)، وهو الشائع لتعويض عزم الدوران.">
+                    </div>
                     <!-- Wing Mount Options -->
                     <div id="wing-engine-placement-options" style="display:none;">
                         <div class="input-group">
@@ -1086,6 +1101,14 @@
                 <div class="result-item" id="pitching-moment-result-item" title="العزم الذي يولده المحرك حول مركز الجاذبية. القيمة السالبة تعني ميلان للأسفل (nose-down)، والموجبة للأعلى (nose-up).">
                     <p><strong>عزم الانحدار من الدفع (N.m):</strong></p>
                     <span id="pitching-moment-result">0.00</span>
+                </div>
+                <div class="result-item" id="yawing-moment-result-item" title="العزم الذي يولده المحرك حول المحور العمودي. القيمة الموجبة تعني انعراج لليمين (nose-right).">
+                    <p><strong>عزم الانعراج من الدفع (N.m):</strong></p>
+                    <span id="yawing-moment-result">0.00</span>
+                </div>
+                <div class="result-item" id="yawing-moment-result-item" title="العزم الذي يولده المحرك حول المحور العمودي. القيمة الموجبة تعني انعراج لليمين (nose-right).">
+                    <p><strong>عزم الانعراج من الدفع (N.m):</strong></p>
+                    <span id="yawing-moment-result">0.00</span>
                 </div>
             </div>
         </div>

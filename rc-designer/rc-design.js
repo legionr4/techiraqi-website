@@ -404,6 +404,8 @@ const mainGearWidthInput = document.getElementById('main-gear-width');
 // Engine Inputs
 const engineTypeInput = document.getElementById('engine-type');
 const enginePlacementInput = document.getElementById('engine-placement');
+const engineThrustAngleInput = document.getElementById('engine-thrust-angle');
+const engineSideThrustAngleInput = document.getElementById('engine-side-thrust-angle');
 const engineVerticalPositionInput = document.getElementById('engine-vertical-position');
 const electricEngineOptions = document.getElementById('electric-engine-options');
 const icEngineOptions = document.getElementById('ic-engine-options');
@@ -412,6 +414,8 @@ const icEngineTypeInput = document.getElementById('ic-engine-type');
 
 // Electric Engine Inputs
 const engineVerticalPositionGroup = document.getElementById('engine-vertical-position-group');
+const engineSideThrustAngleGroup = document.getElementById('engine-side-thrust-angle-group');
+const engineThrustAngleGroup = document.getElementById('engine-thrust-angle-group');
 const wingEnginePlacementOptions = document.getElementById('wing-engine-placement-options');
 const engineWingDistanceInput = document.getElementById('engine-wing-distance');
 const engineWingVerticalPosInput = document.getElementById('engine-wing-vertical-pos');
@@ -492,6 +496,7 @@ const cgPositionResultEl = document.getElementById('cg-position-result');
 const acPositionResultEl = document.getElementById('ac-position-result');
 const staticMarginResultEl = document.getElementById('static-margin-result');
 const pitchingMomentResultEl = document.getElementById('pitching-moment-result');
+const yawingMomentResultEl = document.getElementById('yawing-moment-result');
 
 const planeParams = {}; // Object to hold cached plane parameters for the animation loop
 
@@ -951,6 +956,9 @@ function updatePlaneModel() {
     // إظهار/إخفاء خيارات موضع محرك الجناح
     const enginePlacement = enginePlacementInput.value;
     engineVerticalPositionGroup.style.display = (enginePlacement === 'front' || enginePlacement === 'rear') ? 'flex' : 'none';
+    engineSideThrustAngleGroup.style.display = (enginePlacement === 'front' || enginePlacement === 'rear') ? 'flex' : 'none';
+    engineSideThrustAngleGroup.style.display = (enginePlacement === 'front' || enginePlacement === 'rear') ? 'flex' : 'none';
+    engineThrustAngleGroup.style.display = (enginePlacement === 'front' || enginePlacement === 'rear') ? 'flex' : 'none';
     wingEnginePlacementOptions.style.display = enginePlacement === 'wing' ? 'block' : 'none';
 
 
@@ -1103,7 +1111,6 @@ function updatePlaneModel() {
         // إنشاء طرف الجناح باستخدام دالة createSurface للحصول على مقطع هوائي صحيح
         // نفترض عدم وجود استدقاق أو ميلان لطرف الجناح نفسه للتبسيط
         const wingtipGeometry = createSurface(wingtipLength, wingtipWidth, wingtipTaperRatio, wingtipSweepAngle, wingtipThickness, wingtipAirfoilType, true, true);
-        wingtipGeometry.translate(0, wingtipLength / 2, 0); // Center the geometry vertically
 
         const wingtipMaterial = new THREE.MeshStandardMaterial({ color: wingMaterial.color, side: THREE.DoubleSide });
         const rightWingtip = new THREE.Mesh(wingtipGeometry, wingtipMaterial);
@@ -1111,20 +1118,21 @@ function updatePlaneModel() {
         // Position the wingtip at the end of the main wing
         const tipChord = rootChord * taperRatio;
         const tipSweep = halfSpan * Math.tan(sweepRad);
-        const tipX = tipSweep - (tipChord / 2) + (wingtipWidth / 2); // Attach to the trailing edge of the wing tip
-        const tipZ = halfSpan + (currentFuselageWidth / 2); // Position at the end of the wing span
-
-        rightWingtip.position.set(tipX, 0, tipZ);
+        // The wing geometry is translated by currentFuselageWidth/2, but the winglet is a child of the wing, so its position is relative.
+        const tipZ = halfSpan;
+        rightWingtip.position.set(tipSweep, 0, tipZ);
 
         // Apply the cant angle (up/down rotation)
         rightWingtip.rotation.x = wingtipAngle;
         rightWingtip.rotation.y = wingtipTwistAngle; // Apply twist/toe angle
 
         const leftWingtip = rightWingtip.clone();
-        leftWingtip.position.z *= -1;
-        leftWingtip.scale.z = -1; // Mirror the geometry
+        // Correctly mirror the twist angle for the left winglet.
+        // The cant angle (rotation.x) is handled correctly by the parent's negative scale.
+        leftWingtip.rotation.y = -wingtipTwistAngle;
 
-        wingGroup.add(rightWingtip, leftWingtip);
+        rightWing.add(rightWingtip);
+        leftWing.add(leftWingtip);
 
     }
 
@@ -1162,9 +1170,9 @@ function updatePlaneModel() {
         const chordAtHinge = rootChord + (rootChord * taperRatio - rootChord) * (aileronCenterZ / halfSpan);
         const sweepAtHinge = (aileronCenterZ >= 0 ? aileronCenterZ : 0) * Math.tan(sweepRad);
         const hingeX = sweepAtHinge - (chordAtHinge / 2) + aileronWidth;
-
-        // 3. تمت إزاحة هندسة الجناح للخارج بمقدار نصف عرض جسم الطائرة. يجب تطبيق نفس الإزاحة على محور الجنيح.
-        const finalPivotZ = aileronCenterZ + (currentFuselageWidth / 2);
+        
+        // 3. The wing geometry is already translated by half fuselage width. The aileron pivot is a child of the wing, so its Z position is relative to the wing's origin.
+        const finalPivotZ = aileronCenterZ;
 
         // 4. تحديد موضع ودوران المحاور. يستخدم المحور الأيسر نفس القيم لأن الجناح الأيسر هو نسخة معكوسة.
         rightAileronPivot.position.set(hingeX, 0, finalPivotZ);
@@ -1453,6 +1461,8 @@ function updatePlaneModel() {
     let engineLengthMeters = 0;
     let engineDiameterMeters = 0;
     const engineVerticalPosition = getValidNumber(engineVerticalPositionInput) * conversionFactor;
+    const engineThrustAngleRad = getValidNumber(engineThrustAngleInput) * Math.PI / 180;
+    const engineSideThrustAngleRad = getValidNumber(engineSideThrustAngleInput) * Math.PI / 180;
     if (engineType === 'electric') {
         engineLengthMeters = getValidNumber(electricMotorLengthInput) * conversionFactor;
         engineDiameterMeters = getValidNumber(electricMotorDiameterInput) * conversionFactor;
@@ -1487,16 +1497,19 @@ function updatePlaneModel() {
             const engine = engineProto.clone();
             engine.position.x = fuselageLength / 2 + engineLengthMeters / 2;
             engine.position.y = engineVerticalPosition;
+            engine.rotation.z = engineThrustAngleRad;
             engineGroup.add(engine);
         }
         propellerGroup.add(propProto.clone());
         propellerGroup.position.x = fuselageLength / 2 + engineLengthMeters + 0.01;
         propellerGroup.position.y = engineVerticalPosition;
+        propellerGroup.rotation.z = engineThrustAngleRad;
     } else if (enginePlacement === 'rear') {
         if (engineProto) {
             const engine = engineProto.clone();
             engine.position.x = -fuselageLength / 2 - engineLengthMeters / 2;
             engine.position.y = engineVerticalPosition;
+            engine.rotation.z = engineThrustAngleRad;
             engineGroup.add(engine);
         }
         const pusherProp = propProto.clone();
@@ -1504,6 +1517,7 @@ function updatePlaneModel() {
         propellerGroup.add(pusherProp);
         propellerGroup.position.x = -fuselageLength / 2 - engineLengthMeters - 0.01;
         propellerGroup.position.y = engineVerticalPosition;
+        propellerGroup.rotation.z = engineThrustAngleRad;
     } else if (enginePlacement === 'wing') {
         if (engineProto) {
             // قراءة جميع خيارات تركيب الجناح
@@ -1807,6 +1821,8 @@ function calculateAerodynamics() {
     const cockpitPosition = getVal(cockpitPositionInput);
     const engineType = getStr(engineTypeInput);
     const hasLandingGear = getCheck(hasLandingGearInput);
+    const engineThrustAngleRad = getRaw(engineThrustAngleInput) * (Math.PI / 180);
+    const engineSideThrustAngleRad = getRaw(engineSideThrustAngleInput) * (Math.PI / 180);
     const engineVerticalPosition = getVal(engineVerticalPositionInput);
     const wheelDiameter = getVal(wheelDiameterInput);
     const wheelThickness = getVal(wheelThicknessInput);
@@ -1980,11 +1996,23 @@ function calculateAerodynamics() {
     const totalDrag = aeroDrag + prop_drag;
 
     // --- حساب عزم الانحدار من الدفع (Pitching Moment from Thrust) ---
-    // يفترض أن مركز الجاذبية يقع على المحور Y=0
-    let pitchingMomentFromThrust = 0;
+    let pitchingMomentFromThrust = 0, yawingMomentFromThrust = 0;
     if (enginePlacement === 'front' || enginePlacement === 'rear') {
-        // القوة العمودية للأعلى (موجبة) تولد عزمًا سالبًا (nose-down)
-        pitchingMomentFromThrust = thrust * -engineVerticalPosition;
+        // حساب المكونات الأفقية والعمودية للدفع
+        const mainThrustComponent = thrust * Math.cos(engineThrustAngleRad) * Math.cos(engineSideThrustAngleRad);
+        const verticalThrust = thrust * Math.sin(engineThrustAngleRad);
+        const sideThrust = thrust * Math.cos(engineThrustAngleRad) * Math.sin(engineSideThrustAngleRad);
+
+        // حساب ذراع العزم الأفقي (المسافة بين المحرك ومركز الجاذبية)
+        const engineX = (enginePlacement === 'front') ? (fuselageLength / 2 + engineLengthMeters / 2) : (-fuselageLength / 2 - engineLengthMeters / 2);
+        const horizontalLeverArm = engineX - cg_x; // cg_x is calculated later, but we need it here. This is a slight approximation but acceptable.
+
+        // العزم = (القوة الأفقية * الذراع العمودي) - (القوة العمودية * الذراع الأفقي)
+        // عزم الانحدار: عزم سالب = ميلان للأسفل (nose-down)
+        pitchingMomentFromThrust = (verticalThrust * horizontalLeverArm) - (mainThrustComponent * engineVerticalPosition);
+
+        // عزم الانعراج: عزم موجب = انعراج لليمين (nose-right)
+        yawingMomentFromThrust = sideThrust * horizontalLeverArm;
     }
     // 4. حساب الوزن (Weight Calculation)
     const wingVolume = mainWingArea * wingThickness; // Volume of main wing in m³
@@ -2504,8 +2532,11 @@ function calculateAerodynamics() {
     // عرض عزم الانحدار
     const pitchingMomentItem = document.getElementById('pitching-moment-result-item');
     pitchingMomentResultEl.textContent = pitchingMomentFromThrust.toFixed(3);
+    const yawingMomentItem = document.getElementById('yawing-moment-result-item');
+    yawingMomentResultEl.textContent = yawingMomentFromThrust.toFixed(3);
     // إظهار الحقل فقط إذا كان المحرك أماميًا أو خلفيًا
     pitchingMomentItem.style.display = (enginePlacement === 'front' || enginePlacement === 'rear') ? 'flex' : 'none';
+    yawingMomentItem.style.display = (enginePlacement === 'front' || enginePlacement === 'rear') ? 'flex' : 'none';
 
 }
 
