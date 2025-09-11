@@ -1073,9 +1073,6 @@ function updatePlaneModel() {
     wingGeometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
     wingGeometry.computeVertexNormals(); // لحساب الإضاءة بشكل صحيح
 
-    // إزاحة الجناح ليبدأ من جانب جسم الطائرة بدلاً من المركز
-    wingGeometry.translate(0, 0, currentFuselageWidth / 2);
-
     const rightWing = new THREE.Mesh(wingGeometry, wingMaterial);
     const leftWing = rightWing.clone();
     leftWing.scale.z = -1; // عكس الجناح الأيسر
@@ -1085,6 +1082,10 @@ function updatePlaneModel() {
     const dihedralRad = dihedralAngle * (Math.PI / 180);
     rightWing.rotation.x = dihedralRad;
     leftWing.rotation.x = dihedralRad; // الانعكاس في المقياس Z سيتكفل بجعل الجناح الآخر يرتفع أيضًا
+
+    // تحديد موضع الجناحين ليبدآ من جانبي جسم الطائرة
+    rightWing.position.z = currentFuselageWidth / 2;
+    leftWing.position.z = -currentFuselageWidth / 2;
 
     wingGroup.add(rightWing, leftWing);
      // Wingtip
