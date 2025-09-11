@@ -2941,7 +2941,7 @@ fuselageShapeInput.addEventListener('change', updateAll);
 hasRudderInput.addEventListener('change', updateAll);
 engineTypeInput.addEventListener('change', updateEngineUI);
 fuselageNoseShapeInput.addEventListener('change', updateAll);
-batteryVoltageInput.addEventListener('input', debouncedUpdate); // إعادة الحساب عند تغيير الفولتية
+batteryVoltageInput.addEventListener('input', debouncedCalcUpdate); // إعادة الحساب عند تغيير الفولتية
 fuselageTailShapeInput.addEventListener('change', updateAll);
 hasCockpitInput.addEventListener('change', updateAll);
 fuelTankMaterialInput.addEventListener('change', updateAll);
