@@ -2659,31 +2659,35 @@ function calculateAerodynamics() {
 
     // عزم أطراف الجناح (يُضاف فقط إذا كانت مُفعّلة)
     if (hasWingtip && wingtipWeightKg > 0) {
-        // --- FIX: More robust calculation for wingtip CG ---
+        // --- FIX: Correctly calculate moment for BOTH wingtips ---
+        const singleWingtripWeight = wingtipWeightKg / 2;
         const wingtipLength = getVal(wingtipLengthInput);
         const wingtipWidth = getVal(wingtipWidthInput); // This is the root chord of the wingtip
         const wingtipTaperRatio = getRaw(wingtipTaperRatioInput);
         const wingtipSweepRad = getRaw(wingtipSweepAngleInput) * Math.PI / 180;
 
         // 1. Calculate the wingtip's local CG (as if it's a small wing)
-        const mac_wt = (2 / 3) * wingtipWidth * ((1 + wingtipTaperRatio + Math.pow(wingtipTaperRatio, 2)) / (1 + wingtipTaperRatio));
-        const mac_y_wt = (wingtipLength / 6) * ((1 + 2 * wingtipTaperRatio) / (1 + wingtipTaperRatio));
-        const mac_x_le_wt = mac_y_wt * Math.tan(wingtipSweepRad);
-        const wingtip_local_cg_x = mac_x_le_wt + (0.42 * mac_wt); // Relative to its own root LE
-        const wingtip_local_cg_spanwise = mac_y_wt; // Spanwise position on the wingtip itself
+        const wt_mac = (2 / 3) * wingtipWidth * ((1 + wingtipTaperRatio + Math.pow(wingtipTaperRatio, 2)) / (1 + wingtipTaperRatio));
+        const wt_mac_y = (wingtipLength / 6) * ((1 + 2 * wingtipTaperRatio) / (1 + wingtipTaperRatio));
+        const wt_mac_x_le = wt_mac_y * Math.tan(wingtipSweepRad);
+        const wingtip_local_cg_x = wt_mac_x_le + (0.42 * wt_mac); // Relative to its own root LE
+        const wingtip_local_cg_spanwise = wt_mac_y; // Spanwise position on the wingtip itself
 
         // 2. Find the mounting point on the main wing
         const mainWingTipChord = wingChord * taperRatio;
         const mainWingTipLE_X = wingPositionX + (wingSpan / 2) * Math.tan(sweepRad); // LE X-pos at the tip
         const mainWingTipMountX = mainWingTipLE_X - (mainWingTipChord / 2) + (wingtipWidth / 2); // Mount at center of tip chord
         const mainWingTipMountY = wingGroup.position.y + (wingSpan / 2) * Math.tan(dihedralAngle * Math.PI / 180);
-        const mainWingTipMountZ = wingSpan / 2;
 
-        // 3. Combine to get global CG for the wingtip (assuming vertical winglet for now)
-        const wingtipGlobalCG_X = mainWingTipMountX - wingtip_local_cg_x;
-        const wingtipGlobalCG_Y = mainWingTipMountY + wingtip_local_cg_spanwise;
-        const wingtipGlobalCG_Z = mainWingTipMountZ; // The Z position is complex, this is an approximation
-        addMoment(wingtipWeightKg, wingtipGlobalCG_X, wingtipGlobalCG_Y, wingtipGlobalCG_Z);
+        // 3. Calculate and add moment for the RIGHT wingtip
+        const rightWingtripCG_X = mainWingTipMountX - wingtip_local_cg_x;
+        const rightWingtripCG_Y = mainWingTipMountY + wingtip_local_cg_spanwise;
+        const rightWingtripCG_Z = wingSpan / 2;
+        addMoment(singleWingtripWeight, rightWingtripCG_X, rightWingtripCG_Y, rightWingtripCG_Z);
+
+        // 4. Calculate and add moment for the LEFT wingtip (mirrored Z)
+        const leftWingtripCG_Z = -rightWingtripCG_Z;
+        addMoment(singleWingtripWeight, rightWingtripCG_X, rightWingtripCG_Y, leftWingtripCG_Z);
     }
 
     // عزم القمرة
