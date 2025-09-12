@@ -2083,7 +2083,7 @@ function calculateAerodynamics() {
     const wingEngineForeAft = getStr(engineWingForeAftInput);
     const engineLengthMeters = (engineType === 'electric' ? getVal(electricMotorLengthInput) : getVal(icEngineLengthInput));
 
-    // --- حسابات محدثة ---
+    // ---- حسابات محدثة ---
     // --- حساب مساحة الجناح الرئيسي (بدون الأطراف) ---
     // تم تعديل المنطق: مساحة الجناح هي مساحة الجزء الثابت + مساحة الجنيحات
     const tipChord = wingChord * taperRatio; // This is needed for both area and weight
