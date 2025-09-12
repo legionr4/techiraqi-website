@@ -2646,7 +2646,6 @@ function calculateAerodynamics() {
     const tailIncidenceRad = getRaw(tailIncidenceAngleInput) * (Math.PI / 180);
     const tailAssemblyWeightKg = tailWeightKg; // الوزن الإجمالي للذيل (ثابت + متحرك)
     let tailAssemblyLocalMomentX = 0;
-    let tailAssemblyLocalMomentZ = 0; // Not used yet, but good practice
     let tailAssemblyLocalMomentY = 0;
 
     // عزم الجزء الثابت من الذيل (نسبة إلى نقطة ارتكاز الذيل)
@@ -2654,38 +2653,19 @@ function calculateAerodynamics() {
     if (tailType === 't-tail') {
         baseTailY = vStabHeight + currentFuselageHeight / 2;
     }
-
-    // --- FIX: Separate H-Stab and V-Stab moment calculations ---
-    // 1. Horizontal Stabilizer Moment
-    if (hStabWeightKg > 0) {
-        const hStabCgSpanwise = (tailSpan / 6) * ((1 + 2 * tailTaperRatio) / (1 + tailTaperRatio));
-        const hStabCgY_dihedral = hStabCgSpanwise * Math.tan(tailDihedralAngle * Math.PI / 180);
-        const hStabCgY = baseTailY + hStabCgY_dihedral;
-        const hStabSweepRad = getRaw(tailSweepAngleInput) * (Math.PI / 180);
-        const hStabCgX_local = -(hStabCgSpanwise * Math.tan(hStabSweepRad) + (tailChord * 0.42));
-        tailAssemblyLocalMomentX += hStabWeightKg * hStabCgX_local;
-        tailAssemblyLocalMomentY += hStabWeightKg * hStabCgY;
-    }
-
-    // 2. Vertical Stabilizer Moment
-    if (vStabWeightKg > 0) {
-        const vStabCgSpanwise = (vStabHeight / 6) * ((1 + 2 * tailTaperRatio) / (1 + tailTaperRatio)); // Here, span is height
-        const vStabCgY = (currentFuselageHeight / 2) + vStabCgSpanwise;
-        const vStabSweepRad = getRaw(vStabSweepAngleInput) * (Math.PI / 180);
-        const vStabCgX_local = -(vStabCgSpanwise * Math.tan(vStabSweepRad) + (vStabChord * 0.42));
-        tailAssemblyLocalMomentX += vStabWeightKg * vStabCgX_local;
-        tailAssemblyLocalMomentY += vStabWeightKg * vStabCgY;
-    }
+    const tailCgSpanwise = (tailSpan / 6) * ((1 + 2 * tailTaperRatio) / (1 + tailTaperRatio));
+    const tailCgY_dihedral = tailCgSpanwise * Math.tan(tailDihedralAngle * Math.PI / 180);
+    const tailCgY = baseTailY + tailCgY_dihedral;
+    const tailCgX_local = -(tailChord * 0.42);
+    tailAssemblyLocalMomentX += fixedTailWeightKg * tailCgX_local;
+    tailAssemblyLocalMomentY += fixedTailWeightKg * tailCgY;
 
     // عزم الرافع (نسبة إلى نقطة ارتكاز الذيل)
     if (hasElevator && elevatorWeightKg > 0) {
         const hStabRootChordEffective = tailChord - elevatorWidth;
         const elevatorCgX_local = -hStabRootChordEffective - (elevatorWidth / 2);
         tailAssemblyLocalMomentX += elevatorWeightKg * elevatorCgX_local;
-        // Elevator Y position depends on tail type
-        const hStabCgSpanwise = (tailSpan / 6) * ((1 + 2 * tailTaperRatio) / (1 + tailTaperRatio));
-        const elevatorCgY = baseTailY + (hStabCgSpanwise * Math.tan(tailDihedralAngle * Math.PI / 180));
-        tailAssemblyLocalMomentY += elevatorWeightKg * elevatorCgY;
+        tailAssemblyLocalMomentY += elevatorWeightKg * tailCgY; // يفترض نفس ارتفاع الجزء الثابت
     }
 
     // عزم الدفة (نسبة إلى نقطة ارتكاز الذيل)
@@ -2705,9 +2685,9 @@ function calculateAerodynamics() {
         // 2. تطبيق دوران زاوية الميلان (Incidence) على مركز الثقل المحلي
         // الدوران حول المحور Z في النموذج ثلاثي الأبعاد
         const cosInc = Math.cos(tailIncidenceRad);
-        const sinInc = Math.sin(tailIncidenceRad); // This is rotation around Z axis in the model
-        const rotatedLocalCgX = localCgX * cosInc - localCgY * sinInc; // Incorrect, incidence is rotation around Y axis of the tail, which is Z in the model
-        const rotatedLocalCgY = localCgX * sinInc + localCgY * cosInc; // Incorrect
+        const sinInc = Math.sin(tailIncidenceRad);
+        const rotatedLocalCgX = localCgX * cosInc - localCgY * sinInc;
+        const rotatedLocalCgY = localCgX * sinInc + localCgY * cosInc;
 
         // 3. حساب الموضع العالمي النهائي وإضافة العزم
         const finalTailCgX = tailPositionX + rotatedLocalCgX;
