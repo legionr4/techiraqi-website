@@ -2597,12 +2597,19 @@ function calculateAerodynamics() {
     // عزم الجزء الثابت من الجناح
     // The geometric centroid of a uniform wing is closer to 42% of the MAC.
     // This is a better approximation for the center of *mass* than the aerodynamic center (25%).
-    const wingCgX = wingPositionX + mac_x_le + (0.42 * mac);
     // --- حساب تأثير الديhedral على الموضع العمودي لمركز ثقل الجناح ---
     const wingCgSpanwise = (wingSpan / 6) * ((1 + 2 * taperRatio) / (1 + taperRatio)); // الموضع العرضي لمركز ثقل نصف الجناح
     const wingCgY_dihedral = wingCgSpanwise * Math.tan(dihedralAngle * Math.PI / 180);
     const wingCgY = wingGroup.position.y + wingCgY_dihedral;
-    addMoment(fixedWingWeightKg, wingCgX, wingCgY, 0);
+
+    // --- FIX: حساب تأثير الميلان (Sweep) على الموضع الطولي لمركز ثقل الجناح ---
+    // نحسب الموضع الطولي لمركز ثقل نصف الجناح
+    const halfWingCgX_offset = wingCgSpanwise * Math.tan(sweepRad);
+    const wingCgX = wingPositionX + halfWingCgX_offset + (0.42 * mac); // تقدير تقريبي لمركز الثقل الطولي
+
+    // إضافة عزم كل نصف جناح على حدة لضمان دقة الحسابات في جميع المحاور
+    addMoment(fixedWingWeightKg / 2, wingCgX, wingCgY, wingCgSpanwise); // Right half
+    addMoment(fixedWingWeightKg / 2, wingCgX, wingCgY, -wingCgSpanwise); // Left half
 
     // عزم الجزء الثابت من الذيل
     let baseTailY = 0;
