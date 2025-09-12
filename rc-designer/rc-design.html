@@ -329,6 +329,14 @@
 
                     <!-- Wing Results -->
                     <div class="fieldset-results">
+                        <div class="result-item" id="aileron-area-container" style="display: none;">
+                            <p>مساحة الجنيحات (م²):</p>
+                            <span id="aileron-area-result">0.00</span>
+                        </div>
+                        <div class="result-item" id="aileron-weight-container" style="display: none;">
+                            <p>وزن الجنيحات (جرام):</p>
+                            <span id="aileron-weight-result">0</span>
+                        </div>
                         <div class="result-item">
                             <p>مساحة الجناح (م²):</p>
                             <span id="wing-area-result">0.00</span>
@@ -457,6 +465,22 @@
 
                     <!-- Tail Results -->
                     <div class="fieldset-results">
+                        <div class="result-item" id="elevator-area-container" style="display: none;">
+                            <p>مساحة الرافع (م²):</p>
+                            <span id="elevator-area-result">0.00</span>
+                        </div>
+                        <div class="result-item" id="elevator-weight-container" style="display: none;">
+                            <p>وزن الرافع (جرام):</p>
+                            <span id="elevator-weight-result">0</span>
+                        </div>
+                        <div class="result-item" id="rudder-area-container" style="display: none;">
+                            <p>مساحة الدفة (م²):</p>
+                            <span id="rudder-area-result">0.00</span>
+                        </div>
+                        <div class="result-item" id="rudder-weight-container" style="display: none;">
+                            <p>وزن الدفة (جرام):</p>
+                            <span id="rudder-weight-result">0</span>
+                        </div>
                         <div class="result-item">
                             <p>مساحة الذيل (م²):</p>
                             <span id="tail-area-result">0.00</span>
@@ -1131,6 +1155,14 @@
                 <fieldset>
                     <legend>المواد</legend>
                     <div class="input-group">
+                        <label for="fuselage-material">مادة صنع الجسم</label>
+                        <select id="fuselage-material">
+                            <option value="foam" selected>فوم (Foam - EPO/EPP)</option>
+                            <option value="balsa">خشب البلسا (Balsa)</option>
+                            <option value="plastic">بلاستيك (Plastic - ABS)</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
                         <label for="structure-material">مادة صنع الجناح والذيل</label>
                         <select id="structure-material">
                             <option value="foam" selected>فوم (Foam - EPO/EPP)</option>
@@ -1139,11 +1171,12 @@
                         </select>
                     </div>
                     <div class="input-group">
-                        <label for="fuselage-material">مادة صنع الجسم</label>
-                        <select id="fuselage-material">
+                        <label for="control-surface-material">مادة صنع أسطح التحكم</label>
+                        <select id="control-surface-material">
                             <option value="foam" selected>فوم (Foam - EPO/EPP)</option>
                             <option value="balsa">خشب البلسا (Balsa)</option>
                             <option value="plastic">بلاستيك (Plastic - ABS)</option>
+                            <option value="carbon_fiber">ألياف الكربون</option>
                         </select>
                     </div>
                     <div class="input-group">

@@ -338,6 +338,7 @@ const wingTailDistanceInput = document.getElementById('wing-tail-distance');
 const fuselageMaterialInput = document.getElementById('fuselage-material');
 
 const structureMaterialInput = document.getElementById('structure-material');
+const controlSurfaceMaterialInput = document.getElementById('control-surface-material');
 
 // Cockpit Inputs
 const hasCockpitInput = document.getElementById('has-cockpit');
@@ -1972,6 +1973,7 @@ function calculateAerodynamics() {
     const propMaterial = getStr(propMaterialInput);
     const propPitch = getRaw(propPitchInput); // inches
     const propRpm = getRaw(propRpmInput); // RPM
+    const controlSurfaceMaterial = getStr(controlSurfaceMaterialInput);
     const structureMaterial = getStr(structureMaterialInput);
     const fuselageMaterialValue = getStr(fuselageMaterialInput);
     const fuselageShape = getStr(fuselageShapeInput);
@@ -2225,6 +2227,7 @@ function calculateAerodynamics() {
     // 4. حساب الوزن (Weight Calculation)
     const structureMaterialDensity = MATERIAL_DENSITIES[structureMaterial]; // Density in kg/m³
     const fuselageMaterialDensity = MATERIAL_DENSITIES[fuselageMaterialValue];
+    const controlSurfaceMaterialDensity = MATERIAL_DENSITIES[controlSurfaceMaterial] || structureMaterialDensity; // Fallback to main material
 
     // حساب وزن أطراف الجناح (Wingtips)
     let wingtipWeightKg = 0;
@@ -2242,7 +2245,7 @@ function calculateAerodynamics() {
     if (hasAileron) {
         aileronArea = 2 * aileronLength * aileronWidth; // مساحة الجنيحين
         const aileronVolume = aileronArea * aileronThickness;
-        aileronWeightKg = aileronVolume * structureMaterialDensity;
+        aileronWeightKg = aileronVolume * controlSurfaceMaterialDensity;
     }
 
     // --- حساب وزن الجناح (بشكل دقيق) ---
@@ -2253,18 +2256,70 @@ function calculateAerodynamics() {
     // الوزن الإجمالي للجناح هو مجموع الجزء الثابت والجنيحات
     const wingWeightKg = fixedWingWeightKg + aileronWeightKg;
 
+    // --- Update Aileron-specific results display ---
+    const aileronAreaResultEl = document.getElementById('aileron-area-result');
+    const aileronWeightResultEl = document.getElementById('aileron-weight-result');
+    const aileronAreaContainer = document.getElementById('aileron-area-container');
+    const aileronWeightContainer = document.getElementById('aileron-weight-container');
+
+    if (hasAileron) {
+        aileronAreaContainer.style.display = 'flex';
+        aileronWeightContainer.style.display = 'flex';
+        aileronAreaResultEl.textContent = aileronArea.toFixed(3);
+        aileronWeightResultEl.textContent = (aileronWeightKg * 1000).toFixed(0);
+    } else {
+        aileronAreaContainer.style.display = 'none';
+        aileronWeightContainer.style.display = 'none';
+    }
+
+    // --- Elevator and Rudder Area/Weight Calculation ---
     let elevatorWeightKg = 0;
+    let elevatorArea = 0;
     if (hasElevator && (tailType === 'conventional' || tailType === 't-tail')) {
+        elevatorArea = 2 * elevatorLength * elevatorWidth; // For both sides
         const singleElevatorVolume = elevatorLength * elevatorWidth * controlSurfaceThickness;
-        elevatorWeightKg = 2 * singleElevatorVolume * structureMaterialDensity;
+        elevatorWeightKg = 2 * singleElevatorVolume * controlSurfaceMaterialDensity;
     }
 
     let rudderWeightKg = 0;
+    let rudderArea = 0;
     if (hasRudder && (tailType === 'conventional' || tailType === 't-tail')) {
-        const rudderVolume = rudderLength * rudderWidth * controlSurfaceThickness;
-        rudderWeightKg = rudderVolume * structureMaterialDensity;
+        rudderArea = rudderLength * rudderWidth;
+        const rudderVolume = rudderArea * controlSurfaceThickness;
+        rudderWeightKg = rudderVolume * controlSurfaceMaterialDensity;
     }
     // ملاحظة: أسطح التحكم للذيل V تعتبر جزءًا من وزن الذيل الرئيسي حاليًا لتبسيط الحسابات.
+
+    // --- Update Elevator/Rudder-specific results display ---
+    const elevatorAreaResultEl = document.getElementById('elevator-area-result');
+    const elevatorWeightResultEl = document.getElementById('elevator-weight-result');
+    const elevatorAreaContainer = document.getElementById('elevator-area-container');
+    const elevatorWeightContainer = document.getElementById('elevator-weight-container');
+
+    if (hasElevator && (tailType === 'conventional' || tailType === 't-tail')) {
+        elevatorAreaContainer.style.display = 'flex';
+        elevatorWeightContainer.style.display = 'flex';
+        elevatorAreaResultEl.textContent = elevatorArea.toFixed(3);
+        elevatorWeightResultEl.textContent = (elevatorWeightKg * 1000).toFixed(0);
+    } else {
+        elevatorAreaContainer.style.display = 'none';
+        elevatorWeightContainer.style.display = 'none';
+    }
+
+    const rudderAreaResultEl = document.getElementById('rudder-area-result');
+    const rudderWeightResultEl = document.getElementById('rudder-weight-result');
+    const rudderAreaContainer = document.getElementById('rudder-area-container');
+    const rudderWeightContainer = document.getElementById('rudder-weight-container');
+
+    if (hasRudder && (tailType === 'conventional' || tailType === 't-tail')) {
+        rudderAreaContainer.style.display = 'flex';
+        rudderWeightContainer.style.display = 'flex';
+        rudderAreaResultEl.textContent = rudderArea.toFixed(3);
+        rudderWeightResultEl.textContent = (rudderWeightKg * 1000).toFixed(0);
+    } else {
+        rudderAreaContainer.style.display = 'none';
+        rudderWeightContainer.style.display = 'none';
+    }
 
     // --- حساب وزن الذيل (بشكل دقيق) ---
     let fixedTailWeightKg = 0;
