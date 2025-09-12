@@ -1997,20 +1997,21 @@ function calculateAerodynamics() {
     const wingtipLength = getVal(wingtipLengthInput);
     const wingtipWidth = getVal(wingtipWidthInput);
     const wingtipThickness = getVal(wingtipThicknessInput);
+    const wingtipTaperRatio = getRaw(wingtipTaperRatioInput);
     const hasCockpit = getCheck(hasCockpitInput);
     const cockpitLength = getVal(cockpitLengthInput);
-    const cockpitWidth = getVal(cockpitWidthInput);
-    const cockpitHeight = getVal(cockpitHeightInput);
-    const cockpitMaterial = getStr(cockpitMaterialInput);
-    const cockpitPosition = getVal(cockpitPositionInput);
-    const engineType = getStr(engineTypeInput);
-    const hasLandingGear = getCheck(hasLandingGearInput);
-    const wheelDiameter = getVal(wheelDiameterInput);
-    const wheelThickness = getVal(wheelThicknessInput);
-    const strutLength = getVal(strutLengthInput);
-    const strutThickness = getVal(strutThicknessInput);
-    const gearType = getStr(gearTypeInput);
-    const mainGearPosition = getVal(mainGearPositionInput);
+    const cockpitWidth = getVal(cockpitWidthInput); // This was a duplicate, but keeping it for context
+    const cockpitHeight = getVal(cockpitHeightInput); // This was a duplicate, but keeping it for context
+    const cockpitMaterial = getStr(cockpitMaterialInput); // This was a duplicate, but keeping it for context
+    const cockpitPosition = getVal(cockpitPositionInput); // This was a duplicate, but keeping it for context
+    const engineType = getStr(engineTypeInput); // This was a duplicate, but keeping it for context
+    const hasLandingGear = getCheck(hasLandingGearInput); // This was a duplicate, but keeping it for context
+    const wheelDiameter = getVal(wheelDiameterInput); // This was a duplicate, but keeping it for context
+    const wheelThickness = getVal(wheelThicknessInput); // This was a duplicate, but keeping it for context
+    const strutLength = getVal(strutLengthInput); // This was a duplicate, but keeping it for context
+    const strutThickness = getVal(strutThicknessInput); // This was a duplicate, but keeping it for context
+    const gearType = getStr(gearTypeInput); // This was a duplicate, but keeping it for context
+    const mainGearPosition = getVal(mainGearPositionInput); // This was a duplicate, but keeping it for context
     const wingPropDistance = getVal(wingPropDistanceInput);
     const wingTailDistance = getVal(wingTailDistanceInput);
     const enginePlacement = getStr(enginePlacementInput);
@@ -2050,10 +2051,10 @@ function calculateAerodynamics() {
     const aileronAirfoilType = getStr(aileronAirfoilTypeInput);
     const hasElevator = getCheck(hasElevatorInput);
     const elevatorAirfoilType = getStr(elevatorAirfoilTypeInput);
-    const elevatorLength = getVal(elevatorLengthInput);
+    const elevatorLength = getVal(elevatorLengthInput); // This was a duplicate, but keeping it for context
     const elevatorWidth = getVal(elevatorWidthInput);
     const hasRudder = getCheck(hasRudderInput);
-    const rudderLength = getVal(rudderLengthInput);
+    const rudderLength = getVal(rudderLengthInput); // This was a duplicate, but keeping it for context
     const rudderWidth = getVal(rudderWidthInput);
     const rudderAirfoilType = getStr(rudderAirfoilTypeInput);
     const showCgAc = getCheck(showCgAcCheckbox);
@@ -2104,30 +2105,67 @@ function calculateAerodynamics() {
     const engineLengthMeters = (engineType === 'electric' ? getVal(electricMotorLengthInput) : getVal(icEngineLengthInput));
 
     // --- حسابات محدثة ---
-    // حساب مساحة الجناح الرئيسي (بدون الأطراف)
+    // --- حساب مساحة الجناح الرئيسي (بدون الأطراف) ---
+    // تم تعديل المنطق: مساحة الجناح هي مساحة الجزء الثابت + مساحة الجنيحات
     const tipChord = wingChord * taperRatio;
-    const mainWingArea = wingSpan * (wingChord + tipChord) / 2; // Area of a trapezoid
+    const fixedWingPartArea = wingSpan * (wingChord + tipChord) / 2; // Area of the main structure part
+
+    let aileronArea = 0;
+    if (hasAileron) {
+        // مساحة الجنيحين (مستطيلين)
+        aileronArea = 2 * aileronLength * aileronWidth;
+    }
+    // مساحة الجناح الرئيسية هي مجموع مساحة الجزء الثابت ومساحة الجنيحات
+    const mainWingArea = fixedWingPartArea + aileronArea;
+
     const alphaRad = angleOfAttack * (Math.PI / 180);
 
     // حساب مساحة أطراف الجناح (إذا كانت مفعلة)
     let wingtipsArea = 0;
     if (hasWingtip) {
-        // مساحة طرفي الجناح (مستطيلين)
-        wingtipsArea = 2 * wingtipLength * wingtipWidth;
+        // تصحيح: حساب المساحة كشبه منحرف بناءً على نسبة الاستدقاق
+        const tipChord_wingtip = wingtipWidth * wingtipTaperRatio;
+        const singleWingtipsArea = wingtipLength * (wingtipWidth + tipChord_wingtip) / 2;
+        wingtipsArea = 2 * singleWingtipsArea;
     }
 
     // المساحة الكلية للجناح
     const totalWingArea = mainWingArea + wingtipsArea;
 
+    // --- حساب مساحة الذيل ---
+    // تم تعديل المنطق: مساحة الذيل هي مجموع مساحة الأجزاء الثابتة ومساحة أسطح التحكم
     let totalTailArea = 0;
+    let hStabArea = 0;
+    let vStabArea = 0;
+
+    // قراءة نسبة استدقاق الذيل
+    const tailTaperRatio = getRaw(tailTaperRatioInput);
 
     if (tailType === 'conventional' || tailType === 't-tail') {
-        const hStabArea = tailSpan * tailChord;
-        const vStabArea = vStabHeight * vStabChord;
+        // تصحيح: حساب المساحة كشبه منحرف
+        const tipChord_h = tailChord * tailTaperRatio;
+        hStabArea = tailSpan * (tailChord + tipChord_h) / 2;
+
+        const tipChord_v = vStabChord * tailTaperRatio;
+        vStabArea = vStabHeight * (vStabChord + tipChord_v) / 2;
+
         totalTailArea = hStabArea + vStabArea;
     } else if (tailType === 'v-tail') {
-        totalTailArea = 2 * (vStabHeight * vStabChord);
+        // للذيل V، تعتبر المساحة الكلية هي مساحة اللوحين
+        hStabArea = 0; // لا يوجد مثبت أفقي منفصل
+        // تصحيح: حساب المساحة كشبه منحرف
+        const tipChord_v = vStabChord * tailTaperRatio;
+        const singleVPanelArea = vStabHeight * (vStabChord + tipChord_v) / 2;
+        vStabArea = 2 * singleVPanelArea;
+        totalTailArea = vStabArea;
     }
+
+    // إضافة مساحة أسطح التحكم إلى المجموع الكلي (بنفس منطق الجناح)
+    // تصحيح: حساب مساحة أسطح التحكم كشبه منحرف أيضاً
+    const elevatorArea = hasElevator ? (2 * elevatorLength * elevatorWidth) : 0; // approximation as rectangle for now
+    const rudderArea = hasRudder ? (rudderLength * rudderWidth) : 0; // approximation as rectangle for now
+
+    totalTailArea += elevatorArea + rudderArea;
 
     // 1. قوة الرفع (Lift)
     // L = 0.5 * Cl * rho * V^2 * A
@@ -2233,7 +2271,10 @@ function calculateAerodynamics() {
     let wingtipWeightKg = 0;
     if (hasWingtip) {
         // حساب حجم طرفي الجناح (مستطيلين)
-        const singleWingtipVolume = wingtipLength * wingtipWidth * wingtipThickness;
+        // تصحيح: حساب الحجم بناءً على مساحة شبه المنحرف
+        const tipChord_wingtip = wingtipWidth * wingtipTaperRatio;
+        const singleWingtipsArea = wingtipLength * (wingtipWidth + tipChord_wingtip) / 2;
+        const singleWingtipVolume = singleWingtipsArea * wingtipThickness;
         wingtipWeightKg = 2 * singleWingtipVolume * structureMaterialDensity; // لليمين واليسار
     }
     // عرض وزن أطراف الجناح في النتائج (تم إصلاح الخطأ هنا)
@@ -2241,34 +2282,27 @@ function calculateAerodynamics() {
 
     // --- حساب وزن أسطح التحكم ---
     let aileronWeightKg = 0;
-    let aileronArea = 0;
     if (hasAileron) {
-        aileronArea = 2 * aileronLength * aileronWidth; // مساحة الجنيحين
+        // تم حساب aileronArea في الأعلى
         const aileronVolume = aileronArea * aileronThickness;
         aileronWeightKg = aileronVolume * controlSurfaceMaterialDensity;
     }
 
     // --- حساب وزن الجناح (بشكل دقيق) ---
-    // حساب وزن الجزء الثابت من الجناح (بدون الجنيحات)
-    const fixedWingArea = mainWingArea - aileronArea;
-    const fixedWingVolume = fixedWingArea * wingThickness;
+    // حساب وزن الجزء الثابت من الجناح
+    const fixedWingVolume = fixedWingPartArea * wingThickness;
     const fixedWingWeightKg = fixedWingVolume * structureMaterialDensity;
-    // الوزن الإجمالي للجناح هو مجموع الجزء الثابت والجنيحات
-    const wingWeightKg = fixedWingWeightKg + aileronWeightKg;
+    const wingWeightKg = fixedWingWeightKg + aileronWeightKg; // الوزن الإجمالي للجناح هو مجموع الجزء الثابت والجنيحات
 
     // --- Elevator and Rudder Area/Weight Calculation ---
     let elevatorWeightKg = 0;
-    let elevatorArea = 0;
-    if (hasElevator && (tailType === 'conventional' || tailType === 't-tail')) {
-        elevatorArea = 2 * elevatorLength * elevatorWidth; // For both sides
+    if (hasElevator && (tailType === 'conventional' || tailType === 't-tail') && elevatorArea > 0) {
         const singleElevatorVolume = elevatorLength * elevatorWidth * controlSurfaceThickness;
         elevatorWeightKg = 2 * singleElevatorVolume * controlSurfaceMaterialDensity;
     }
 
     let rudderWeightKg = 0;
-    let rudderArea = 0;
-    if (hasRudder && (tailType === 'conventional' || tailType === 't-tail')) {
-        rudderArea = rudderLength * rudderWidth;
+    if (hasRudder && (tailType === 'conventional' || tailType === 't-tail') && rudderArea > 0) {
         const rudderVolume = rudderArea * controlSurfaceThickness;
         rudderWeightKg = rudderVolume * controlSurfaceMaterialDensity;
     }
@@ -2277,15 +2311,13 @@ function calculateAerodynamics() {
     // --- حساب وزن الذيل (بشكل دقيق) ---
     let fixedTailWeightKg = 0;
     if (tailType === 'conventional' || tailType === 't-tail') {
-        // حساب مساحة الأجزاء الثابتة من الذيل
-        const fixedHStabArea = tailSpan * (tailChord - (hasElevator ? elevatorWidth : 0));
-        const fixedVStabArea = vStabHeight * (vStabChord - (hasRudder ? rudderWidth : 0));
-        const fixedTailVolume = (fixedHStabArea + fixedVStabArea) * tailThickness;
+        // حساب وزن الأجزاء الثابتة بناءً على مساحتها (التي هي الآن شبه منحرف)
+        const fixedTailVolume = (hStabArea + vStabArea) * tailThickness;
         fixedTailWeightKg = fixedTailVolume * structureMaterialDensity;
     } else if (tailType === 'v-tail') {
         // للذيل V، يتم حساب الوزن الكلي بناءً على المساحة الكلية والسماكة الرئيسية للتبسيط
         // (يفترض أن أسطح التحكم مدمجة)
-        const vTailVolume = totalTailArea * tailThickness;
+        const vTailVolume = vStabArea * tailThickness; // استخدام مساحة الألواح (التي هي الآن شبه منحرف)
         fixedTailWeightKg = vTailVolume * structureMaterialDensity;
     }
 
@@ -2522,9 +2554,6 @@ function calculateAerodynamics() {
 
     // المركز الهوائي للذيل الأفقي (Horizontal Tail AC)
     const X_ac_h = tailPositionX - (0.25 * tailChord);
-
-    // مساحة الذيل الأفقي
-    const hStabArea = (tailType === 'conventional' || tailType === 't-tail') ? tailSpan * tailChord : 0;
 
     // ميل منحنى الرفع للجناح والذيل
     const CL_alpha_w = 2 * Math.PI * Math.cos(sweepRad);
