@@ -853,7 +853,10 @@ function updateEngineUI() {
 }
 
 function updatePlaneModel() {
+    // --- FIX: Define all necessary variables at the top of the function scope ---
     const conversionFactor = UNIT_CONVERSIONS[unitSelector.value];
+    const engineType = engineTypeInput.value;
+
 
     // قراءة قيم الجناح
     const wingSpan = getValidNumber(wingSpanInput) * conversionFactor;
@@ -943,6 +946,7 @@ function updatePlaneModel() {
     const airflowColor = airflowColorInput.value;
     const smokeColor = smokeColorInput.value;
     const backgroundColor = backgroundColorInput.value;
+    const accessoryColor = accessoryColorInput.value; // FIX: Define accessoryColor
 
 
     // تحديث الألوان
@@ -1553,7 +1557,6 @@ function updatePlaneModel() {
 
 
     // 2. قراءة أبعاد المحرك والمروحة
-    const engineType = engineTypeInput.value;
     let engineLengthMeters = 0;
     let engineDiameterMeters = 0;
     if (engineType === 'electric') {
@@ -1854,7 +1857,7 @@ function updatePlaneModel() {
         accessoriesGroup.remove(child);
     }
 
-    const accessoryMaterial = new THREE.MeshStandardMaterial({ color: accessoryColor, transparent: true, opacity: 0.8 });
+    const accessoryMaterial = new THREE.MeshStandardMaterial({ color: accessoryColor, transparent: true, opacity: 0.8 }); // This will now work
 
     const createAccessoryBox = (weightGrams, posX_cm, posY_cm, posZ_cm, name) => {
         if (weightGrams <= 0) return;
@@ -1889,48 +1892,35 @@ function updatePlaneModel() {
     createAccessoryBox(getValidNumber(servoG1WeightInput) * getValidNumber(servoG1CountInput), getValidNumber(servoG1PositionXInput), getValidNumber(servoG1PositionYInput), getValidNumber(servoG1PositionZInput), 'Servo Group 1');
     createAccessoryBox(getValidNumber(servoG2WeightInput) * getValidNumber(servoG2CountInput), getValidNumber(servoG2PositionXInput), getValidNumber(servoG2PositionYInput), getValidNumber(servoG2PositionZInput), 'Servo Group 2');
 
-    // --- مصدر الطاقة (بطارية/خزان وقود) - تم نقل هذا الجزء إلى هنا لضمان عمله ---
+    // --- FIX: Energy Source (Battery/Fuel Tank) Logic ---
     energySourceGroup.visible = false; // إخفاؤه افتراضيًا
 
     if (engineType === 'electric') {
         energySourceGroup.visible = true;
 
         // حساب الحجم بناءً على الوزن والكثافة التقديرية للبطارية
-        const batteryWeightGrams = getValidNumber(batteryWeightInput);
+        const batteryWeightGrams = getValidNumber(batteryWeightInput); // Already in grams
         const batteryDensityG_cm3 = 1.5; // كثافة تقديرية للبطارية مع الغلاف (جرام/سم^3)
-        const volume_cm3 = batteryWeightGrams / batteryDensityG_cm3;
+        const volume_cm3 = batteryWeightGrams > 0 ? batteryWeightGrams / batteryDensityG_cm3 : 0;
         const volume_m3 = volume_cm3 / 1e6;
 
         // حساب الأبعاد من الحجم مع الحفاظ على نسبة أبعاد تقديرية (L:W:H = 4:2:1)
-        const x_dim = Math.cbrt(volume_m3 / (4 * 2 * 1));
+        const x_dim = volume_m3 > 0 ? Math.cbrt(volume_m3 / (4 * 2 * 1)) : 0;
         const height = x_dim * 1;
         const width = x_dim * 2;
         const length = x_dim * 4;
 
-        // تحديث حجم الصندوق
         energySourceMesh.scale.set(length, height, width);
 
-        // تحديث الموضع
-        // تحويل الموضع من "المسافة من المقدمة" إلى إحداثيات النموذج
         const batteryPositionFromNose = getValidNumber(batteryPositionInput) * conversionFactor;
-        const batteryPositionX = (fuselageLength / 2) - batteryPositionFromNose;
-        energySourceGroup.position.x = batteryPositionX;
+        energySourceGroup.position.x = (fuselageLength / 2) - batteryPositionFromNose;
 
     } else if (engineType === 'ic') {
         energySourceGroup.visible = true;
 
-        // قراءة الأبعاد مباشرة من المدخلات
-        const length = getValidNumber(fuelTankLengthInput) * conversionFactor;
-        const width = getValidNumber(fuelTankWidthInput) * conversionFactor;
-        const height = getValidNumber(fuelTankHeightInput) * conversionFactor;
-
-        // تحديث حجم الصندوق
-        energySourceMesh.scale.set(length, height, width);
-
-        // تحديث الموضع
+        energySourceMesh.scale.set(getValidNumber(fuelTankLengthInput) * conversionFactor, getValidNumber(fuelTankHeightInput) * conversionFactor, getValidNumber(fuelTankWidthInput) * conversionFactor);
         const tankPositionFromNose = getValidNumber(fuelTankPositionInput) * conversionFactor;
-        const tankPositionX = (fuselageLength / 2) - tankPositionFromNose;
-        energySourceGroup.position.x = tankPositionX;
+        energySourceGroup.position.x = (fuselageLength / 2) - tankPositionFromNose;
     }
 }
 
@@ -1939,7 +1929,7 @@ function updatePlaneModel() {
  * تم تعديل هذه الدالة لتقرأ القيم مباشرة من عناصر DOM لضمان الدقة.
  */
 function calculateAerodynamics() {
-    // --- Fix: Read all values directly from DOM to ensure they are current ---
+    // --- FIX: Read all values directly from DOM to ensure they are current ---
     const conversionFactor = UNIT_CONVERSIONS[unitSelector.value];
 
     // Helper to get value and convert
@@ -1948,7 +1938,7 @@ function calculateAerodynamics() {
     const getStr = (el) => el.value;
     const getCheck = (el) => el.checked;
 
-    // --- Read all parameters directly from inputs ---
+    // --- Read ALL parameters directly from inputs ---
     const wingSpan = getVal(wingSpanInput);
     const wingChord = getVal(wingChordInput);
     const wingThickness = getVal(wingThicknessInput);
@@ -3090,8 +3080,8 @@ function setAirflowVisibility(isSpinning) {
 
 function updateAll() {
     try {
-        updatePlaneModel();
-        calculateAerodynamics(); // استدعاء دالة الحسابات التي تقرأ الآن القيم مباشرة
+        updatePlaneModel(); // تحديث النموذج ثلاثي الأبعاد أولاً
+        calculateAerodynamics(); // ثم إجراء الحسابات بناءً على النموذج المحدث
         updatePlaneParameters(); // تخزين المعلمات المؤقتة للرسوم المتحركة
         if (liftChart && dragChart && thrustChart) {
             updateCharts();
