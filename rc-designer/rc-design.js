@@ -2254,7 +2254,7 @@ function calculateAerodynamics() {
         const singleWingtipsArea = wingtipLength * (wingtipWidth + tipChord_wingtip) / 2;
 
         // Adjust volume based on airfoil shape
-        let volumeFactor = 0.7; // Default for symmetrical
+        let volumeFactor = 0.7; // Default for symmetrical/blended airfoils
         if (wingtipAirfoilType === 'rectangular') {
             volumeFactor = 1.0;
         } else if (wingtipAirfoilType === 'wedge') {
