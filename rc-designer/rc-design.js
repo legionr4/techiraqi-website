@@ -2270,8 +2270,13 @@ function calculateAerodynamics() {
     // --- حساب وزن أسطح التحكم ---
     let aileronWeightKg = 0;
     if (hasAileron) {
-        // تم حساب aileronArea في الأعلى
-        const aileronVolume = aileronArea * aileronThickness;
+        // --- FIX: حساب حجم الجنيح بناءً على شكله لوزن أكثر دقة ---
+        let aileronVolumeFactor = 1.0; // الافتراضي للأشكال المستطيلة والمسطحة
+        if (aileronAirfoilType === 'wedge') {
+            aileronVolumeFactor = 0.5; // شكل الإسفين (المثلث) له نصف حجم المستطيل
+        }
+        // تم حساب aileronArea في الأعلى (مساحة الجنيحين معًا)
+        const aileronVolume = aileronArea * aileronThickness * aileronVolumeFactor;
         aileronWeightKg = aileronVolume * controlSurfaceMaterialDensity;
     }
 
