@@ -2544,9 +2544,11 @@ function calculateAerodynamics() {
     let totalMomentY = 0;
     let totalMomentZ = 0;
 
-    const addMoment = (weightKg, positionX) => {
+    const addMoment = (weightKg, positionX, positionY = 0, positionZ = 0) => {
         if (weightKg > 0) {
             totalMoment += weightKg * positionX; // حساب العزم حول نقطة الأصل (0,0,0)
+            totalMomentY += weightKg * positionY;
+            totalMomentZ += weightKg * positionZ;
         }
     };
 
@@ -2558,7 +2560,7 @@ function calculateAerodynamics() {
         // في شكل قطرة الدمع، يميل مركز الثقل نحو الجزء الأعرض (الأمامي)
         fuselageCgX = fuselageLength * 0.1; // إزاحة تقديرية للأمام بنسبة 10%
     }
-    addMoment(fuselageWeightKg, fuselageCgX);
+    addMoment(fuselageWeightKg, fuselageCgX, 0, 0); // الجسم يفترض أنه متمركز
 
     // --- تحسين دقة مركز ثقل الجناح والذيل (فصل الأجزاء الثابتة والمتحركة) ---
     // عزم الجزء الثابت من الجناح
@@ -2625,35 +2627,37 @@ function calculateAerodynamics() {
 
     if (receiverWeightGrams > 0) {
         const receiverX = fuselageDatum - receiverPosition;
-        addMoment(receiverWeightGrams / 1000, receiverX);
+        addMoment(receiverWeightGrams / 1000, receiverX, receiverPositionY, receiverPositionZ);
     }
     if (servoG1WeightGrams > 0) {
         const servoG1X = fuselageDatum - servoG1PositionX;
-        addMoment(servoG1WeightGrams / 1000, servoG1X);
+        addMoment(servoG1WeightGrams / 1000, servoG1X, servoG1PositionY, servoG1PositionZ);
     }
     if (servoG2WeightGrams > 0) {
         const servoG2X = fuselageDatum - servoG2PositionX;
-        addMoment(servoG2WeightGrams / 1000, servoG2X);
+        addMoment(servoG2WeightGrams / 1000, servoG2X, servoG2PositionY, servoG2PositionZ);
     }
 
     if (cameraWeightGrams > 0) {
         const cameraX = fuselageDatum - cameraPosition;
-        addMoment(cameraWeightGrams / 1000, cameraX);
+        addMoment(cameraWeightGrams / 1000, cameraX, cameraPositionY, cameraPositionZ);
     }
     if (otherAccessoriesWeightGrams > 0) {
         // بما أن الغراء والمواد الأخرى موزعة، نفترض أن مركز كتلتها
         // يقع في المركز الهندسي لجسم الطائرة (x=0 في إحداثيات النموذج).
-        addMoment(otherAccessoriesWeightGrams / 1000, 0);
+        addMoment(otherAccessoriesWeightGrams / 1000, 0, 0, 0);
     }
 
     if (engineType === 'electric') {
         const batteryPositionFromNose = getVal(batteryPositionInput);
         const batteryPositionX = (fuselageLength / 2) - batteryPositionFromNose;
-        addMoment(batteryWeightGrams / 1000, batteryPositionX);
+        // نفترض أن البطارية في المنتصف عمودياً وجانبياً، يمكن إضافة حقول إدخال لموضعها Y و Z في المستقبل
+        addMoment(batteryWeightGrams / 1000, batteryPositionX, 0, 0);
     } else { // ic
         const tankPositionFromNose = getVal(fuelTankPositionInput);
         const tankPositionX = (fuselageLength / 2) - tankPositionFromNose;
-        addMoment(energySourceWeightKg, tankPositionX);
+        // نفترض أن الخزان في المنتصف عمودياً وجانبياً
+        addMoment(energySourceWeightKg, tankPositionX, 0, 0);
     }
 
     // عزم المحرك والمروحة بناءً على الموضع
@@ -2696,16 +2700,17 @@ function calculateAerodynamics() {
 
     // 4. حساب الموضع النهائي لمركز الجاذبية
     const cg_x = totalWeightKg > 0 ? totalMoment / totalWeightKg : 0;
+    const cg_y = totalWeightKg > 0 ? totalMomentY / totalWeightKg : 0;
+    const cg_z = totalWeightKg > 0 ? totalMomentZ / totalWeightKg : 0;
 
     // 5. حساب الهامش الثابت
     const staticMargin = mac > 0 ? ((X_np - cg_x) / mac) * 100 : 0;
 
     // تحديث الكرات في النموذج ثلاثي الأبعاد
     cgSphere.position.x = cg_x;
+    cgSphere.position.y = cg_y;
+    cgSphere.position.z = cg_z;
     acSphere.position.x = X_np; // الكرة الزرقاء تمثل الآن النقطة المحايدة
-    // افترض أن CG و AC يقعان على المحور المركزي للطائرة
-    cgSphere.position.y = 0;
-    cgSphere.position.z = 0;
     acSphere.position.y = 0;
     acSphere.position.z = 0;
 
@@ -2818,6 +2823,8 @@ function calculateAerodynamics() {
     const cg_from_nose = cg_x - datum;
     const ac_from_nose = ac_x - datum;
 
+    document.getElementById('cg-position-y-result').textContent = (cg_y * conversionFactorToDisplay).toFixed(1);
+    document.getElementById('cg-position-z-result').textContent = (cg_z * conversionFactorToDisplay).toFixed(1);
     cgPositionResultEl.textContent = (cg_from_nose * conversionFactorToDisplay).toFixed(1);
     acPositionResultEl.textContent = ((X_np - datum) * conversionFactorToDisplay).toFixed(1);
     staticMarginResultEl.textContent = `${staticMargin.toFixed(1)}%`;
