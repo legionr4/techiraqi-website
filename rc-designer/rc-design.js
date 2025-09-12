@@ -4258,6 +4258,37 @@ function initHeatHazeParticles() {
     planeGroup.add(heatHazeParticleSystem);
 }
 
+/**
+ * Initializes the collapsible fieldset functionality.
+ */
+function initCollapsibleFieldsets() {
+    const fieldsets = document.querySelectorAll('.collapsible-fieldset');
+
+    fieldsets.forEach((fieldset) => {
+        const legend = fieldset.querySelector('.collapsible-legend');
+        const content = fieldset.querySelector('.collapsible-content');
+        const icon = legend.querySelector('.toggle-icon');
+
+        if (!legend || !content || !icon) return;
+
+        // Collapse some sections by default to save space
+        const isInitiallyCollapsed = ['المحاكاة والتأثيرات البصرية', 'ملحقات وأوزان إضافية', 'المواد', 'الألوان'].includes(legend.querySelector('span').textContent);
+
+        if (isInitiallyCollapsed) {
+            content.style.maxHeight = '0px';
+            content.classList.add('collapsed');
+            icon.classList.replace('fa-chevron-down', 'fa-chevron-left');
+        }
+
+        legend.addEventListener('click', () => {
+            const isCollapsed = content.style.maxHeight === '0px' || content.classList.contains('collapsed');
+            content.style.maxHeight = isCollapsed ? '5000px' : '0px';
+            content.classList.toggle('collapsed');
+            icon.classList.toggle('fa-chevron-down', isCollapsed);
+            icon.classList.toggle('fa-chevron-left', !isCollapsed);
+        });
+    });
+}
 
 // --- التشغيل الأولي ---
 initPropAirflowParticles();
@@ -4273,6 +4304,7 @@ updateUnitLabels();
 updateAirDensity(); // Calculate initial density based on default temp/pressure
 updateEngineUI();
 updateControlSurfacesFromSliders(); // ضبط أسطح التحكم على الوضع الأولي (0)
+initCollapsibleFieldsets(); // Initialize the new collapsible feature
 animate();
 
 // --- التعامل مع تغيير حجم النافذة ---
