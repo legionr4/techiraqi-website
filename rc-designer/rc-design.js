@@ -2710,9 +2710,9 @@ function calculateAerodynamics() {
         const mainWingTipMountY_dihedral = (wingSpan / 2) * Math.tan(dihedralAngle * Math.PI / 180);
         const mainWingTipMountZ = wingSpan / 2;
 
-        // 4. Calculate the final global CG position for the wingtip, including main wing incidence
+        // 4. Calculate the final global CG position for the wingtip, including main wing position and incidence
         const final_cg_x = mainWingTipLE_X_global + local_cg_x_rotated;
-        const final_cg_y = wingGroup.position.y + mainWingTipMountY_dihedral + local_cg_y_rotated;
+        const final_cg_y = wingYPosition + mainWingTipMountY_dihedral + local_cg_y_rotated;
         const final_cg_z = mainWingTipMountZ + local_cg_z_rotated;
 
         // Add moment for both wingtips (right and left)
