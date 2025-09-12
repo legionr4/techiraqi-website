@@ -3510,52 +3510,66 @@ function animate() {
             const travelDistance = 5.0; // مسافة ثابتة لرحلة الجسيمات
 
             if (enginePlacement === 'wing') {
+                // --- تصحيح: البحث عن المراوح بالاسم في المشهد بأكمله ---
                 const wingPropRotation = wingPropRotationInput.value;
-                const props = wingEnginesGroup.children.filter(c => c.type === 'Group');
-                if (props.length === 2) {
-                    // تحديد المروحة اليمنى واليسرى بشكل دقيق بناءً على موضعها
-                    let rightProp, leftProp;
-                    if (props[0].position.z > 0) {
-                        rightProp = props[0];
-                        leftProp = props[1];
-                    } else {
-                        rightProp = props[1];
-                        leftProp = props[0];
-                    }
-                    const rightPropPos = rightProp.position;
-                    const leftPropPos = leftProp.position;
+                const rightProp = scene.getObjectByName("wingProp_right");
+                const leftProp = scene.getObjectByName("wingProp_left");
+
+                if (rightProp && leftProp) {
+                    // --- تحسين: الحصول على الموضع العالمي وتحويله إلى محلي ---
+                    const rightPropPosWorld = new THREE.Vector3();
+                    rightProp.getWorldPosition(rightPropPosWorld);
+                    const rightPropPosLocal = planeGroup.worldToLocal(rightPropPosWorld);
+
+                    const leftPropPosWorld = new THREE.Vector3();
+                    leftProp.getWorldPosition(leftPropPosWorld);
+                    const leftPropPosLocal = planeGroup.worldToLocal(leftPropPosWorld);
+
+                    // --- تصحيح: حساب متجه الدفع الصحيح ---
+                    const thrustVector = new THREE.Vector3(-1, 0, 0); // متجه أساسي للخلف
+                    const worldQuaternion = new THREE.Quaternion();
+                    rightProp.getWorldQuaternion(worldQuaternion); // نفترض أن كلا المحركين لهما نفس زاوية الدفع
+                    thrustVector.applyQuaternion(worldQuaternion);
+                    thrustVector.normalize();
 
                     for (let i = 0; i < propParticleCount; i++) {
                         const i2 = i * 2;
                         const i3 = i * 3;
 
                         const isRightSide = i < propParticleCount / 2;
-                        const propPos = isRightSide ? rightPropPos : leftPropPos;
+                        const propPos = isRightSide ? rightPropPosLocal : leftPropPosLocal;
 
-                        const startX = propPos.x - 0.1;
-                        const endX = startX - travelDistance;
+                        const age = propPos.distanceTo(new THREE.Vector3(positions[i3], positions[i3+1], positions[i3+2]));
 
-                        if (positions[i3] < endX || positions[i3] === 0) {
-                            positions[i3] = startX;
+                        if (age > travelDistance || positions[i3] === 0) {
+                            positions[i3] = propPos.x;
+                            positions[i3+1] = propPos.y;
+                            positions[i3+2] = propPos.z;
                             spiralData[i2] = emissionRadius * Math.sqrt(Math.random());
                             spiralData[i2 + 1] = Math.random() * 2 * Math.PI;
                         }
 
-                        positions[i3] -= axialSpeed * deltaTime;
+                        // التحرك على طول متجه الدفع
+                        positions[i3] += thrustVector.x * axialSpeed * deltaTime;
+                        positions[i3 + 1] += thrustVector.y * axialSpeed * deltaTime;
+                        positions[i3 + 2] += thrustVector.z * axialSpeed * deltaTime;
+
                         // تحديث زاوية الدوران بناءً على اختيار المستخدم
                         if (wingPropRotation === 'counter') {
-                            if (isRightSide) {
-                                spiralData[i2 + 1] += rotationalSpeed * deltaTime;
-                            } else {
-                                spiralData[i2 + 1] -= rotationalSpeed * deltaTime;
-                            }
+                            spiralData[i2 + 1] += rotationalSpeed * deltaTime * (isRightSide ? 1 : -1);
                         } else { // 'same'
                             spiralData[i2 + 1] += rotationalSpeed * deltaTime;
                         }
-                        positions[i3 + 1] = propPos.y + spiralData[i2] * Math.cos(spiralData[i2 + 1]);
-                        positions[i3 + 2] = propPos.z + spiralData[i2] * Math.sin(spiralData[i2 + 1]);
 
-                        const currentTravel = startX - positions[i3];
+                        // حساب الدوران الحلزوني (هذا الجزء يحتاج إلى تحسين ليعمل مع متجه الدفع)
+                        // للتبسيط، سنبقي الدوران في مستوى YZ المحلي للمروحة
+                        const yOffset = spiralData[i2] * Math.cos(spiralData[i2 + 1]);
+                        const zOffset = spiralData[i2] * Math.sin(spiralData[i2 + 1]);
+                        positions[i3 + 1] += yOffset * deltaTime * 10; // إضافة إزاحة صغيرة بدلاً من تحديد الموضع
+                        positions[i3 + 2] += zOffset * deltaTime * 10;
+
+
+                        const currentTravel = age;
                         const ageRatio = Math.max(0, Math.min(1, currentTravel / travelDistance));
                         const effectStrength = Math.sin(ageRatio * Math.PI);
 
