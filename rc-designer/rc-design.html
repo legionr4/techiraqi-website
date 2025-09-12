@@ -1040,6 +1040,10 @@
                         <input type="number" id="receiver-weight" value="15" step="1">
                     </div>
                     <div class="input-group">
+                        <label for="receiver-position">موضع جهاز الاستقبال (من المقدمة) (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="receiver-position" value="10" step="1">
+                    </div>
+                    <div class="input-group">
                         <label for="servo-weight">وزن السيرفو الواحد (جرام)</label>
                         <input type="number" id="servo-weight" value="9" step="1">
                     </div>
@@ -1048,12 +1052,24 @@
                         <input type="number" id="servo-count" value="4" step="1" min="0">
                     </div>
                     <div class="input-group">
+                        <label for="servos-position">الموضع المتوسط للسيرفوهات (من المقدمة) (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="servos-position" value="50" step="1" title="الموضع المتوسط لجميع السيرفوهات. للسيرفوهات في الذيل، استخدم قيمة أكبر.">
+                    </div>
+                    <div class="input-group">
                         <label for="camera-weight">وزن الكاميرا (إن وجدت) (جرام)</label>
                         <input type="number" id="camera-weight" value="0" step="5">
                     </div>
                     <div class="input-group">
+                        <label for="camera-position">موضع الكاميرا (من المقدمة) (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="camera-position" value="5" step="1">
+                    </div>
+                    <div class="input-group">
                         <label for="other-accessories-weight">أوزان أخرى (هيكل، غراء...) (جرام)</label>
                         <input type="number" id="other-accessories-weight" value="250" step="10">
+                    </div>
+                    <div class="input-group">
+                        <label for="other-accessories-position">الموضع المتوسط للأوزان الأخرى (من المقدمة) (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="other-accessories-position" value="50" step="1" title="الموضع المتوسط التقريبي للأوزان الموزعة مثل الغراء، الأسلاك، إلخ.">
                     </div>
 
                     <!-- Accessories Results -->

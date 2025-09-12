@@ -474,6 +474,10 @@ const servoWeightInput = document.getElementById('servo-weight');
 const servoCountInput = document.getElementById('servo-count');
 const cameraWeightInput = document.getElementById('camera-weight');
 const otherAccessoriesWeightInput = document.getElementById('other-accessories-weight');
+const receiverPositionInput = document.getElementById('receiver-position');
+const servosPositionInput = document.getElementById('servos-position');
+const cameraPositionInput = document.getElementById('camera-position');
+const otherAccessoriesPositionInput = document.getElementById('other-accessories-position');
 
 // CG/AC Inputs
 const showCgAcCheckbox = document.getElementById('show-cg-ac');
@@ -1994,6 +1998,11 @@ function calculateAerodynamics() {
     const servoWeightGrams = getRaw(servoWeightInput) * getRaw(servoCountInput);
     const cameraWeightGrams = getRaw(cameraWeightInput);
     const otherAccessoriesWeightGrams = getRaw(otherAccessoriesWeightInput);
+    const receiverPosition = getVal(receiverPositionInput);
+    const servosPosition = getVal(servosPositionInput);
+    const cameraPosition = getVal(cameraPositionInput);
+    const otherAccessoriesPosition = getVal(otherAccessoriesPositionInput);
+
     
     // تصحيح: قراءة وزن المحرك من الحقل الصحيح لكل نوع
     let engineWeightGrams = (engineType === 'electric') ? getRaw(electricMotorWeightInput) : getRaw(icEngineWeightInput);
@@ -2515,7 +2524,25 @@ function calculateAerodynamics() {
         addMoment(landingGearWeightKg, mainGearX);
     }
 
-    addMoment(totalAccessoriesWeightKg, wingPositionX);
+    // --- عزم الملحقات (بطريقة دقيقة) ---
+    const fuselageDatum = fuselageLength / 2; // مقدمة الجسم هي نقطة الصفر للمستخدم
+
+    if (receiverWeightGrams > 0) {
+        const receiverX = fuselageDatum - receiverPosition;
+        addMoment(receiverWeightGrams / 1000, receiverX);
+    }
+    if (servoWeightGrams > 0) {
+        const servosX = fuselageDatum - servosPosition;
+        addMoment(servoWeightGrams / 1000, servosX);
+    }
+    if (cameraWeightGrams > 0) {
+        const cameraX = fuselageDatum - cameraPosition;
+        addMoment(cameraWeightGrams / 1000, cameraX);
+    }
+    if (otherAccessoriesWeightGrams > 0) {
+        const otherX = fuselageDatum - otherAccessoriesPosition;
+        addMoment(otherAccessoriesWeightGrams / 1000, otherX);
+    }
 
     if (engineType === 'electric') {
         const batteryPositionFromNose = getVal(batteryPositionInput);
@@ -3093,6 +3120,10 @@ servoWeightInput.addEventListener('input', debouncedUpdate);
 servoCountInput.addEventListener('input', debouncedUpdate);
 cameraWeightInput.addEventListener('input', debouncedUpdate);
 otherAccessoriesWeightInput.addEventListener('input', debouncedUpdate);
+receiverPositionInput.addEventListener('input', debouncedUpdate);
+servosPositionInput.addEventListener('input', debouncedUpdate);
+cameraPositionInput.addEventListener('input', debouncedUpdate);
+otherAccessoriesPositionInput.addEventListener('input', debouncedUpdate);
 enginePylonLengthInput.addEventListener('input', debouncedUpdate);
 
 pylonMaterialInput.addEventListener('change', () => {
