@@ -1977,8 +1977,8 @@ function calculateAerodynamics() {
     const fuselageShape = getStr(fuselageShapeInput);
     const fuselageTaperRatio = getRaw(fuselageTaperRatioInput);
     const fuselageLength = getVal(fuselageLengthInput);
+    const sweepRad = getRaw(sweepAngleInput) * (Math.PI / 180); // تعريف sweepRad مرة واحدة هنا
     const sweepAngle = getRaw(sweepAngleInput);
-    const sweepRad = sweepAngle * (Math.PI / 180);
     const wingPosition = getStr(wingPositionInput);
     const dihedralAngle = getRaw(dihedralAngleInput);
     const tailDihedralAngle = getRaw(tailDihedralAngleInput);
@@ -2014,24 +2014,30 @@ function calculateAerodynamics() {
     const enginePlacement = getStr(enginePlacementInput);
     const noseShape = getStr(fuselageNoseShapeInput);
     const tailShape = getStr(fuselageTailShapeInput);
+    const fuselageDiameter = getVal(fuselageDiameterInput);
+    const fuselageFrontDiameter = getVal(fuselageFrontDiameterInput);
+    const fuselageRearDiameter = getVal(fuselageRearDiameterInput);
+    const fuselageWidth = getVal(fuselageWidthInput);
+    let fuselageHeight = getVal(fuselageHeightInput); // Use let to allow modification
 
     // --- Fix: Determine current fuselage dimensions for calculations ---
     let currentFuselageWidth, currentFuselageHeight;
     if (fuselageShape === 'rectangular') {
-        currentFuselageWidth = getVal(fuselageWidthInput);
-        currentFuselageHeight = getVal(fuselageHeightInput);
+        currentFuselageWidth = fuselageWidth;
+        currentFuselageHeight = fuselageHeight;
     } else if (fuselageShape === 'cylindrical') {
-        const fuselageDiameter = getVal(fuselageDiameterInput);
         currentFuselageWidth = fuselageDiameter;
         currentFuselageHeight = fuselageDiameter;
     } else if (fuselageShape === 'teardrop') {
-        const fuselageFrontDiameter = getVal(fuselageFrontDiameterInput);
-        const fuselageRearDiameter = getVal(fuselageRearDiameterInput);
         currentFuselageWidth = Math.max(fuselageFrontDiameter, fuselageRearDiameter);
         currentFuselageHeight = Math.max(fuselageFrontDiameter, fuselageRearDiameter);
     } else {
         currentFuselageWidth = 0.15; // Default
         currentFuselageHeight = 0.15; // Default
+    }
+    // This ensures fuselageHeight is correctly set for pylon calculations below
+    if (fuselageShape !== 'rectangular') {
+        fuselageHeight = currentFuselageHeight;
     }
 
     const hasAileron = getCheck(hasAileronInput);
@@ -2284,8 +2290,8 @@ function calculateAerodynamics() {
     let fuselageSurfaceArea = 0;
 
     if (fuselageShape === 'rectangular') {
-        const frontWidth = getVal(fuselageWidthInput);
-        const frontHeight = getVal(fuselageHeightInput);
+        const frontWidth = fuselageWidth;
+        const frontHeight = fuselageHeight;
         const rearWidth = frontWidth * fuselageTaperRatio;
         const rearHeight = frontHeight * fuselageTaperRatio;
 
@@ -2305,11 +2311,11 @@ function calculateAerodynamics() {
         let radiusFront, radiusRear;
 
         if (fuselageShape === 'cylindrical') {
-            radiusFront = getVal(fuselageDiameterInput) / 2;
+            radiusFront = fuselageDiameter / 2;
             radiusRear = radiusFront * fuselageTaperRatio;
         } else { // teardrop
-            radiusFront = getVal(fuselageFrontDiameterInput) / 2;
-            radiusRear = getVal(fuselageRearDiameterInput) / 2;
+            radiusFront = fuselageFrontDiameter / 2;
+            radiusRear = fuselageRearDiameter / 2;
         }
 
         // --- Nose Cone Calculation ---
@@ -2847,7 +2853,7 @@ function calculateAerodynamics() {
     if (totalWingArea > 0 && wingSpan > 0 && (tailType === 'conventional' || tailType === 't-tail')) {
         const vStabArea = vStabHeight * vStabChord;
         // ارتفاع مركز الضغط للذيل العمودي فوق المحور الطولي للطائرة
-        const Z_v = (currentFuselageHeight / 2) + (vStabHeight / 2);
+        const Z_v = (fuselageHeight / 2) + (vStabHeight / 2);
         // معامل قوة الرفع للذيل العمودي (مشابه للجناح)
         const CL_alpha_v = 2 * Math.PI;
         // حساب مساهمة الذيل العمودي في استقرار الدوران
