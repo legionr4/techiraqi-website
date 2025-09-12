@@ -2710,11 +2710,10 @@ function calculateAerodynamics() {
 
         // 2. تطبيق دوران زاوية الميلان (Incidence) على مركز الثقل المحلي
         // الدوران حول المحور Z في النموذج ثلاثي الأبعاد
-        // FIX: Incidence is rotation around the Y-axis of the tail, which is the Z-axis in the model's coordinate system.
         const cosInc = Math.cos(tailIncidenceRad);
         const sinInc = Math.sin(tailIncidenceRad);
-        const rotatedLocalCgX = localCgX * cosInc - 0; // Rotation around Z doesn't change X
-        const rotatedLocalCgY = localCgY; // Y is also not changed by rotation around Z
+        const rotatedLocalCgX = localCgX * cosInc - localCgY * sinInc;
+        const rotatedLocalCgY = localCgX * sinInc + localCgY * cosInc;
 
         // 3. حساب الموضع العالمي النهائي وإضافة العزم
         const finalTailCgX = tailPositionX + rotatedLocalCgX;
