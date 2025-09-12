@@ -2540,6 +2540,10 @@ function calculateAerodynamics() {
     const X_np = X_ac_w + (CL_alpha_h / CL_alpha_total) * (1 - de_da) * V_h * mac;
 
     // دالة مساعدة لحساب العزم
+    // تم تعديلها لتشمل العزم العمودي (Y) والجانبي (Z) في المستقبل
+    let totalMomentY = 0;
+    let totalMomentZ = 0;
+
     const addMoment = (weightKg, positionX) => {
         if (weightKg > 0) {
             totalMoment += weightKg * positionX; // حساب العزم حول نقطة الأصل (0,0,0)
@@ -2548,9 +2552,19 @@ function calculateAerodynamics() {
 
     // 3. حساب العزم لكل مكون (الوزن * الذراع)
     // إضافة عزم كل مكون
-    addMoment(fuselageWeightKg, 0); // مركز الجسم عند نقطة الأصل (0)
-    addMoment(wingWeightKg, wingPositionX + mac_x_le + (0.4 * mac)); // مركز الجناح عند ~40% MAC
-    addMoment(tailWeightKg, tailPositionX - (tailChord * 0.4)); // مركز الذيل عند ~40% من وتره
+    // --- تحسين دقة مركز ثقل الجسم ---
+    let fuselageCgX = 0;
+    if (fuselageShape === 'teardrop') {
+        // في شكل قطرة الدمع، يميل مركز الثقل نحو الجزء الأعرض (الأمامي)
+        fuselageCgX = fuselageLength * 0.1; // إزاحة تقديرية للأمام بنسبة 10%
+    }
+    addMoment(fuselageWeightKg, fuselageCgX);
+
+    // --- تحسين دقة مركز ثقل الجناح والذيل (فصل الأجزاء الثابتة والمتحركة) ---
+    // عزم الجزء الثابت من الجناح
+    addMoment(fixedWingWeightKg, wingPositionX + mac_x_le + (0.35 * mac)); // مركز الجزء الثابت عند ~35% MAC
+    // عزم الجزء الثابت من الذيل
+    addMoment(fixedTailWeightKg, tailPositionX - (tailChord * 0.35)); // مركز الجزء الثابت عند ~35% من وتره
 
     // --- عزم أسطح التحكم ---
     if (hasAileron && aileronWeightKg > 0) {
@@ -2575,15 +2589,14 @@ function calculateAerodynamics() {
 
     if (hasElevator && elevatorWeightKg > 0) {
         // حساب مركز الجاذبية للرافع مع الأخذ في الاعتبار استدقاق الذيل
-        const tailTaperRatio = getRaw(tailTaperRatioInput);
-        const elevatorCgX = (tailPositionX - (tailChord * (1 + tailTaperRatio) / 4)) + (elevatorWidth / 2);
+        const hStabRootChordEffective = tailChord - elevatorWidth;
+        const elevatorCgX = tailPositionX - hStabRootChordEffective - (elevatorWidth / 2);
         addMoment(elevatorWeightKg, elevatorCgX);
     }
 
     if (hasRudder && rudderWeightKg > 0) {
-        // حساب مركز الجاذبية للدفة مع الأخذ في الاعتبار استدقاق الذيل العمودي
-        const tailTaperRatio = getRaw(tailTaperRatioInput); // نفترض أن استدقاق الذيل العمودي هو نفسه
-        const rudderCgX = (tailPositionX - (vStabChord * (1 + tailTaperRatio) / 4)) + (rudderWidth / 2);
+        const vStabRootChordEffective = vStabChord - rudderWidth;
+        const rudderCgX = tailPositionX - vStabRootChordEffective - (rudderWidth / 2);
         addMoment(rudderWeightKg, rudderCgX);
     }
 
@@ -2645,10 +2658,20 @@ function calculateAerodynamics() {
 
     // عزم المحرك والمروحة بناءً على الموضع
     if (enginePlacement === 'front' || enginePlacement === 'rear') {
-        addMoment(engineWeightKg, engineGroup.position.x);
-        addMoment(propWeightKg, propellerGroup.position.x);
+        // استخدام الموضع الدقيق من النموذج ثلاثي الأبعاد
+        const enginePos = engineGroup.position;
+        const propPos = propellerGroup.position;
+        addMoment(engineWeightKg, enginePos.x);
+        addMoment(propWeightKg, propPos.x);
+
+        // إضافة تأثير الموضع العمودي على العزم العمودي
+        totalMomentY += engineWeightKg * enginePos.y;
+        totalMomentY += propWeightKg * propPos.y;
+
     } else if (enginePlacement === 'wing') {
-        const totalWingPropulsionWeight = (engineWeightKg * 2) + (propWeightKg * 2);
+        // الوزن الإجمالي للمحركين والمروحتين
+        const totalWingPropulsionWeight = engineWeightKg + (propWeightKg * 2); // engineWeightKg is already doubled
+
         // حساب موضع المحرك على الجناح من المدخلات بدلاً من النموذج ثلاثي الأبعاد
         const posOnWingZ = (getVal(engineWingDistanceInput)) + (currentFuselageWidth / 2);
         const spanProgress = (posOnWingZ - currentFuselageWidth / 2) / (wingSpan / 2);
