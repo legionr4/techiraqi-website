@@ -2144,7 +2144,35 @@ function calculateAerodynamics() {
     const rudderArea = hasRudder ? (rudderLength * rudderWidth) : 0; // approximation as rectangle for now
 
     totalTailArea += elevatorArea + rudderArea;
+    
+    // --- FIX: Define hStabWeightKg and vStabWeightKg for CG calculations ---
+    let hStabWeightKg = 0;
+    let vStabWeightKg = 0;
+    let fixedTailWeightKg = 0;
 
+    if (tailType === 'conventional' || tailType === 't-tail') {
+        if (hStabArea > 0) {
+            hStabWeightKg = (hStabArea * tailThickness) * structureMaterialDensity;
+        }
+        if (vStabArea > 0) {
+            vStabWeightKg = (vStabArea * tailThickness) * structureMaterialDensity;
+        }
+        fixedTailWeightKg = hStabWeightKg + vStabWeightKg;
+    } else if (tailType === 'v-tail') {
+        // For V-tail, the entire weight is considered part of the vertical stabilizer for simplicity
+        vStabWeightKg = (vStabArea * tailThickness) * structureMaterialDensity;
+        fixedTailWeightKg = vStabWeightKg;
+    }
+
+    // الوزن الإجمالي للذيل هو مجموع الأجزاء الثابتة والمتحركة (الرافع والدفة)
+    const tailWeightKg = fixedTailWeightKg + elevatorWeightKg + rudderWeightKg;
+
+    // 2. قوة السحب (Drag)
+    // D = 0.5 * Cd * rho * V^2 * A
+    // Cd = Cdp + Cdi (سحب طفيلي + سحب مستحث)
+    const aspectRatio = totalWingArea > 0 ? Math.pow(wingSpan, 2) / totalWingArea : 0;
+
+    // --- تعديل كفاءة أوزوالد بناءً على وجود وشكل أطراف الجناح ---
     // 1. قوة الرفع (Lift)
     // L = 0.5 * Cl * rho * V^2 * A
     // Cl (معامل الرفع) ≈ 2 * PI * alpha (تقريب لنظرية الجنيح الرقيق)
@@ -2160,12 +2188,6 @@ function calculateAerodynamics() {
     const cl = airfoilLiftFactor * 2 * Math.PI * alphaRad * Math.cos(sweepRad);
     const lift = 0.5 * cl * airDensity * Math.pow(airSpeed, 2) * totalWingArea;
 
-    // 2. قوة السحب (Drag)
-    // D = 0.5 * Cd * rho * V^2 * A
-    // Cd = Cdp + Cdi (سحب طفيلي + سحب مستحث)
-    const aspectRatio = totalWingArea > 0 ? Math.pow(wingSpan, 2) / totalWingArea : 0;
-
-    // --- تعديل كفاءة أوزوالد بناءً على وجود وشكل أطراف الجناح ---
     // أطراف الجناح تقلل من السحب المستحث عن طريق زيادة نسبة العرض إلى الارتفاع الفعالة.
     let oswaldEfficiency = 0.8; // قيمة أساسية بدون أطراف
     if (hasWingtip) {
@@ -2293,22 +2315,6 @@ function calculateAerodynamics() {
         rudderWeightKg = rudderVolume * controlSurfaceMaterialDensity;
     }
     // ملاحظة: أسطح التحكم للذيل V تعتبر جزءًا من وزن الذيل الرئيسي حاليًا لتبسيط الحسابات.
-
-    // --- حساب وزن الذيل (بشكل دقيق) ---
-    let fixedTailWeightKg = 0;
-    if (tailType === 'conventional' || tailType === 't-tail') {
-        // حساب وزن الأجزاء الثابتة بناءً على مساحتها (التي هي الآن شبه منحرف)
-        const fixedTailVolume = (hStabArea + vStabArea) * tailThickness;
-        fixedTailWeightKg = fixedTailVolume * structureMaterialDensity;
-    } else if (tailType === 'v-tail') {
-        // للذيل V، يتم حساب الوزن الكلي بناءً على المساحة الكلية والسماكة الرئيسية للتبسيط
-        // (يفترض أن أسطح التحكم مدمجة)
-        const vTailVolume = vStabArea * tailThickness; // استخدام مساحة الألواح (التي هي الآن شبه منحرف)
-        fixedTailWeightKg = vTailVolume * structureMaterialDensity;
-    }
-
-    // الوزن الإجمالي للذيل هو مجموع الأجزاء الثابتة والمتحركة (الرافع والدفة)
-    const tailWeightKg = fixedTailWeightKg + elevatorWeightKg + rudderWeightKg;
 
     // حساب وزن الجسم
     let fuselageWeightKg = 0;
@@ -2704,10 +2710,11 @@ function calculateAerodynamics() {
 
         // 2. تطبيق دوران زاوية الميلان (Incidence) على مركز الثقل المحلي
         // الدوران حول المحور Z في النموذج ثلاثي الأبعاد
+        // FIX: Incidence is rotation around the Y-axis of the tail, which is the Z-axis in the model's coordinate system.
         const cosInc = Math.cos(tailIncidenceRad);
-        const sinInc = Math.sin(tailIncidenceRad); // This is rotation around Z axis in the model
-        const rotatedLocalCgX = localCgX * cosInc - localCgY * sinInc; // Incorrect, incidence is rotation around Y axis of the tail, which is Z in the model
-        const rotatedLocalCgY = localCgX * sinInc + localCgY * cosInc; // Incorrect
+        const sinInc = Math.sin(tailIncidenceRad);
+        const rotatedLocalCgX = localCgX * cosInc - 0; // Rotation around Z doesn't change X
+        const rotatedLocalCgY = localCgY; // Y is also not changed by rotation around Z
 
         // 3. حساب الموضع العالمي النهائي وإضافة العزم
         const finalTailCgX = tailPositionX + rotatedLocalCgX;
