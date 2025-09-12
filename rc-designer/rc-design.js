@@ -2678,34 +2678,36 @@ function calculateAerodynamics() {
     // عزم أطراف الجناح (يُضاف فقط إذا كانت مُفعّلة)
     if (hasWingtip && wingtipWeightKg > 0) {
         // --- FIX: Correctly calculate moment for BOTH wingtips ---
-        const singleWingtripWeight = wingtipWeightKg / 2;
+        const singleWingtripWeight = wingtipWeightKg / 2; // The weight of one wingtip
         const wingtipLength = getVal(wingtipLengthInput);
         const wingtipWidth = getVal(wingtipWidthInput); // This is the root chord of the wingtip
         const wingtipTaperRatio = getRaw(wingtipTaperRatioInput);
         const wingtipSweepRad = getRaw(wingtipSweepAngleInput) * Math.PI / 180;
 
         // 1. Calculate the wingtip's local CG (as if it's a small wing)
+        // This calculates the CG of the wingtip relative to its own root (where it attaches to the main wing)
         const wt_mac = (2 / 3) * wingtipWidth * ((1 + wingtipTaperRatio + Math.pow(wingtipTaperRatio, 2)) / (1 + wingtipTaperRatio));
-        const wt_mac_y = (wingtipLength / 6) * ((1 + 2 * wingtipTaperRatio) / (1 + wingtipTaperRatio));
-        const wt_mac_x_le = wt_mac_y * Math.tan(wingtipSweepRad);
-        const wingtip_local_cg_x = wt_mac_x_le + (0.42 * wt_mac); // Relative to its own root LE
-        const wingtip_local_cg_spanwise = wt_mac_y; // Spanwise position on the wingtip itself
+        const wt_mac_spanwise = (wingtipLength / 6) * ((1 + 2 * wingtipTaperRatio) / (1 + wingtipTaperRatio));
+        const wt_mac_le_x = wt_mac_spanwise * Math.tan(wingtipSweepRad);
+        const wingtip_local_cg_x = wt_mac_le_x + (0.42 * wt_mac); // Local X CG relative to wingtip's own root LE
+        const wingtip_local_cg_spanwise = wt_mac_spanwise; // Local spanwise CG on the wingtip itself
 
         // 2. Find the mounting point on the main wing
         const mainWingTipChord = wingChord * taperRatio;
-        const mainWingTipLE_X = wingPositionX + (wingSpan / 2) * Math.tan(sweepRad); // LE X-pos at the tip
-        const mainWingTipMountX = mainWingTipLE_X - (mainWingTipChord / 2) + (wingtipWidth / 2); // Mount at center of tip chord
-        const mainWingTipMountY = wingGroup.position.y + (wingSpan / 2) * Math.tan(dihedralAngle * Math.PI / 180);
+        const mainWingTipLE_X_global = wingPositionX + (wingSpan / 2) * Math.tan(sweepRad); // Global X-pos of main wing's tip LE
+        const mainWingTipMountX = mainWingTipLE_X_global; // Mount the wingtip's LE to the main wing's tip LE
+        const mainWingTipMountY = wingGroup.position.y + (wingSpan / 2) * Math.tan(dihedralAngle * Math.PI / 180); // Global Y-pos of main wing's tip
+        const mainWingTipMountZ = wingSpan / 2; // Global Z-pos of main wing's tip
 
-        // 3. Calculate and add moment for the RIGHT wingtip
-        const rightWingtripCG_X = mainWingTipMountX + (wingtip_local_cg_spanwise * Math.tan(sweepRad)) - wingtip_local_cg_x;
-        const rightWingtripCG_Y = mainWingTipMountY + wingtip_local_cg_spanwise;
-        const rightWingtripCG_Z = wingSpan / 2;
-        addMoment(singleWingtripWeight, rightWingtripCG_X, rightWingtripCG_Y, rightWingtripCG_Z);
+        // 3. Calculate the final global CG position for the wingtip
+        // Start with the mount point and add the local CG offsets
+        const wingtip_global_cg_x = mainWingTipMountX + wingtip_local_cg_x;
+        const wingtip_global_cg_y = mainWingTipMountY + wingtip_local_cg_spanwise; // Assuming wingtip cant angle is 0 for CG calc simplicity
+        const wingtip_global_cg_z = mainWingTipMountZ;
 
-        // 4. Calculate and add moment for the LEFT wingtip (mirrored Z)
-        const leftWingtripCG_Z = -rightWingtripCG_Z;
-        addMoment(singleWingtripWeight, rightWingtripCG_X, rightWingtripCG_Y, leftWingtripCG_Z);
+        // Add moment for both wingtips (right and left)
+        addMoment(singleWingtripWeight, wingtip_global_cg_x, wingtip_global_cg_y, wingtip_global_cg_z); // Right
+        addMoment(singleWingtripWeight, wingtip_global_cg_x, wingtip_global_cg_y, -wingtip_global_cg_z); // Left
     }
 
     // عزم القمرة
