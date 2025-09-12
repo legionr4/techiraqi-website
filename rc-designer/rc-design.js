@@ -2261,11 +2261,19 @@ function calculateAerodynamics() {
     // حساب وزن أطراف الجناح (Wingtips)
     let wingtipWeightKg = 0;
     if (hasWingtip) {
-        // حساب حجم طرفي الجناح (مستطيلين)
-        // تصحيح: حساب الحجم بناءً على مساحة شبه المنحرف
+        // --- FIX: Calculate wingtip volume and weight more accurately ---
         const tipChord_wingtip = wingtipWidth * wingtipTaperRatio;
         const singleWingtipsArea = wingtipLength * (wingtipWidth + tipChord_wingtip) / 2;
-        const singleWingtipVolume = singleWingtipsArea * wingtipThickness;
+
+        // Adjust volume based on airfoil shape
+        let volumeFactor = 0.7; // Default for symmetrical
+        if (wingtipAirfoilType === 'rectangular') {
+            volumeFactor = 1.0;
+        } else if (wingtipAirfoilType === 'wedge') {
+            volumeFactor = 0.5;
+        }
+
+        const singleWingtipVolume = singleWingtipsArea * wingtipThickness * volumeFactor;
         wingtipWeightKg = 2 * singleWingtipVolume * structureMaterialDensity; // لليمين واليسار
     }
     // عرض وزن أطراف الجناح في النتائج (تم إصلاح الخطأ هنا)
@@ -2651,11 +2659,31 @@ function calculateAerodynamics() {
 
     // عزم أطراف الجناح (يُضاف فقط إذا كانت مُفعّلة)
     if (hasWingtip && wingtipWeightKg > 0) {
-        // The wingtip is attached to the wing tip. Its CG is at the wing's tip CG.
-        const tipChord_wing = wingChord * taperRatio;
-        const wingTipX = wingPositionX + (wingSpan / 2) * Math.tan(sweepRad) - (tipChord_wing / 4);
-        // Y position is the same as the wing
-        addMoment(wingtipWeightKg, wingTipX, wingGroup.position.y, 0);
+        // --- FIX: More robust calculation for wingtip CG ---
+        const wingtipLength = getVal(wingtipLengthInput);
+        const wingtipWidth = getVal(wingtipWidthInput); // This is the root chord of the wingtip
+        const wingtipTaperRatio = getRaw(wingtipTaperRatioInput);
+        const wingtipSweepRad = getRaw(wingtipSweepAngleInput) * Math.PI / 180;
+
+        // 1. Calculate the wingtip's local CG (as if it's a small wing)
+        const mac_wt = (2 / 3) * wingtipWidth * ((1 + wingtipTaperRatio + Math.pow(wingtipTaperRatio, 2)) / (1 + wingtipTaperRatio));
+        const mac_y_wt = (wingtipLength / 6) * ((1 + 2 * wingtipTaperRatio) / (1 + wingtipTaperRatio));
+        const mac_x_le_wt = mac_y_wt * Math.tan(wingtipSweepRad);
+        const wingtip_local_cg_x = mac_x_le_wt + (0.42 * mac_wt); // Relative to its own root LE
+        const wingtip_local_cg_spanwise = mac_y_wt; // Spanwise position on the wingtip itself
+
+        // 2. Find the mounting point on the main wing
+        const mainWingTipChord = wingChord * taperRatio;
+        const mainWingTipLE_X = wingPositionX + (wingSpan / 2) * Math.tan(sweepRad); // LE X-pos at the tip
+        const mainWingTipMountX = mainWingTipLE_X - (mainWingTipChord / 2) + (wingtipWidth / 2); // Mount at center of tip chord
+        const mainWingTipMountY = wingGroup.position.y + (wingSpan / 2) * Math.tan(dihedralAngle * Math.PI / 180);
+        const mainWingTipMountZ = wingSpan / 2;
+
+        // 3. Combine to get global CG for the wingtip (assuming vertical winglet for now)
+        const wingtipGlobalCG_X = mainWingTipMountX - wingtip_local_cg_x;
+        const wingtipGlobalCG_Y = mainWingTipMountY + wingtip_local_cg_spanwise;
+        const wingtipGlobalCG_Z = mainWingTipMountZ; // The Z position is complex, this is an approximation
+        addMoment(wingtipWeightKg, wingtipGlobalCG_X, wingtipGlobalCG_Y, wingtipGlobalCG_Z);
     }
 
     // عزم القمرة
