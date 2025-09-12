@@ -2083,7 +2083,7 @@ function calculateAerodynamics() {
     const wingEngineForeAft = getStr(engineWingForeAftInput);
     const engineLengthMeters = (engineType === 'electric' ? getVal(electricMotorLengthInput) : getVal(icEngineLengthInput));
 
-    // ---- حسابات محدثة ---
+    // --- حسابات محدثة ---
     // --- حساب مساحة الجناح الرئيسي (بدون الأطراف) ---
     // تم تعديل المنطق: مساحة الجناح هي مساحة الجزء الثابت + مساحة الجنيحات
     const tipChord = wingChord * taperRatio; // This is needed for both area and weight
@@ -2642,14 +2642,14 @@ function calculateAerodynamics() {
         // حساب موضع الحافة الأمامية للجنيح عند بدايته ونهايته
         const chordAtStart = wingChord + (wingChord * taperRatio - wingChord) * (aileronZStart / halfSpan);
         const sweepAtStart = aileronZStart * Math.tan(sweepRad); // X offset due to sweep at aileron start
-        const hingeX_start = wingPositionX + sweepAtStart - (chordAtStart / 2); // X position of the wing's trailing edge at aileron start
-
+        const hingeX_start = wingPositionX + sweepAtStart + (chordAtStart / 2) - aileronWidth; // X position of the aileron's LE
+ 
         const chordAtEnd = wingChord + (wingChord * taperRatio - wingChord) * (aileronZEnd / halfSpan);
         const sweepAtEnd = aileronZEnd * Math.tan(sweepRad); // X offset due to sweep at aileron end
-        const hingeX_end = wingPositionX + sweepAtEnd - (chordAtEnd / 2); // X position of the wing's trailing edge at aileron end
-
-        // مركز الجاذبية للجنيح يقع خلف متوسط موضع المفصل بمقدار نصف عرض الجنيح
-        const aileronCgX = ((hingeX_start + hingeX_end) / 2) - (aileronWidth / 2); // The CG is behind the hinge line
+        const hingeX_end = wingPositionX + sweepAtEnd + (chordAtEnd / 2) - aileronWidth; // X position of the aileron's LE
+ 
+        // مركز الجاذبية للجنيح يقع في منتصف المسافة بين بداية ونهاية الحافة الأمامية، ومزاح للخلف بمقدار نصف عرضه
+        const aileronCgX = ((hingeX_start + hingeX_end) / 2) + (aileronWidth / 2);
         // --- حساب المسافة الجانبية من مركز الجسم للجنيح ---
         const aileronCenterZ = (aileronZStart + aileronZEnd) / 2;
         
