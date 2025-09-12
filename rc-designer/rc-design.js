@@ -2262,7 +2262,7 @@ function calculateAerodynamics() {
     let wingtipWeightKg = 0;
     if (hasWingtip) {
         // --- FIX: Calculate wingtip volume and weight more accurately ---
-        const tipChord_wingtip = wingtipWidth * wingtipTaperRatio;
+        const tipChord_wingtip = getVal(wingtipWidthInput) * wingtipTaperRatio; // FIX: Use getVal to get meters
         const singleWingtipsArea = wingtipLength * (wingtipWidth + tipChord_wingtip) / 2;
 
         // Adjust volume based on airfoil shape
@@ -2276,8 +2276,8 @@ function calculateAerodynamics() {
         const singleWingtipVolume = singleWingtipsArea * wingtipThickness * volumeFactor;
         wingtipWeightKg = 2 * singleWingtipVolume * structureMaterialDensity; // لليمين واليسار
     }
-    // عرض وزن أطراف الجناح في النتائج (تم إصلاح الخطأ هنا)
-    document.getElementById('wingtip-weight-result').textContent = (wingtipWeightKg * 1000).toFixed(0);
+    // FIX: Hide the separate wingtip weight display as requested by the user. It's now part of the total wing weight.
+    // document.getElementById('wingtip-weight-result').textContent = (wingtipWeightKg * 1000).toFixed(0);
 
     // --- حساب وزن أسطح التحكم ---
     let aileronWeightKg = 0;
@@ -2689,7 +2689,7 @@ function calculateAerodynamics() {
         const mainWingTipMountY = wingGroup.position.y + (wingSpan / 2) * Math.tan(dihedralAngle * Math.PI / 180);
 
         // 3. Calculate and add moment for the RIGHT wingtip
-        const rightWingtripCG_X = mainWingTipMountX - wingtip_local_cg_x;
+        const rightWingtripCG_X = mainWingTipMountX + (wingtip_local_cg_spanwise * Math.tan(sweepRad)) - wingtip_local_cg_x;
         const rightWingtripCG_Y = mainWingTipMountY + wingtip_local_cg_spanwise;
         const rightWingtripCG_Z = wingSpan / 2;
         addMoment(singleWingtripWeight, rightWingtripCG_X, rightWingtripCG_Y, rightWingtripCG_Z);
