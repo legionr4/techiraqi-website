@@ -2619,8 +2619,8 @@ function calculateAerodynamics() {
     // --- عزم أسطح التحكم ---
     if (hasAileron && aileronWeightKg > 0) {
         // حساب أكثر دقة لمركز الجاذبية للجنيح مع الأخذ في الاعتبار الميلان والاستدقاق
-        const halfSpan = wingSpan / 2;
         const aileronZStart = halfSpan - aileronPosition - aileronLength;
+        const halfSpan = wingSpan / 2;
         const aileronZEnd = halfSpan - aileronPosition;
 
         // حساب موضع الحافة الأمامية للجنيح عند بدايته ونهايته
@@ -2634,13 +2634,15 @@ function calculateAerodynamics() {
 
         // مركز الجاذبية للجنيح يقع في منتصف المسافة بين بداية ونهاية الحافة الأمامية، ومزاح للخلف بمقدار نصف عرضه
         const aileronCgX = ((hingeX_start + hingeX_end) / 2) - (aileronWidth / 2);
-        // The Y position of the aileron is the same as the wing's
         // --- حساب المسافة الجانبية من مركز الجسم للجنيح ---
-        const aileronZPosition = (aileronStartZ + aileronEndZ) / 2;
-        const aileronZ = wingGroup.position.z + aileronZPosition;
+        const aileronCenterZ = (aileronZStart + aileronZEnd) / 2;
         
-        // إضافة العزم مع الأخذ في الاعتبار موضع الجنيح
-        addMoment(aileronWeightKg, aileronCgX, wingGroup.position.y, aileronZ);
+        // The Y position of the aileron is the same as the wing's
+        const aileronCgY = wingCgY; // Use the calculated wing CG Y position
+
+        // إضافة العزم لكل جنيح على حدة
+        addMoment(aileronWeightKg / 2, aileronCgX, aileronCgY, aileronCenterZ); // Right aileron
+        addMoment(aileronWeightKg / 2, aileronCgX, aileronCgY, -aileronCenterZ); // Left aileron
     }
     if (hasElevator && elevatorWeightKg > 0) {
         // حساب مركز الجاذبية للرافع
