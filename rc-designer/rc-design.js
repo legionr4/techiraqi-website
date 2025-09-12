@@ -1957,6 +1957,12 @@ function calculateAerodynamics() {
     const structureMaterial = getStr(structureMaterialInput);
     const fuselageMaterialValue = getStr(fuselageMaterialInput);
     const fuselageShape = getStr(fuselageShapeInput);
+    // --- FIX: Define material densities early to prevent ReferenceError ---
+    const structureMaterialDensity = MATERIAL_DENSITIES[structureMaterial]; // Density in kg/m³
+    const fuselageMaterialDensity = MATERIAL_DENSITIES[fuselageMaterialValue];
+    const controlSurfaceMaterialDensity = MATERIAL_DENSITIES[controlSurfaceMaterial] || structureMaterialDensity; // Fallback to main material
+
+
     const fuselageTaperRatio = getRaw(fuselageTaperRatioInput);
     const fuselageLength = getVal(fuselageLengthInput);
     const sweepRad = getRaw(sweepAngleInput) * (Math.PI / 180); // تعريف sweepRad مرة واحدة هنا
@@ -2263,11 +2269,6 @@ function calculateAerodynamics() {
     const prop_drag = airSpeed > 1 ? power_consumed_watts / airSpeed : 0; // تجنب القسمة على صفر
     const totalDrag = aeroDrag + prop_drag;
     // 4. حساب الوزن (Weight Calculation)
-    const structureMaterialDensity = MATERIAL_DENSITIES[structureMaterial]; // Density in kg/m³
-    const fuselageMaterialDensity = MATERIAL_DENSITIES[fuselageMaterialValue];
-    const controlSurfaceMaterialDensity = MATERIAL_DENSITIES[controlSurfaceMaterial] || structureMaterialDensity; // Fallback to main material
-
-
     // حساب وزن أطراف الجناح (Wingtips)
     let wingtipWeightKg = 0;
     if (hasWingtip) {
