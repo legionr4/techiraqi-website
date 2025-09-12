@@ -2649,7 +2649,7 @@ function calculateAerodynamics() {
         const aileronCenterZ = (aileronZStart + aileronZEnd) / 2;
         
         // The Y position of the aileron is the same as the wing's
-        const aileronCgY = wingCgY; // Use the calculated wing CG Y position
+        const aileronCgY = finalCgY; // FIX: Use the correct variable name for the wing's final Y position
 
         // إضافة العزم لكل جنيح على حدة
         addMoment(aileronWeightKg / 2, aileronCgX, aileronCgY, aileronCenterZ); // Right aileron
