@@ -2641,15 +2641,15 @@ function calculateAerodynamics() {
 
         // حساب موضع الحافة الأمامية للجنيح عند بدايته ونهايته
         const chordAtStart = wingChord + (wingChord * taperRatio - wingChord) * (aileronZStart / halfSpan);
-        const sweepAtStart = aileronZStart * Math.tan(sweepRad);
-        const hingeX_start = (wingPositionX + sweepAtStart - (chordAtStart / 2)) + aileronWidth;
+        const sweepAtStart = aileronZStart * Math.tan(sweepRad); // X offset due to sweep at aileron start
+        const hingeX_start = wingPositionX + sweepAtStart - (chordAtStart / 2); // X position of the wing's trailing edge at aileron start
 
         const chordAtEnd = wingChord + (wingChord * taperRatio - wingChord) * (aileronZEnd / halfSpan);
-        const sweepAtEnd = aileronZEnd * Math.tan(sweepRad);
-        const hingeX_end = (wingPositionX + sweepAtEnd - (chordAtEnd / 2)) + aileronWidth;
+        const sweepAtEnd = aileronZEnd * Math.tan(sweepRad); // X offset due to sweep at aileron end
+        const hingeX_end = wingPositionX + sweepAtEnd - (chordAtEnd / 2); // X position of the wing's trailing edge at aileron end
 
-        // مركز الجاذبية للجنيح يقع في منتصف المسافة بين بداية ونهاية الحافة الأمامية، ومزاح للخلف بمقدار نصف عرضه
-        const aileronCgX = ((hingeX_start + hingeX_end) / 2) - (aileronWidth / 2);
+        // مركز الجاذبية للجنيح يقع خلف متوسط موضع المفصل بمقدار نصف عرض الجنيح
+        const aileronCgX = ((hingeX_start + hingeX_end) / 2) - (aileronWidth / 2); // The CG is behind the hinge line
         // --- حساب المسافة الجانبية من مركز الجسم للجنيح ---
         const aileronCenterZ = (aileronZStart + aileronZEnd) / 2;
         
