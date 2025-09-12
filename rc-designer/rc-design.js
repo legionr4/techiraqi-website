@@ -2619,8 +2619,8 @@ function calculateAerodynamics() {
     // --- عزم أسطح التحكم ---
     if (hasAileron && aileronWeightKg > 0) {
         // حساب أكثر دقة لمركز الجاذبية للجنيح مع الأخذ في الاعتبار الميلان والاستدقاق
-        const aileronZStart = halfSpan - aileronPosition - aileronLength;
         const halfSpan = wingSpan / 2;
+        const aileronZStart = halfSpan - aileronPosition - aileronLength;
         const aileronZEnd = halfSpan - aileronPosition;
 
         // حساب موضع الحافة الأمامية للجنيح عند بدايته ونهايته
