@@ -981,10 +981,8 @@ function updatePlaneModel() {
     // Wingtip Controls visibility
     if (hasWingtipInput.checked) {
         wingtipControls.style.display = 'block';
-        wingtipResultsContainer.style.display = 'block';
     } else {
         wingtipControls.style.display = 'none';
-        wingtipResultsContainer.style.display = 'none';
     }
 
     // Aileron Controls visibility
@@ -2009,15 +2007,10 @@ function calculateAerodynamics() {
     } else if (fuselageShape === 'cylindrical') {
         const fuselageDiameter = getVal(fuselageDiameterInput);
         currentFuselageWidth = fuselageDiameter;
-        currentFuselageHeight = fuselageHeight;
-    } else if (fuselageShape === 'cylindrical') {
-        currentFuselageWidth = fuselageDiameter;
         currentFuselageHeight = fuselageDiameter;
     } else if (fuselageShape === 'teardrop') {
         currentFuselageWidth = Math.max(fuselageFrontDiameter, fuselageRearDiameter);
         currentFuselageHeight = Math.max(fuselageFrontDiameter, fuselageRearDiameter);
-        const fuselageFrontDiameter = getVal(fuselageFrontDiameterInput);
-        const fuselageRearDiameter = getVal(fuselageRearDiameterInput);
     } else {
         currentFuselageWidth = 0.15; // Default
         currentFuselageHeight = 0.15; // Default
@@ -2047,8 +2040,6 @@ function calculateAerodynamics() {
     const rudderAirfoilType = getStr(rudderAirfoilTypeInput);
     const showCg = getCheck(showCgCheckbox);
     const batteryWeightGrams = getRaw(batteryWeightInput);
-    const fuelTankLength = getVal(fuelTankLengthInput);
-    const fuelTankWidth = getVal(fuelTankWidthInput);
     const fuelTankHeight = getVal(fuelTankHeightInput);
     const tankCapacityMl = getRaw(fuelTankCapacityInput);
     const tankMaterial = getStr(fuelTankMaterialInput);
@@ -2095,16 +2086,15 @@ function calculateAerodynamics() {
     // --- حسابات محدثة ---
     // --- حساب مساحة الجناح الرئيسي (بدون الأطراف) ---
     // تم تعديل المنطق: مساحة الجناح هي مساحة الجزء الثابت + مساحة الجنيحات
-    const tipChord = wingChord * taperRatio;
-    const fixedWingPartArea = wingSpan * (wingChord + tipChord) / 2; // Area of the main structure part
+    const tipChord = wingChord * taperRatio; // This is needed for both area and weight
 
     let aileronArea = 0;
     if (hasAileron) {
         // مساحة الجنيحين (مستطيلين)
         aileronArea = 2 * aileronLength * aileronWidth;
     }
-    // مساحة الجناح الرئيسية هي مجموع مساحة الجزء الثابت ومساحة الجنيحات
-    const mainWingArea = fixedWingPartArea + aileronArea;
+    // مساحة الجناح الرئيسية هي مساحة شبه المنحرف الكلي (بما في ذلك منطقة الجنيحات)
+    const mainWingArea = wingSpan * (wingChord + tipChord) / 2;
 
     const alphaRad = angleOfAttack * (Math.PI / 180);
 
@@ -2255,9 +2245,6 @@ function calculateAerodynamics() {
     const fuselageMaterialDensity = MATERIAL_DENSITIES[fuselageMaterialValue];
     const controlSurfaceMaterialDensity = MATERIAL_DENSITIES[controlSurfaceMaterial] || structureMaterialDensity; // Fallback to main material
 
-    // --- Fix: Re-read fuselage dimensions needed for weight calculation ---
-    const fuselageFrontDiameter = getVal(fuselageFrontDiameterInput);
-    const fuselageRearDiameter = getVal(fuselageRearDiameterInput);
 
     // حساب وزن أطراف الجناح (Wingtips)
     let wingtipWeightKg = 0;
@@ -2289,8 +2276,8 @@ function calculateAerodynamics() {
     }
 
     // --- حساب وزن الجناح (بشكل دقيق) ---
-    // حساب وزن الجزء الثابت من الجناح
-    const fixedWingVolume = fixedWingPartArea * wingThickness;
+    // حساب وزن الجزء الثابت من الجناح (مساحة الجناح الكلية مطروحاً منها مساحة الجنيحات)
+    const fixedWingVolume = (mainWingArea - aileronArea) * wingThickness;
     const fixedWingWeightKg = fixedWingVolume * structureMaterialDensity;
     const wingWeightKg = fixedWingWeightKg + aileronWeightKg + wingtipWeightKg; // الوزن الإجمالي للجناح هو مجموع الجزء الثابت والجنيحات والأطراف
 
@@ -2471,6 +2458,8 @@ function calculateAerodynamics() {
         document.getElementById('fuel-tank-area-item').style.display = 'flex'; // إظهار مساحة الخزان
         
         // حساب وزن مصدر الطاقة (الوقود + الخزان) بشكل دقيق
+        const fuelTankLength = getVal(fuelTankLengthInput);
+        const fuelTankWidth = getVal(fuelTankWidthInput);
         const tankMaterialDensity = MATERIAL_DENSITIES[tankMaterial];
         const fuelDensity = FUEL_DENSITIES[fuelType] || FUEL_DENSITIES['methanol_nitro'];
 
