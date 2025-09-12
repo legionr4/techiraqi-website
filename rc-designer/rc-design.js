@@ -1966,6 +1966,7 @@ function calculateAerodynamics() {
     const wingPosition = getStr(wingPositionInput);
     const dihedralAngle = getRaw(dihedralAngleInput);
     const tailDihedralAngle = getRaw(tailDihedralAngleInput);
+    const wingIncidenceAngle = getRaw(wingIncidenceAngleInput);
     const tailSpan = getVal(tailSpanInput);
     const tailChord = getVal(tailChordInput);
     const vStabHeight = getVal(vStabHeightInput);
@@ -2597,19 +2598,33 @@ function calculateAerodynamics() {
     // عزم الجزء الثابت من الجناح
     // The geometric centroid of a uniform wing is closer to 42% of the MAC.
     // This is a better approximation for the center of *mass* than the aerodynamic center (25%).
-    // --- حساب تأثير الديhedral على الموضع العمودي لمركز ثقل الجناح ---
+    // --- حساب الموضع النسبي لمركز ثقل نصف الجناح (قبل دوران الميلان) ---
     const wingCgSpanwise = (wingSpan / 6) * ((1 + 2 * taperRatio) / (1 + taperRatio)); // الموضع العرضي لمركز ثقل نصف الجناح
-    const wingCgY_dihedral = wingCgSpanwise * Math.tan(dihedralAngle * Math.PI / 180);
-    const wingCgY = wingGroup.position.y + wingCgY_dihedral;
-
-    // --- FIX: حساب تأثير الميلان (Sweep) على الموضع الطولي لمركز ثقل الجناح ---
-    // نحسب الموضع الطولي لمركز ثقل نصف الجناح
     const halfWingCgX_offset = wingCgSpanwise * Math.tan(sweepRad);
-    const wingCgX = wingPositionX + halfWingCgX_offset + (0.42 * mac); // تقدير تقريبي لمركز الثقل الطولي
+    const wingCgY_offset_dihedral = wingCgSpanwise * Math.tan(dihedralAngle * Math.PI / 180);
+    const wingCgX_offset_sweep = halfWingCgX_offset + (0.42 * mac);
 
-    // إضافة عزم كل نصف جناح على حدة لضمان دقة الحسابات في جميع المحاور
-    addMoment(fixedWingWeightKg / 2, wingCgX, wingCgY, wingCgSpanwise); // Right half
-    addMoment(fixedWingWeightKg / 2, wingCgX, wingCgY, -wingCgSpanwise); // Left half
+    // --- تطبيق دوران زاوية الميلان (Incidence) على موضع مركز الثقل ---
+    const wingIncidenceRad = wingIncidenceAngle * (Math.PI / 180);
+    const cosIncidence = Math.cos(wingIncidenceRad);
+    const sinIncidence = Math.sin(wingIncidenceRad);
+
+    // حساب الموضع النسبي بعد الدوران
+    const rotatedCgX_offset = wingCgX_offset_sweep * cosIncidence - wingCgY_offset_dihedral * sinIncidence;
+    const rotatedCgY_offset = wingCgX_offset_sweep * sinIncidence + wingCgY_offset_dihedral * cosIncidence;
+
+    // حساب الموضع Y العام للجناح
+    let wingYPosition;
+    if (wingPosition === 'high') wingYPosition = currentFuselageHeight / 2;
+    else if (wingPosition === 'mid') wingYPosition = 0;
+    else if (wingPosition === 'low') wingYPosition = -currentFuselageHeight / 2;
+
+    // حساب الموضع النهائي لمركز ثقل كل نصف جناح وإضافة عزمه
+    const finalCgX = wingPositionX + rotatedCgX_offset;
+    const finalCgY = wingYPosition + rotatedCgY_offset;
+
+    addMoment(fixedWingWeightKg / 2, finalCgX, finalCgY, wingCgSpanwise); // Right half
+    addMoment(fixedWingWeightKg / 2, finalCgX, finalCgY, -wingCgSpanwise); // Left half
 
     // عزم الجزء الثابت من الذيل
     let baseTailY = 0;
