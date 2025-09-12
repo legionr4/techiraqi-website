@@ -4271,8 +4271,16 @@ function initCollapsibleFieldsets() {
 
         if (!legend || !content || !icon) return;
 
-        // Collapse some sections by default to save space
-        const isInitiallyCollapsed = ['المحاكاة والتأثيرات البصرية', 'ملحقات وأوزان إضافية', 'المواد', 'الألوان'].includes(legend.querySelector('span').textContent);
+        // قائمة بالأقسام التي ستبقى مفتوحة بشكل افتراضي
+        const sectionsToKeepOpen = [
+            'الوحدات',
+            'تصميم الجناح',
+            'تصميم الذيل',
+            'جسم الطائرة'
+        ];
+
+        const sectionTitle = legend.querySelector('span').textContent;
+        const isInitiallyCollapsed = !sectionsToKeepOpen.includes(sectionTitle);
 
         if (isInitiallyCollapsed) {
             content.style.maxHeight = '0px';
