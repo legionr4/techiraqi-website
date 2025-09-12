@@ -2268,14 +2268,29 @@ function calculateAerodynamics() {
     }
     fuselageWeightKg = fuselageVolume * fuselageMaterialDensity;
 
-    // حساب وزن القمرة
+    // حساب وزن ومساحة القمرة
     let cockpitWeightKg = 0;
+    let cockpitSurfaceArea = 0;
     if (hasCockpit) {
         const cockpitMaterialDensity = MATERIAL_DENSITIES[cockpitMaterial];
 
         // Volume of a half-ellipsoid: (2/3) * PI * a * b * c
         const cockpitVolume = (2 / 3) * Math.PI * (cockpitLength / 2) * cockpitHeight * (cockpitWidth / 2);
         cockpitWeightKg = cockpitVolume * cockpitMaterialDensity;
+
+        // Approximate surface area of the cockpit (half-ellipsoid) using Knud Thomsen formula
+        const a = cockpitLength / 2;
+        const b = cockpitHeight;
+        const c = cockpitWidth / 2;
+        if (a > 0 && b > 0 && c > 0) {
+            const p = 1.6075;
+            // Area of the full ellipsoid
+            const fullEllipsoidArea = 4 * Math.PI * Math.pow( (Math.pow(a*b, p) + Math.pow(a*c, p) + Math.pow(b*c, p)) / 3, 1/p);
+            // Area of the base ellipse
+            const baseArea = Math.PI * a * c;
+            // Total area is half the ellipsoid's surface + the base
+            cockpitSurfaceArea = (fullEllipsoidArea / 2) + baseArea;
+        }
     }
 
     // حساب وزن المروحة
@@ -2610,10 +2625,25 @@ function calculateAerodynamics() {
     wingWeightResultEl.textContent = (wingWeightKg * 1000).toFixed(0);
     tailAreaResultEl.textContent = totalTailArea > 0 ? totalTailArea.toFixed(2) : '0.00';
     tailWeightResultEl.textContent = (tailWeightKg * 1000).toFixed(0);
-    fuselageAreaResultEl.textContent = fuselageSurfaceArea > 0 ? fuselageSurfaceArea.toFixed(2) : '0.00'; // Correct
-    fuselageWeightResultEl.textContent = (fuselageWeightKg * 1000).toFixed(0);
-    cockpitWeightResultEl.textContent = (cockpitWeightKg * 1000).toFixed(0);
-    cockpitWeightResultEl.parentElement.parentElement.style.display = getCheck(hasCockpitInput) ? 'block' : 'none'; // Adjusting for new structure
+
+    // --- دمج نتائج الجسم والقمرة للعرض ---
+    const fuselageWeightLabel = document.querySelector('#fuselage-weight-result').parentElement.querySelector('p');
+    const fuselageAreaLabel = document.querySelector('#fuselage-area-result').parentElement.querySelector('p');
+    let totalFuselageSectionWeightKg = fuselageWeightKg;
+    let totalFuselageSectionAreaM2 = fuselageSurfaceArea;
+
+    if (hasCockpit) {
+        totalFuselageSectionWeightKg += cockpitWeightKg;
+        totalFuselageSectionAreaM2 += cockpitSurfaceArea;
+        fuselageWeightLabel.textContent = 'وزن الجسم والقمرة (جرام):';
+        fuselageAreaLabel.textContent = 'مساحة سطح الجسم والقمرة (م²):';
+    } else {
+        fuselageWeightLabel.textContent = 'وزن الجسم التقديري (جرام):';
+        fuselageAreaLabel.textContent = 'مساحة سطح الجسم (م²):';
+    }
+    fuselageAreaResultEl.textContent = totalFuselageSectionAreaM2 > 0 ? totalFuselageSectionAreaM2.toFixed(2) : '0.00';
+    fuselageWeightResultEl.textContent = (totalFuselageSectionWeightKg * 1000).toFixed(0);
+
     energySourceWeightResultEl.textContent = (energySourceWeightKg * 1000).toFixed(0);
     accessoriesWeightResultEl.textContent = totalAccessoriesWeightGrams.toFixed(0);
     if (hasLandingGear) {
