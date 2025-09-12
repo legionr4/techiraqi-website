@@ -2893,6 +2893,78 @@ function calculateAerodynamics() {
     cgSphere.position.y = cg_y;
     cgSphere.position.z = cg_z;
 
+    // --- حساب النقطة المحايدة (Neutral Point) وهامش الاستقرار (Static Margin) ---
+    let staticMargin = 0;
+    if (totalWingArea > 0 && hStabArea > 0 && mac > 0) {
+        // 1. حساب المركز الهوائي للجناح والذيل
+        const wing_ac_x = wingPositionX + mac_x_le + (0.25 * mac);
+        const tail_ac_x = tailPositionX - (0.25 * tailChord);
+
+        // 2. ذراع الذيل (المسافة بين المركزين الهوائيين)
+        const tail_arm_lh = wing_ac_x - tail_ac_x;
+
+        // 3. معامل حجم الذيل الأفقي (Tail Volume Coefficient)
+        const tail_volume_Vh = (tail_arm_lh * hStabArea) / (mac * totalWingArea);
+
+        // 4. ميلان منحنى الرفع للجناح والذيل
+        const CL_alpha_wing = airfoilLiftFactor * 2 * Math.PI * Math.cos(sweepRad);
+        const CL_alpha_tail = 2 * Math.PI * Math.cos(getRaw(tailSweepAngleInput) * Math.PI / 180); // تقريب للذيل
+
+        // 5. تأثير التيار الهوائي الهابط (Downwash)
+        const d_epsilon_d_alpha = (aspectRatio > 0) ? (2 * CL_alpha_wing) / (Math.PI * aspectRatio) : 0;
+
+        // 6. حساب موضع النقطة المحايدة (NP)
+        // Xnp = Xac_w + (CL_alpha_h / CL_alpha_w) * (1 - de/da) * Vh * (q_h/q_w) * MAC
+        const tail_efficiency = 0.9; // كفاءة الذيل (تقديرية)
+        const np_contribution_from_tail = (CL_alpha_tail / CL_alpha_wing) * (1 - d_epsilon_d_alpha) * tail_volume_Vh * tail_efficiency * mac;
+        const neutral_point_x = wing_ac_x + np_contribution_from_tail;
+
+        // 7. حساب هامش الاستقرار
+        staticMargin = ((neutral_point_x - cg_x) / mac) * 100; // كنسبة مئوية
+    }
+
+    // --- حساب عزم الانحدار (Pitching Moment) حول مركز الجاذبية ---
+    let totalPitchingMoment = 0;
+
+    // 1. عزم رفع الجناح
+    // المركز الهوائي للجناح (AC) يقع تقريبًا عند 25% من الوتر الديناميكي الهوائي المتوسط (MAC)
+    const wing_ac_x = wingPositionX + mac_x_le + (0.25 * mac);
+    const wingLeverArm = wing_ac_x - cg_x;
+    const wingPitchingMoment = lift * wingLeverArm;
+    totalPitchingMoment += wingPitchingMoment;
+
+    // 2. عزم رفع الذيل
+    if (hStabArea > 0) {
+        // تقدير زاوية التيار الهوائي الهابط (Downwash) من الجناح
+        const downwash_epsilon_rad = (aspectRatio > 0) ? (2 * cl) / (Math.PI * aspectRatio) : 0;
+        // زاوية الهجوم الفعالة للذيل
+        const tail_aoa_rad = alphaRad + (getRaw(tailIncidenceAngleInput) * Math.PI / 180) - downwash_epsilon_rad;
+        // معامل رفع الذيل
+        const cl_tail = 2 * Math.PI * tail_aoa_rad; // تقريب لنظرية الجنيح الرقيق
+        // قوة رفع الذيل (قد تكون سالبة، أي قوة ضاغطة للأسفل)
+        const lift_tail = 0.5 * airDensity * Math.pow(airSpeed, 2) * hStabArea * cl_tail;
+
+        // المركز الهوائي للذيل (AC) يقع تقريبًا عند 25% من وتره
+        const tail_ac_x = tailPositionX - (0.25 * tailChord);
+        const tailLeverArm = tail_ac_x - cg_x;
+        const tailPitchingMoment = lift_tail * tailLeverArm;
+        totalPitchingMoment += tailPitchingMoment;
+    }
+
+    // 3. عزم دفع المحرك
+    // العزم ينتج عن المسافة العمودية بين خط الدفع ومركز الجاذبية
+    if (thrust > 0) {
+        const thrustVector = new THREE.Vector3(1, 0, 0).applyEuler(engineGroup.rotation);
+        const enginePosition = engineGroup.position; // الموضع العالمي للمحرك
+
+        const thrustLeverArmY = enginePosition.y - cg_y;
+        const thrustLeverArmX = enginePosition.x - cg_x;
+
+        // العزم = (القوة الأفقية * الذراع العمودي) - (القوة العمودية * الذراع الأفقي)
+        const thrustPitchingMoment = (thrust * thrustVector.x * thrustLeverArmY) - (thrust * thrustVector.y * thrustLeverArmX);
+        totalPitchingMoment += thrustPitchingMoment;
+    }
+
     // تحديث حالة إظهار مجموعة CG/AC
     cgAcGroup.visible = showCg;
 
@@ -3004,6 +3076,8 @@ function calculateAerodynamics() {
     document.getElementById('cg-position-y-result').textContent = (cg_y * conversionFactorToDisplay).toFixed(1);
     document.getElementById('cg-position-z-result').textContent = (cg_z * conversionFactorToDisplay).toFixed(1);
     cgPositionResultEl.textContent = (cg_from_nose * conversionFactorToDisplay).toFixed(1);
+    document.getElementById('pitching-moment-result').textContent = totalPitchingMoment.toFixed(2);
+    document.getElementById('static-margin-result').textContent = staticMargin.toFixed(1);
 }
 
 /**
