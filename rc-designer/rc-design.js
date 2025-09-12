@@ -2457,26 +2457,6 @@ function calculateAerodynamics() {
     const totalAccessoriesWeightKg = totalAccessoriesWeightGrams / 1000;
 
     // حساب وزن الحامل (Pylon) قبل حساب الوزن الإجمالي
-    let pylonWeightKg = 0;
-    if (enginePlacement === 'wing' && pylonHeightMeters > 0.001) {
-        const pylonForeAftLength = engineDiameterMeters * 0.6;
-        if (pylonForeAftLength > 0) {
-            const pylonWidth = engineDiameterMeters * 0.4;
-            const pylonVolume = pylonForeAftLength * pylonHeightMeters * pylonWidth;
-            const pylonMaterialDensity = MATERIAL_DENSITIES[pylonMaterial] || MATERIAL_DENSITIES['plastic'];
-            pylonWeightKg = pylonVolume * pylonMaterialDensity * 2; // For both pylons
-        }
-    }
-
-    const totalWeightKg = wingWeightKg + tailWeightKg + fuselageWeightKg + propWeightKg + landingGearWeightKg + engineWeightKg + energySourceWeightKg + cockpitWeightKg + totalAccessoriesWeightKg + wingtipWeightKg + pylonWeightKg;
-
-    // 5. نسبة الدفع إلى الوزن (Thrust-to-Weight Ratio)
-    const weightInNewtons = totalWeightKg * 9.81;
-    const twr = weightInNewtons > 0 ? (thrust / weightInNewtons) : 0;
-
-    // --- حساب سرعة الانهيار (Stall Speed) ---
-    // V_s = sqrt( (2 * W) / (Cl_max * rho * A) )
-    // تقدير معامل الرفع الأقصى (Cl_max) بناءً على شكل المقطع
     let cl_max = 1.2; // قيمة افتراضية (شبه متماثل)
     if (airfoilType === 'flat-bottom') {
         cl_max = 1.5; // أعلى معامل رفع، جيد للتدريب
@@ -2487,6 +2467,17 @@ function calculateAerodynamics() {
     } else if (airfoilType === 'rectangular') {
         cl_max = 1.0; // بسيط وأقل كفاءة
     }
+    
+    // If wing-mounted, engine weight is for two engines
+    if (enginePlacement === 'wing') {
+        engineWeightKg *= 2;
+    }
+
+    const totalWeightKg = wingWeightKg + tailWeightKg + fuselageWeightKg + propWeightKg + landingGearWeightKg + engineWeightKg + energySourceWeightKg + cockpitWeightKg + totalAccessoriesWeightKg + wingtipWeightKg + pylonWeightKg;
+
+    // 5. نسبة الدفع إلى الوزن (Thrust-to-Weight Ratio)
+    const weightInNewtons = totalWeightKg * 9.81;
+    const twr = weightInNewtons > 0 ? (thrust / weightInNewtons) : 0;
 
     let stallSpeed = 0;
     if (totalWingArea > 0 && airDensity > 0 && cl_max > 0 && weightInNewtons > 0) {
@@ -2494,7 +2485,7 @@ function calculateAerodynamics() {
     }
     // --- حساب مركز الجاذبية (CG) والمركز الهوائي (AC) ---
     let totalMoment = 0;
-    const conversionFactorToDisplay = 1 / conversionFactor; // للتحويل من متر إلى الوحدة المعروضة
+    const conversionFactorToDisplay = 1 / conversionFactor;
 
     // 1. حساب الوتر الديناميكي الهوائي المتوسط (MAC) وموقعه
     const mac = (2 / 3) * wingChord * ((1 + taperRatio + Math.pow(taperRatio, 2)) / (1 + taperRatio));
@@ -2625,13 +2616,6 @@ function calculateAerodynamics() {
         addMoment(landingGearWeightKg, mainGearX, mainGearY, 0);
     }
 
-    // --- عزم الملحقات (بطريقة دقيقة) ---
-    const fuselageDatum = fuselageLength / 2; // مقدمة الجسم هي نقطة الصفر للمستخدم
-
-    if (receiverWeightGrams > 0) {
-        const receiverX = fuselageDatum - receiverPosition;
-        addMoment(receiverWeightGrams / 1000, receiverX, receiverPositionY, receiverPositionZ);
-    }
     if (servoG1WeightGrams > 0) {
         const servoG1X = fuselageDatum - servoG1PositionX;
         addMoment(servoG1WeightGrams / 1000, servoG1X, servoG1PositionY, servoG1PositionZ);
@@ -2639,16 +2623,6 @@ function calculateAerodynamics() {
     if (servoG2WeightGrams > 0) {
         const servoG2X = fuselageDatum - servoG2PositionX;
         addMoment(servoG2WeightGrams / 1000, servoG2X, servoG2PositionY, servoG2PositionZ);
-    }
-
-    if (cameraWeightGrams > 0) {
-        const cameraX = fuselageDatum - cameraPosition;
-        addMoment(cameraWeightGrams / 1000, cameraX, cameraPositionY, cameraPositionZ);
-    }
-    if (otherAccessoriesWeightGrams > 0) {
-        // بما أن الغراء والمواد الأخرى موزعة، نفترض أن مركز كتلتها
-        // يقع في المركز الهندسي لجسم الطائرة (x=0 في إحداثيات النموذج).
-        addMoment(otherAccessoriesWeightGrams / 1000, 0, 0, 0);
     }
 
     if (engineType === 'electric') {
@@ -2745,10 +2719,14 @@ function calculateAerodynamics() {
     }
 
     // --- حساب استقرار الانعراج (Yaw Stability - Cnβ) ---
-    const l_v = Math.abs(cg_x - (tailPositionX - (vStabChord * 0.25)));
-    const V_v = (totalWingArea > 0 && wingSpan > 0) ? ((vStabHeight * vStabChord) * l_v) / (totalWingArea * wingSpan) : 0;
-    const Cn_beta = (tailType === 'conventional' || tailType === 't-tail') ? (2 * Math.PI) * V_v : 0;
-
+    let Cn_beta = 0;
+    if (totalWingArea > 0 && wingSpan > 0 && (tailType === 'conventional' || tailType === 't-tail')) {
+        const vStabArea = vStabHeight * vStabChord;
+        const l_v = Math.abs(cg_x - (tailPositionX - (vStabChord * 0.25)));
+        const V_v = (vStabArea * l_v) / (totalWingArea * wingSpan);
+        const CL_alpha_v = 2 * Math.PI; // Approximation
+        Cn_beta = CL_alpha_v * V_v;
+    }
     // 5. حساب الهامش الثابت
     const staticMargin = mac > 0 ? ((X_np - cg_x) / mac) * 100 : 0;
 
