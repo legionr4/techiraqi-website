@@ -4274,12 +4274,10 @@ function initCollapsibleFieldsets() {
         // قائمة بالأقسام التي ستبقى مفتوحة بشكل افتراضي
         const sectionsToKeepOpen = [
             'الوحدات',
-            'تصميم الجناح',
-            'تصميم الذيل',
-            'جسم الطائرة'
+            'تصميم الجناح'
         ];
 
-        const sectionTitle = legend.querySelector('span').textContent;
+        const sectionTitle = legend.querySelector('span').textContent.trim();
         const isInitiallyCollapsed = !sectionsToKeepOpen.includes(sectionTitle);
 
         if (isInitiallyCollapsed) {
@@ -4298,6 +4296,70 @@ function initCollapsibleFieldsets() {
     });
 }
 
+/**
+ * Initializes the Save/Load design functionality.
+ */
+function initSaveLoad() {
+    const saveBtn = document.getElementById('save-design-btn');
+    const loadBtn = document.getElementById('load-design-btn');
+    const loadInput = document.getElementById('load-design-input');
+
+    // --- Save Functionality ---
+    saveBtn.addEventListener('click', () => {
+        const designData = {};
+        const formElements = form.querySelectorAll('input, select');
+
+        formElements.forEach(el => {
+            if (el.id) {
+                switch (el.type) {
+                    case 'checkbox':
+                        designData[el.id] = el.checked;
+                        break;
+                    case 'file':
+                        // لا تحفظ قيمة حقل الملف
+                        break;
+                    default:
+                        designData[el.id] = el.value;
+                }
+            }
+        });
+
+        const jsonString = JSON.stringify(designData, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'rc_plane_design.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    });
+
+    // --- Load Functionality ---
+    loadBtn.addEventListener('click', () => {
+        loadInput.click(); // Trigger the hidden file input
+    });
+
+    loadInput.addEventListener('change', (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const designData = JSON.parse(e.target.result);
+                applyDesign(designData);
+            } catch (error) {
+                console.error("Error parsing design file:", error);
+                alert("ملف تصميم غير صالح أو تالف.");
+            }
+        };
+        reader.readAsText(file);
+    });
+}
+
 // --- التشغيل الأولي ---
 initPropAirflowParticles();
 initWingAirflowParticles();
@@ -4305,6 +4367,7 @@ initVortexParticles();
 initSmokeParticles();
 initHeatHazeParticles();
 initCharts();
+initSaveLoad(); // Initialize Save/Load functionality
 chartsContainer.style.display = 'none'; // Hide charts initially
 updateUnitLabels();
 // استدعاء updateEngineUI أولاً لملء حقول المحرك بالقيم الافتراضية.

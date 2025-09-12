@@ -172,6 +172,18 @@
             overflow: hidden;
             transition: max-height 0.5s ease-in-out, padding 0.5s ease-in-out, margin 0.5s ease-in-out;
         }
+        /* New styles for legend icons */
+        .collapsible-legend > div {
+            display: flex;
+            align-items: center;
+        }
+        .legend-icon {
+            margin-left: 10px; /* RTL: margin on the left of the text */
+            color: var(--primary-color, #0056b3);
+            width: 20px; /* To align text nicely */
+            text-align: center;
+            font-size: 1.1em;
+        }
     </style>
 </head>
 <body>
@@ -184,7 +196,10 @@
             <form id="plane-form">
                 <fieldset class="collapsible-fieldset">
                     <legend class="collapsible-legend">
-                        <span>الوحدات</span>
+                        <div>
+                            <i class="fas fa-ruler-combined legend-icon"></i>
+                            <span>الوحدات</span>
+                        </div>
                         <i class="fas fa-chevron-down toggle-icon"></i>
                     </legend>
                     <div class="collapsible-content">
@@ -205,7 +220,30 @@
                 </fieldset>
                 <fieldset class="collapsible-fieldset">
                     <legend class="collapsible-legend">
-                        <span>تصميم الجناح</span>
+                        <div>
+                            <i class="fas fa-save legend-icon"></i>
+                            <span>حفظ وتحميل التصميم</span>
+                        </div>
+                        <i class="fas fa-chevron-down toggle-icon"></i>
+                    </legend>
+                    <div class="collapsible-content">
+                        <div class="input-group">
+                            <label for="save-design-btn">حفظ التصميم الحالي</label>
+                            <button type="button" id="save-design-btn" style="flex-basis: 45%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; background-color: #4CAF50; color: white;">حفظ كملف</button>
+                        </div>
+                        <div class="input-group">
+                            <label for="load-design-btn">تحميل تصميم من ملف</label>
+                            <input type="file" id="load-design-input" accept=".json" style="display: none;">
+                            <button type="button" id="load-design-btn" style="flex-basis: 45%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; background-color: #008CBA; color: white;">تحميل ملف</button>
+                        </div>
+                    </div>
+                </fieldset>
+                <fieldset class="collapsible-fieldset">
+                    <legend class="collapsible-legend">
+                        <div>
+                            <i class="fas fa-feather-alt legend-icon"></i>
+                            <span>تصميم الجناح</span>
+                        </div>
                         <i class="fas fa-chevron-down toggle-icon"></i>
                     </legend>
                     <div class="collapsible-content">
@@ -381,7 +419,10 @@
 
                 <fieldset class="collapsible-fieldset">
                     <legend class="collapsible-legend">
-                        <span>تصميم الذيل</span>
+                        <div>
+                            <i class="fas fa-stream legend-icon"></i>
+                            <span>تصميم الذيل</span>
+                        </div>
                         <i class="fas fa-chevron-down toggle-icon"></i>
                     </legend>
                     <div class="collapsible-content">
@@ -512,7 +553,10 @@
 
                 <fieldset class="collapsible-fieldset">
                     <legend class="collapsible-legend">
-                        <span>جسم الطائرة</span>
+                        <div>
+                            <i class="fas fa-plane-body legend-icon"></i>
+                            <span>جسم الطائرة</span>
+                        </div>
                         <i class="fas fa-chevron-down toggle-icon"></i>
                     </legend>
                     <div class="collapsible-content">
@@ -642,7 +686,10 @@
 
                 <fieldset class="collapsible-fieldset">
                     <legend class="collapsible-legend">
-                        <span>المحرك (Engine)</span>
+                        <div>
+                            <i class="fas fa-cogs legend-icon"></i>
+                            <span>المحرك (Engine)</span>
+                        </div>
                         <i class="fas fa-chevron-down toggle-icon"></i>
                     </legend>
                     <div class="collapsible-content">
@@ -784,7 +831,10 @@
 
                 <fieldset class="collapsible-fieldset">
                     <legend class="collapsible-legend">
-                        <span>الطاقة (Energy Source)</span>
+                        <div>
+                            <i class="fas fa-battery-full legend-icon"></i>
+                            <span>الطاقة (Energy Source)</span>
+                        </div>
                         <i class="fas fa-chevron-down toggle-icon"></i>
                     </legend>
 
@@ -879,7 +929,10 @@
 
                 <fieldset class="collapsible-fieldset">
                     <legend class="collapsible-legend">
-                        <span>المروحة</span>
+                        <div>
+                            <i class="fas fa-fan legend-icon"></i>
+                            <span>المروحة</span>
+                        </div>
                         <i class="fas fa-chevron-down toggle-icon"></i>
                     </legend>
                     <div class="collapsible-content">
@@ -933,7 +986,10 @@
 
                 <fieldset class="collapsible-fieldset">
                     <legend class="collapsible-legend">
-                        <span>عجلات الهبوط (Landing Gear)</span>
+                        <div>
+                            <i class="fas fa-circle-dot legend-icon"></i>
+                            <span>عجلات الهبوط (Landing Gear)</span>
+                        </div>
                         <i class="fas fa-chevron-down toggle-icon"></i>
                     </legend>
                     <div class="collapsible-content">
@@ -1000,7 +1056,10 @@
 
                 <fieldset class="collapsible-fieldset">
                     <legend class="collapsible-legend">
-                        <span>الديناميكا الهوائية والبيئة</span>
+                        <div>
+                            <i class="fas fa-wind legend-icon"></i>
+                            <span>الديناميكا الهوائية والبيئة</span>
+                        </div>
                         <i class="fas fa-chevron-down toggle-icon"></i>
                     </legend>
                     <div class="collapsible-content">
@@ -1029,7 +1088,10 @@
 
                 <fieldset class="collapsible-fieldset">
                     <legend class="collapsible-legend">
-                        <span>المحاكاة والتأثيرات البصرية</span>
+                        <div>
+                            <i class="fas fa-magic legend-icon"></i>
+                            <span>المحاكاة والتأثيرات البصرية</span>
+                        </div>
                         <i class="fas fa-chevron-down toggle-icon"></i>
                     </legend>
                     <div class="collapsible-content">
@@ -1104,7 +1166,10 @@
 
                 <fieldset class="collapsible-fieldset">
                     <legend class="collapsible-legend">
-                        <span>الرسوم البيانية والتحليلات</span>
+                        <div>
+                            <i class="fas fa-chart-line legend-icon"></i>
+                            <span>الرسوم البيانية والتحليلات</span>
+                        </div>
                         <i class="fas fa-chevron-down toggle-icon"></i>
                     </legend>
                     <div class="collapsible-content">
@@ -1117,7 +1182,10 @@
 
                 <fieldset class="collapsible-fieldset">
                     <legend class="collapsible-legend">
-                        <span>ملحقات وأوزان إضافية</span>
+                        <div>
+                            <i class="fas fa-weight-hanging legend-icon"></i>
+                            <span>ملحقات وأوزان إضافية</span>
+                        </div>
                         <i class="fas fa-chevron-down toggle-icon"></i>
                     </legend>
                     <div class="collapsible-content">
@@ -1217,7 +1285,10 @@
 
                 <fieldset class="collapsible-fieldset">
                     <legend class="collapsible-legend">
-                        <span>المواد</span>
+                        <div>
+                            <i class="fas fa-layer-group legend-icon"></i>
+                            <span>المواد</span>
+                        </div>
                         <i class="fas fa-chevron-down toggle-icon"></i>
                     </legend>
                     <div class="collapsible-content">
@@ -1281,7 +1352,10 @@
 
                 <fieldset class="collapsible-fieldset">
                     <legend class="collapsible-legend">
-                        <span>مركز الجاذبية والاستقرار (CG & Stability)</span>
+                        <div>
+                            <i class="fas fa-crosshairs legend-icon"></i>
+                            <span>مركز الجاذبية والاستقرار (CG & Stability)</span>
+                        </div>
                         <i class="fas fa-chevron-down toggle-icon"></i>
                     </legend>
                     <div class="collapsible-content">
@@ -1294,7 +1368,10 @@
 
                 <fieldset class="collapsible-fieldset">
                     <legend class="collapsible-legend">
-                        <span>الألوان</span>
+                        <div>
+                            <i class="fas fa-palette legend-icon"></i>
+                            <span>الألوان</span>
+                        </div>
                         <i class="fas fa-chevron-down toggle-icon"></i>
                     </legend>
                     <div class="collapsible-content">
