@@ -2292,7 +2292,7 @@ function calculateAerodynamics() {
     // حساب وزن الجزء الثابت من الجناح
     const fixedWingVolume = fixedWingPartArea * wingThickness;
     const fixedWingWeightKg = fixedWingVolume * structureMaterialDensity;
-    const wingWeightKg = fixedWingWeightKg + aileronWeightKg; // الوزن الإجمالي للجناح هو مجموع الجزء الثابت والجنيحات
+    const wingWeightKg = fixedWingWeightKg + aileronWeightKg + wingtipWeightKg; // الوزن الإجمالي للجناح هو مجموع الجزء الثابت والجنيحات والأطراف
 
     // --- Elevator and Rudder Area/Weight Calculation ---
     let elevatorWeightKg = 0;
@@ -2508,7 +2508,7 @@ function calculateAerodynamics() {
         }
     }
 
-    const totalWeightKg = wingWeightKg + tailWeightKg + fuselageWeightKg + propWeightKg + landingGearWeightKg + engineWeightKg + energySourceWeightKg + cockpitWeightKg + totalAccessoriesWeightKg + wingtipWeightKg + pylonWeightKg;
+    const totalWeightKg = wingWeightKg + tailWeightKg + fuselageWeightKg + propWeightKg + landingGearWeightKg + engineWeightKg + energySourceWeightKg + cockpitWeightKg + totalAccessoriesWeightKg + pylonWeightKg;
 
     // 5. نسبة الدفع إلى الوزن (Thrust-to-Weight Ratio)
     const weightInNewtons = totalWeightKg * 9.81;
@@ -3160,14 +3160,11 @@ function createAirflowMaterial(color) {
 }
 
 function setAirflowVisibility(isSpinning) {
-    const showAmbient = showAmbientWindInput.checked;
-
-
     if (propParticleSystem) {
         propParticleSystem.visible = isSpinning;
     }
     if (wingAirflowParticleSystem) {
-        wingAirflowParticleSystem.visible = isSpinning && showAmbient;
+        wingAirflowParticleSystem.visible = isSpinning;
         if (!isSpinning) { // Reset only when stopping the whole simulation
             // Re-initializing is a robust way to reset all particle states
             wingAirflowParticleSystem.geometry.dispose();
@@ -3176,17 +3173,13 @@ function setAirflowVisibility(isSpinning) {
         }
     }
     if (vortexParticleSystem) {
-        const showVortices = showVorticesInput.checked;
-        vortexParticleSystem.visible = isSpinning && showVortices;
+        vortexParticleSystem.visible = isSpinning;
     }
-
-    // التحكم في رؤية الدخان
     if (smokeParticleSystem) {
-        const engineType = engineTypeInput.value;
-        const showSmoke = showSmokeInput.checked;
-        smokeParticleSystem.visible = isSpinning && engineType === 'ic' && showSmoke;
-    } else {
-        // This case should not happen if init is correct
+        smokeParticleSystem.visible = isSpinning;
+    }
+    if (heatHazeParticleSystem) {
+        heatHazeParticleSystem.visible = isSpinning;
     }
 }
 
@@ -3360,6 +3353,26 @@ function animate() {
     planeGroup.position.set(0, 0, 0);
 
     if (isPropSpinning) {
+
+        // --- [تصحيح] تحديث رؤية التأثيرات البصرية بشكل فوري ---
+        // يتم التحقق من حالة مربعات الاختيار في كل إطار وتحديث الرؤية مباشرة.
+        if (propParticleSystem) {
+            propParticleSystem.visible = true; // مرئي دائمًا عند التشغيل
+        }
+        if (wingAirflowParticleSystem) {
+            wingAirflowParticleSystem.visible = showAmbientWindInput.checked;
+        }
+        if (vortexParticleSystem) {
+            vortexParticleSystem.visible = showVorticesInput.checked;
+        }
+        if (smokeParticleSystem) {
+            const engineType = engineTypeInput.value;
+            smokeParticleSystem.visible = showSmokeInput.checked && engineType === 'ic';
+        }
+        if (heatHazeParticleSystem) {
+            const engineType = engineTypeInput.value;
+            heatHazeParticleSystem.visible = showHeatHazeInput.checked && engineType === 'ic';
+        }
 
         // --- قراءة قيم المحرك مباشرة من المدخلات للتحديث الفوري ---
         const currentRpm = getValidNumber(propRpmInput);
