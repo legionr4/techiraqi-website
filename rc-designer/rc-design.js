@@ -2007,11 +2007,6 @@ function calculateAerodynamics() {
     const wingPropDistance = getVal(wingPropDistanceInput);
     const wingTailDistance = getVal(wingTailDistanceInput);
     const enginePlacement = getStr(enginePlacementInput);
-    const noseShape = getStr(fuselageNoseShapeInput);
-    const tailShape = getStr(fuselageTailShapeInput);
-    const fuselageDiameter = getVal(fuselageDiameterInput);
-    const fuselageFrontDiameter = getVal(fuselageFrontDiameterInput);
-    const fuselageRearDiameter = getVal(fuselageRearDiameterInput);
     const fuselageWidth = getVal(fuselageWidthInput);
     let fuselageHeight = getVal(fuselageHeightInput); // Use let to allow modification
 
@@ -2021,11 +2016,17 @@ function calculateAerodynamics() {
         currentFuselageWidth = fuselageWidth;
         currentFuselageHeight = fuselageHeight;
     } else if (fuselageShape === 'cylindrical') {
+        const fuselageDiameter = getVal(fuselageDiameterInput);
+        currentFuselageWidth = fuselageDiameter;
+        currentFuselageHeight = fuselageHeight;
+    } else if (fuselageShape === 'cylindrical') {
         currentFuselageWidth = fuselageDiameter;
         currentFuselageHeight = fuselageDiameter;
     } else if (fuselageShape === 'teardrop') {
         currentFuselageWidth = Math.max(fuselageFrontDiameter, fuselageRearDiameter);
         currentFuselageHeight = Math.max(fuselageFrontDiameter, fuselageRearDiameter);
+        const fuselageFrontDiameter = getVal(fuselageFrontDiameterInput);
+        const fuselageRearDiameter = getVal(fuselageRearDiameterInput);
     } else {
         currentFuselageWidth = 0.15; // Default
         currentFuselageHeight = 0.15; // Default
@@ -2034,6 +2035,10 @@ function calculateAerodynamics() {
     if (fuselageShape !== 'rectangular') {
         fuselageHeight = currentFuselageHeight;
     }
+
+    const noseShape = getStr(fuselageNoseShapeInput);
+    const tailShape = getStr(fuselageTailShapeInput);
+
 
     const hasAileron = getCheck(hasAileronInput);
     const aileronLength = getVal(aileronLengthInput);
@@ -2258,6 +2263,10 @@ function calculateAerodynamics() {
     const structureMaterialDensity = MATERIAL_DENSITIES[structureMaterial]; // Density in kg/m³
     const fuselageMaterialDensity = MATERIAL_DENSITIES[fuselageMaterialValue];
     const controlSurfaceMaterialDensity = MATERIAL_DENSITIES[controlSurfaceMaterial] || structureMaterialDensity; // Fallback to main material
+
+    // --- Fix: Re-read fuselage dimensions needed for weight calculation ---
+    const fuselageFrontDiameter = getVal(fuselageFrontDiameterInput);
+    const fuselageRearDiameter = getVal(fuselageRearDiameterInput);
 
     // حساب وزن أطراف الجناح (Wingtips)
     let wingtipWeightKg = 0;
