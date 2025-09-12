@@ -2590,13 +2590,21 @@ function calculateAerodynamics() {
     // The geometric centroid of a uniform wing is closer to 42% of the MAC.
     // This is a better approximation for the center of *mass* than the aerodynamic center (25%).
     const wingCgX = wingPositionX + mac_x_le + (0.42 * mac);
-    addMoment(fixedWingWeightKg, wingCgX); // مركز الجزء الثابت عند ~42% MAC
+    // --- حساب تأثير الديhedral على الموضع العمودي لمركز ثقل الجناح ---
+    const wingCgSpanwise = (wingSpan / 6) * ((1 + 2 * taperRatio) / (1 + taperRatio)); // الموضع العرضي لمركز ثقل نصف الجناح
+    const wingCgY_dihedral = wingCgSpanwise * Math.tan(dihedralAngle * Math.PI / 180);
+    const wingCgY = wingGroup.position.y + wingCgY_dihedral;
+    addMoment(fixedWingWeightKg, wingCgX, wingCgY, 0);
 
     // عزم الجزء الثابت من الذيل
-    let tailCgY = 0;
+    let baseTailY = 0;
     if (tailType === 't-tail') {
-        tailCgY = vStabHeight + currentFuselageHeight / 2;
+        baseTailY = vStabHeight + currentFuselageHeight / 2;
     }
+    // --- حساب تأثير الديhedral على الموضع العمودي لمركز ثقل الذيل ---
+    const tailCgSpanwise = (tailSpan / 6) * ((1 + 2 * tailTaperRatio) / (1 + tailTaperRatio));
+    const tailCgY_dihedral = tailCgSpanwise * Math.tan(tailDihedralAngle * Math.PI / 180);
+    const tailCgY = baseTailY + tailCgY_dihedral;
     const tailCgX = tailPositionX - (tailChord * 0.42); // مركز الجزء الثابت عند ~42% من وتره
     addMoment(fixedTailWeightKg, tailCgX, tailCgY, 0);
 
@@ -2619,7 +2627,12 @@ function calculateAerodynamics() {
         // مركز الجاذبية للجنيح يقع في منتصف المسافة بين بداية ونهاية الحافة الأمامية، ومزاح للخلف بمقدار نصف عرضه
         const aileronCgX = ((hingeX_start + hingeX_end) / 2) - (aileronWidth / 2);
         // The Y position of the aileron is the same as the wing's
-        addMoment(aileronWeightKg, aileronCgX, wingGroup.position.y, 0);
+        // --- حساب المسافة الجانبية من مركز الجسم للجنيح ---
+        const aileronZPosition = (aileronStartZ + aileronEndZ) / 2;
+        const aileronZ = wingGroup.position.z + aileronZPosition;
+        
+        // إضافة العزم مع الأخذ في الاعتبار موضع الجنيح
+        addMoment(aileronWeightKg, aileronCgX, wingGroup.position.y, aileronZ);
     }
     if (hasElevator && elevatorWeightKg > 0) {
         // حساب مركز الجاذبية للرافع
@@ -2735,22 +2748,22 @@ function calculateAerodynamics() {
         const wingEngineY_global = wingGroup.position.y + engineY_local; // Add wing's global Y position
 
         const spanProgress = wingEngineDist / (wingSpan / 2);
-        const chordAtPylon = wingChord + (wingChord * taperRatio - wingChord) * spanProgress;
-        const sweepAtPylon = (posOnWingZ - currentFuselageWidth / 2) * Math.tan(sweepRad);
-        const leadingEdgeX = wingPositionX + sweepAtPylon + chordAtPylon / 2;
-        const trailingEdgeX = wingPositionX + sweepAtPylon - chordAtPylon / 2;
+        const chordAtPylon = wingChord * (1 - spanProgress * (1 - taperRatio));
+        const sweepAtPylon = wingEngineDist * Math.tan(sweepRad);
+        const leadingEdgeX_at_pylon = wingPositionX + sweepAtPylon;
+
         // تصحيح: استخدام طول الحامل الأفقي بدلاً من ارتفاعه العمودي لحساب الموضع
         const pylonForeAftLength = engineDiameterMeters * 0.6;
-        const wingEngineX = (wingEngineForeAft === 'leading') ? (leadingEdgeX + pylonForeAftLength + (engineLengthMeters / 2)) : (trailingEdgeX - pylonForeAftLength - (engineLengthMeters / 2));
+        const wingEngineX = (wingEngineForeAft === 'leading') ? (leadingEdgeX_at_pylon + pylonForeAftLength + (engineLengthMeters / 2)) : ((leadingEdgeX_at_pylon - chordAtPylon) - pylonForeAftLength - (engineLengthMeters / 2));
         // Add moments for both engines/props
-        addMoment(totalWingPropulsionWeight / 2, wingEngineX, wingEngineY_global, posOnWingZ_abs);
-        addMoment(totalWingPropulsionWeight / 2, wingEngineX, wingEngineY_global, -posOnWingZ_abs);
+        addMoment((engineWeightKg / 2) + propWeightKg, wingEngineX, wingEngineY_global, posOnWingZ_abs);
+        addMoment((engineWeightKg / 2) + propWeightKg, wingEngineX, wingEngineY_global, -posOnWingZ_abs);
 
         // --- حساب وزن وعزم حوامل المحركات (Pylons) ---
         // تم حساب الوزن مسبقًا، هنا نحسب العزم فقط
         if (pylonWeightKg > 0) {
             const pylonForeAftLength = engineDiameterMeters * 0.6;
-            const pylonX = (wingEngineForeAft === 'leading') ? (leadingEdgeX + pylonForeAftLength / 2) : (trailingEdgeX - pylonForeAftLength / 2);
+            const pylonX = (wingEngineForeAft === 'leading') ? (leadingEdgeX_at_pylon + pylonForeAftLength / 2) : ((leadingEdgeX_at_pylon - chordAtPylon) - pylonForeAftLength / 2);
             const pylonY_local = (wingEngineVerticalPos === 'above') ? (wingThickness / 2) + (pylonHeightMeters / 2) : -(wingThickness / 2) - (pylonHeightMeters / 2);
             const pylonY_global = wingGroup.position.y + pylonY_local;
             addMoment(pylonWeightKg / 2, pylonX, pylonY_global, posOnWingZ_abs);
