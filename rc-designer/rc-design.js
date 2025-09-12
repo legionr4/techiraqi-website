@@ -2249,9 +2249,8 @@ function calculateAerodynamics() {
     // حساب وزن أطراف الجناح (Wingtips)
     let wingtipWeightKg = 0;
     if (hasWingtip) {
-        // --- FIX: Calculate wingtip volume and weight more accurately ---
-        const tipChord_wingtip = getVal(wingtipWidthInput) * wingtipTaperRatio; // FIX: Use getVal to get meters
-        const singleWingtipsArea = wingtipLength * (wingtipWidth + tipChord_wingtip) / 2;
+        // تم حساب المساحة مسبقًا باستخدام المتغيرات الصحيحة (wingtipsArea)
+        const singleWingtipsArea = wingtipsArea / 2;
 
         // Adjust volume based on airfoil shape
         let volumeFactor = 0.7; // Default for symmetrical
