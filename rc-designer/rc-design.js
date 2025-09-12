@@ -2254,7 +2254,7 @@ function calculateAerodynamics() {
         const singleWingtipsArea = wingtipLength * (wingtipWidth + tipChord_wingtip) / 2;
 
         // Adjust volume based on airfoil shape
-        let volumeFactor = 0.7; // Default for symmetrical/blended airfoils
+        let volumeFactor = 0.7; // Default for symmetrical
         if (wingtipAirfoilType === 'rectangular') {
             volumeFactor = 1.0;
         } else if (wingtipAirfoilType === 'wedge') {
@@ -2270,13 +2270,8 @@ function calculateAerodynamics() {
     // --- حساب وزن أسطح التحكم ---
     let aileronWeightKg = 0;
     if (hasAileron) {
-        // --- FIX: حساب حجم الجنيح بناءً على شكله لوزن أكثر دقة ---
-        let aileronVolumeFactor = 1.0; // الافتراضي للأشكال المستطيلة والمسطحة
-        if (aileronAirfoilType === 'wedge') {
-            aileronVolumeFactor = 0.5; // شكل الإسفين (المثلث) له نصف حجم المستطيل
-        }
-        // تم حساب aileronArea في الأعلى (مساحة الجنيحين معًا)
-        const aileronVolume = aileronArea * aileronThickness * aileronVolumeFactor;
+        // تم حساب aileronArea في الأعلى
+        const aileronVolume = aileronArea * aileronThickness;
         aileronWeightKg = aileronVolume * controlSurfaceMaterialDensity;
     }
 
@@ -2641,20 +2636,20 @@ function calculateAerodynamics() {
 
         // حساب موضع الحافة الأمامية للجنيح عند بدايته ونهايته
         const chordAtStart = wingChord + (wingChord * taperRatio - wingChord) * (aileronZStart / halfSpan);
-        const sweepAtStart = aileronZStart * Math.tan(sweepRad); // X offset due to sweep at aileron start
-        const hingeX_start = wingPositionX + sweepAtStart + (chordAtStart / 2) - aileronWidth; // X position of the aileron's LE
- 
+        const sweepAtStart = aileronZStart * Math.tan(sweepRad);
+        const hingeX_start = (wingPositionX + sweepAtStart - (chordAtStart / 2)) + aileronWidth;
+
         const chordAtEnd = wingChord + (wingChord * taperRatio - wingChord) * (aileronZEnd / halfSpan);
-        const sweepAtEnd = aileronZEnd * Math.tan(sweepRad); // X offset due to sweep at aileron end
-        const hingeX_end = wingPositionX + sweepAtEnd + (chordAtEnd / 2) - aileronWidth; // X position of the aileron's LE
- 
+        const sweepAtEnd = aileronZEnd * Math.tan(sweepRad);
+        const hingeX_end = (wingPositionX + sweepAtEnd - (chordAtEnd / 2)) + aileronWidth;
+
         // مركز الجاذبية للجنيح يقع في منتصف المسافة بين بداية ونهاية الحافة الأمامية، ومزاح للخلف بمقدار نصف عرضه
-        const aileronCgX = ((hingeX_start + hingeX_end) / 2) + (aileronWidth / 2);
+        const aileronCgX = ((hingeX_start + hingeX_end) / 2) - (aileronWidth / 2);
         // --- حساب المسافة الجانبية من مركز الجسم للجنيح ---
         const aileronCenterZ = (aileronZStart + aileronZEnd) / 2;
         
         // The Y position of the aileron is the same as the wing's
-        const aileronCgY = finalCgY; // FIX: Use the correct variable name for the wing's final Y position
+        const aileronCgY = wingCgY; // Use the calculated wing CG Y position
 
         // إضافة العزم لكل جنيح على حدة
         addMoment(aileronWeightKg / 2, aileronCgX, aileronCgY, aileronCenterZ); // Right aileron
@@ -2683,31 +2678,46 @@ function calculateAerodynamics() {
         const wingtipWidth = getVal(wingtipWidthInput); // This is the root chord of the wingtip
         const wingtipTaperRatio = getRaw(wingtipTaperRatioInput);
         const wingtipSweepRad = getRaw(wingtipSweepAngleInput) * Math.PI / 180;
+        const wingtipCantRad = getRaw(wingtipAngleInput) * Math.PI / 180;
+        const wingtipTwistRad = getRaw(wingtipTwistAngleInput) * Math.PI / 180;
 
         // 1. Calculate the wingtip's local CG (as if it's a small wing)
         // This calculates the CG of the wingtip relative to its own root (where it attaches to the main wing)
         const wt_mac = (2 / 3) * wingtipWidth * ((1 + wingtipTaperRatio + Math.pow(wingtipTaperRatio, 2)) / (1 + wingtipTaperRatio));
         const wt_mac_spanwise = (wingtipLength / 6) * ((1 + 2 * wingtipTaperRatio) / (1 + wingtipTaperRatio));
         const wt_mac_le_x = wt_mac_spanwise * Math.tan(wingtipSweepRad);
-        const wingtip_local_cg_x = wt_mac_le_x + (0.42 * wt_mac); // Local X CG relative to wingtip's own root LE
-        const wingtip_local_cg_spanwise = wt_mac_spanwise; // Local spanwise CG on the wingtip itself
+        const wingtip_local_cg_x_unrotated = wt_mac_le_x + (0.42 * wt_mac); // Local X CG relative to wingtip's own root LE
+        const wingtip_local_cg_z_unrotated = wt_mac_spanwise; // Local spanwise CG on the wingtip itself
 
-        // 2. Find the mounting point on the main wing
+        // 2. Apply wingtip's own rotations (Cant & Twist) to its local CG
+        const cosCant = Math.cos(wingtipCantRad);
+        const sinCant = Math.sin(wingtipCantRad);
+        const cosTwist = Math.cos(wingtipTwistRad);
+        const sinTwist = Math.sin(wingtipTwistRad);
+
+        // Apply Twist (rotation around Y-axis) first
+        const twisted_x = wingtip_local_cg_x_unrotated * cosTwist - wingtip_local_cg_z_unrotated * sinTwist;
+        const twisted_z = wingtip_local_cg_x_unrotated * sinTwist + wingtip_local_cg_z_unrotated * cosTwist;
+
+        // Apply Cant (rotation around X-axis) to the twisted coordinates
+        const local_cg_x_rotated = twisted_x;
+        const local_cg_y_rotated = -twisted_z * sinCant; // Y is affected by cant
+        const local_cg_z_rotated = twisted_z * cosCant;
+
+        // 3. Find the mounting point on the main wing
         const mainWingTipChord = wingChord * taperRatio;
-        const mainWingTipLE_X_global = wingPositionX + (wingSpan / 2) * Math.tan(sweepRad); // Global X-pos of main wing's tip LE
-        const mainWingTipMountX = mainWingTipLE_X_global; // Mount the wingtip's LE to the main wing's tip LE
-        const mainWingTipMountY = wingGroup.position.y + (wingSpan / 2) * Math.tan(dihedralAngle * Math.PI / 180); // Global Y-pos of main wing's tip
-        const mainWingTipMountZ = wingSpan / 2; // Global Z-pos of main wing's tip
+        const mainWingTipLE_X_global = wingPositionX + (wingSpan / 2) * Math.tan(sweepRad);
+        const mainWingTipMountY_dihedral = (wingSpan / 2) * Math.tan(dihedralAngle * Math.PI / 180);
+        const mainWingTipMountZ = wingSpan / 2;
 
-        // 3. Calculate the final global CG position for the wingtip
-        // Start with the mount point and add the local CG offsets
-        const wingtip_global_cg_x = mainWingTipMountX + wingtip_local_cg_x;
-        const wingtip_global_cg_y = mainWingTipMountY + wingtip_local_cg_spanwise; // Assuming wingtip cant angle is 0 for CG calc simplicity
-        const wingtip_global_cg_z = mainWingTipMountZ;
+        // 4. Calculate the final global CG position for the wingtip, including main wing incidence
+        const final_cg_x = mainWingTipLE_X_global + local_cg_x_rotated;
+        const final_cg_y = wingGroup.position.y + mainWingTipMountY_dihedral + local_cg_y_rotated;
+        const final_cg_z = mainWingTipMountZ + local_cg_z_rotated;
 
         // Add moment for both wingtips (right and left)
-        addMoment(singleWingtripWeight, wingtip_global_cg_x, wingtip_global_cg_y, wingtip_global_cg_z); // Right
-        addMoment(singleWingtripWeight, wingtip_global_cg_x, wingtip_global_cg_y, -wingtip_global_cg_z); // Left
+        addMoment(singleWingtripWeight, final_cg_x, final_cg_y, final_cg_z); // Right
+        addMoment(singleWingtripWeight, final_cg_x, final_cg_y, -final_cg_z); // Left
     }
 
     // عزم القمرة
