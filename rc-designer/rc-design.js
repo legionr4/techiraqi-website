@@ -2673,44 +2673,62 @@ function calculateAerodynamics() {
     // عزم أطراف الجناح (يُضاف فقط إذا كانت مُفعّلة)
     if (hasWingtip && wingtipWeightKg > 0) {
         // --- FIX: Correctly calculate moment for BOTH wingtips ---
-        const singleWingtripWeight = wingtipWeightKg / 2; // The weight of one wingtip
+        const singleWingtripWeight = wingtipWeightKg / 2;
         const wingtipLength = getVal(wingtipLengthInput);
-        const wingtipWidth = getVal(wingtipWidthInput); // This is the root chord of the wingtip
+        const wingtipWidth = getVal(wingtipWidthInput);
         const wingtipTaperRatio = getRaw(wingtipTaperRatioInput);
         const wingtipSweepRad = getRaw(wingtipSweepAngleInput) * Math.PI / 180;
         const wingtipCantRad = getRaw(wingtipAngleInput) * Math.PI / 180;
         const wingtipTwistRad = getRaw(wingtipTwistAngleInput) * Math.PI / 180;
 
-        // 1. Calculate the wingtip's local CG (as if it's a small wing)
-        // This calculates the CG of the wingtip relative to its own root (where it attaches to the main wing)
-        const wt_mac = (2 / 3) * wingtipWidth * ((1 + wingtipTaperRatio + Math.pow(wingtipTaperRatio, 2)) / (1 + wingtipTaperRatio));
-        const wt_mac_spanwise = (wingtipLength / 6) * ((1 + 2 * wingtipTaperRatio) / (1 + wingtipTaperRatio));
-        const wt_mac_le_x = wt_mac_spanwise * Math.tan(wingtipSweepRad);
-        const wingtip_local_cg_x_unrotated = wt_mac_le_x + (0.42 * wt_mac); // Local X CG relative to wingtip's own root LE
-        const wingtip_local_cg_z_unrotated = wt_mac_spanwise; // Local spanwise CG on the wingtip itself
+        // --- Universal Logic for Wingtip CG Calculation ---
 
-        // 2. Apply wingtip's own rotations (Cant & Twist) to its local CG
+        // 1. Calculate the wingtip's LOCAL CG (relative to its own root)
+        let local_cg_x_unrotated, local_cg_z_unrotated;
+
+        if (wingtipAirfoilType === 'rectangular' || wingtipAirfoilType === 'wedge') {
+            // Geometric centroid of a trapezoid (which is what a tapered winglet is)
+            const a = wingtipWidth; // root chord
+            const b = wingtipWidth * wingtipTaperRatio; // tip chord
+            const h = wingtipLength; // span (height of trapezoid)
+            
+            // Centroid along the span (local Z)
+            local_cg_z_unrotated = (h / 3) * ((a + 2 * b) / (a + b));
+            
+            // Centroid along the chord (local X), considering sweep
+            const x_offset_due_to_sweep = local_cg_z_unrotated * Math.tan(wingtipSweepRad);
+            const chord_at_centroid = a + (b - a) * (local_cg_z_unrotated / h);
+            local_cg_x_unrotated = x_offset_due_to_sweep - (chord_at_centroid / 2) + (a / 2); // Relative to root chord center
+
+        } else {
+            // Aerodynamic center based calculation for airfoil shapes
+            const wt_mac = (2 / 3) * wingtipWidth * ((1 + wingtipTaperRatio + Math.pow(wingtipTaperRatio, 2)) / (1 + wingtipTaperRatio));
+            local_cg_z_unrotated = (wingtipLength / 6) * ((1 + 2 * wingtipTaperRatio) / (1 + wingtipTaperRatio));
+            const wt_mac_le_x = local_cg_z_unrotated * Math.tan(wingtipSweepRad);
+            local_cg_x_unrotated = wt_mac_le_x + (0.42 * wt_mac); // Local X CG relative to wingtip's own root LE
+        }
+
+        // 2. Apply wingtip's own rotations (Cant & Twist) to its local CG to get rotated local coordinates
         const cosCant = Math.cos(wingtipCantRad);
         const sinCant = Math.sin(wingtipCantRad);
         const cosTwist = Math.cos(wingtipTwistRad);
         const sinTwist = Math.sin(wingtipTwistRad);
 
         // Apply Twist (rotation around Y-axis) first
-        const twisted_x = wingtip_local_cg_x_unrotated * cosTwist - wingtip_local_cg_z_unrotated * sinTwist;
-        const twisted_z = wingtip_local_cg_x_unrotated * sinTwist + wingtip_local_cg_z_unrotated * cosTwist;
+        const twisted_x = local_cg_x_unrotated * cosTwist - local_cg_z_unrotated * sinTwist;
+        const twisted_z = local_cg_x_unrotated * sinTwist + local_cg_z_unrotated * cosTwist;
 
         // Apply Cant (rotation around X-axis) to the twisted coordinates
         const local_cg_x_rotated = twisted_x;
         const local_cg_y_rotated = -twisted_z * sinCant; // Y is affected by cant
         const local_cg_z_rotated = twisted_z * cosCant;
 
-        // 3. Find the mounting point on the main wing
-        const mainWingTipChord = wingChord * taperRatio;
+        // 3. Find the global mounting point on the main wing, considering sweep and dihedral
         const mainWingTipLE_X_global = wingPositionX + (wingSpan / 2) * Math.tan(sweepRad);
         const mainWingTipMountY_dihedral = (wingSpan / 2) * Math.tan(dihedralAngle * Math.PI / 180);
         const mainWingTipMountZ = wingSpan / 2;
 
-        // 4. Calculate the final global CG position for the wingtip, including main wing position and incidence
+        // 4. Calculate the final global CG position for the wingtip
         const final_cg_x = mainWingTipLE_X_global + local_cg_x_rotated;
         const final_cg_y = wingYPosition + mainWingTipMountY_dihedral + local_cg_y_rotated;
         const final_cg_z = mainWingTipMountZ + local_cg_z_rotated;
