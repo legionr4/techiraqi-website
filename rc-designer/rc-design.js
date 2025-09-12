@@ -4371,6 +4371,44 @@ function initCollapsibleFieldsets() {
 }
 
 /**
+ * Applies a loaded design from a JSON object to the form inputs.
+ * @param {object} designData The object containing the design parameters.
+ */
+function applyDesign(designData) {
+    // Loop through the loaded data and apply it to the corresponding form elements
+    for (const id in designData) {
+        const element = document.getElementById(id);
+        if (element) {
+            switch (element.type) {
+                case 'checkbox':
+                    element.checked = designData[id];
+                    break;
+                case 'file':
+                    // Do not attempt to set the value of file inputs
+                    break;
+                default:
+                    element.value = designData[id];
+            }
+        }
+    }
+
+    // After setting all form values, trigger a full update of the application
+    updateAll();
+
+    // Manually trigger 'input' events for range sliders to ensure their text displays are updated
+    const rangeInputs = form.querySelectorAll('input[type="range"]');
+    rangeInputs.forEach(range => {
+        const event = new Event('input', { bubbles: true });
+        range.dispatchEvent(event);
+    });
+
+    // Manually update control surfaces as their state is not part of the main update loop
+    updateControlSurfacesFromSliders();
+
+    alert("تم تحميل التصميم بنجاح!");
+}
+
+/**
  * Initializes the Save/Load design functionality.
  */
 function initSaveLoad() {
