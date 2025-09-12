@@ -3837,8 +3837,25 @@ function animate() {
             const emissionPoints = [];
 
             if (enginePlacement === 'wing') {
-                const engines = wingEnginesGroup.children.filter(c => c.type === 'Mesh' && c.geometry.type === 'CylinderGeometry');
-                engines.forEach(engine => emissionPoints.push(engine.position.clone()));
+                // تصحيح: البحث عن المحركات في المجموعات الصحيحة الخاصة بكل جناح
+                const rightWingEngineGrp = scene.getObjectByName("rightWingEngineGroup");
+                const leftWingEngineGrp = scene.getObjectByName("leftWingEngineGroup");
+
+                const findAndAddEngine = (group) => {
+                    if (group) {
+                        const engine = group.children.find(c => c.type === 'Mesh' && c.geometry.type === 'CylinderGeometry');
+                        if (engine) {
+                            // الحصول على الموضع العالمي للمحرك لضمان دقة الانبعاث
+                            const worldPos = new THREE.Vector3();
+                            engine.getWorldPosition(worldPos);
+                            emissionPoints.push(worldPos);
+                        }
+                    }
+                };
+
+                findAndAddEngine(rightWingEngineGrp);
+                findAndAddEngine(leftWingEngineGrp);
+
             } else {
                 emissionPoints.push(engineGroup.position.clone());
             }
@@ -3851,7 +3868,10 @@ function animate() {
 
                 if (lifeData[i2] <= 0) {
                     // توزيع الجسيمات على نقاط الانبعاث
-                    const emissionPoint = emissionPoints[i % emissionPoints.length];
+                    // تصحيح: التأكد من وجود نقاط انبعاث قبل استخدامها
+                    if (emissionPoints.length === 0) continue;
+                    const emissionPoint = emissionPoints[i % emissionPoints.length] || new THREE.Vector3();
+
 
                     positions[i3] = emissionPoint.x + (Math.random() - 0.5) * 0.1;
                     positions[i3 + 1] = emissionPoint.y + (Math.random() - 0.5) * 0.1;
