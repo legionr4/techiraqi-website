@@ -1147,7 +1147,7 @@
                         </select>
                     </div>
                     <div class="input-group">
-                        <label for="control-surface-material">مواد الجنيح والدفة والرافع</label>
+                        <label for="control-surface-material">مواد صنع الجنيح والدفة والرافع</label>
                         <select id="control-surface-material">
                             <option value="foam" selected>فوم (Foam - EPO/EPP)</option>
                             <option value="balsa">خشب البلسا (Balsa)</option>
@@ -1190,8 +1190,8 @@
                 <fieldset>
                     <legend>مركز الجاذبية والاستقرار (Center of Gravity & Stability)</legend>
                     <div class="input-group">
-                        <label for="show-cg-ac">إظهار CG (أحمر) و AC (أزرق)</label>
-                        <input type="checkbox" id="show-cg-ac" checked style="flex-basis: auto; margin-left: auto;">
+                        <label for="show-cg">إظهار مركز الجاذبية (CG)</label>
+                        <input type="checkbox" id="show-cg" checked style="flex-basis: auto; margin-left: auto;">
                     </div>
                 </fieldset>
 
@@ -1291,37 +1291,13 @@
                     <p>موضع مركز الجاذبية (CG) (سم):</p>
                     <span id="cg-position-result">0.0</span>
                 </div>
-                <div class="result-item" title="موضع المركز الهوائي من مقدمة الطائرة">
-                    <p>موضع المركز الهوائي (AC) (سم):</p>
-                    <span id="ac-position-result">0.0</span>
-                </div>
-                <div class="result-item" title="مقياس استقرار الطائرة. يجب أن تكون القيمة موجبة (عادة بين 5% و 15%) لتكون الطائرة مستقرة.">
-                    <p><strong>الهامش الثابت (Static Margin):</strong></p>
-                    <span id="static-margin-result">0.0%</span>
-                </div>
-                <div class="result-item" title="الموضع العمودي لمركز الجاذبية (موجب للأعلى)">
-                    <p>موضع CG العمودي (Y) (سم):</p>
-                    <span id="cg-position-y-result">0.0</span>
-                </div>
-                <div class="result-item" title="الموضع الجانبي لمركز الجاذبية (موجب لليمين)">
-                    <p>موضع CG الجانبي (Z) (سم):</p>
-                    <span id="cg-position-z-result">0.0</span>
-                </div>
-                <div class="result-item" title="مقياس استقرار الطائرة الجانبي (Roll). القيمة السالبة تعني أن الطائرة مستقرة وتميل للعودة إلى الوضع الأفقي.">
-                    <p><strong>معامل استقرار الدوران (Clβ):</strong></p>
-                    <span id="roll-stability-result">-0.00</span>
-                </div>
-                <div class="result-item" id="pitching-moment-result-item" title="العزم الذي يولده المحرك حول مركز الجاذبية. القيمة السالبة تعني ميلان للأسفل (nose-down)، والموجبة للأعلى (nose-up).">
+                <div class="result-item" id="pitching-moment-result-item" title="العزم الذي يولده المحرك حول مركز الجاذبية. القيمة السالبة تعني ميلان للأسفل (nose-down)، والموجبة للأعلى (nose-up)." style="display: none;">
                     <p><strong>عزم الانحدار من الدفع (N.m):</strong></p>
                     <span id="pitching-moment-result">0.00</span>
                 </div>
-                <div class="result-item" id="yawing-moment-result-item" title="العزم الذي يولده المحرك حول المحور العمودي. القيمة الموجبة تعني انعراج لليمين (nose-right).">
+                <div class="result-item" id="yawing-moment-result-item" title="العزم الذي يولده المحرك حول المحور العمودي. القيمة الموجبة تعني انعراج لليمين (nose-right)." style="display: none;">
                     <p><strong>عزم الانعراج من الدفع (N.m):</strong></p>
                     <span id="yawing-moment-result">0.00</span>
-                </div>
-                <div class="result-item" id="yaw-stability-result-item" title="مقياس استقرار الطائرة الاتجاهي (Yaw). القيمة الموجبة تعني أن الطائرة مستقرة وتميل للعودة إلى اتجاه الريح (Weathercock stability).">
-                    <p><strong>معامل استقرار الانعراج (Cnβ):</strong></p>
-                    <span id="yaw-stability-result">0.000</span>
                 </div>
             </div>
         </div>

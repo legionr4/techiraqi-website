@@ -104,12 +104,9 @@ scene.add(planeGroup);
 // --- كائنات مركز الجاذبية والمركز الهوائي ---
 const cgAcGroup = new THREE.Group();
 const cgGeom = new THREE.SphereGeometry(0.02, 16, 16);
-const acGeom = new THREE.SphereGeometry(0.02, 16, 16);
 const cgMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 }); // أحمر
-const acMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff }); // أزرق
 const cgSphere = new THREE.Mesh(cgGeom, cgMaterial);
-const acSphere = new THREE.Mesh(acGeom, acMaterial);
-cgAcGroup.add(cgSphere, acSphere);
+cgAcGroup.add(cgSphere);
 planeGroup.add(cgAcGroup);
 
 // متغير لتخزين اهتزاز الدوران من الإطار السابق لإزالته في الإطار التالي
@@ -389,7 +386,6 @@ const accessoryColorInput = document.getElementById('accessory-color');
 const airflowColorInput = document.getElementById('airflow-color');
 const vortexColorInput = document.getElementById('vortex-color');
 const smokeColorInput = document.getElementById('smoke-color');
-const strutColorInput = document.getElementById('strut-color');
 const wheelColorInput = document.getElementById('wheel-color');
 const backgroundColorInput = document.getElementById('background-color');
 
@@ -500,7 +496,7 @@ const servoG2PositionYInput = document.getElementById('servo-g2-position-y');
 const servoG2PositionZInput = document.getElementById('servo-g2-position-z');
 
 // CG/AC Inputs
-const showCgAcCheckbox = document.getElementById('show-cg-ac');
+const showCgCheckbox = document.getElementById('show-cg');
 
 // عناصر التحكم الجديدة
 const aileronControlSlider = document.getElementById('aileron-control');
@@ -535,8 +531,6 @@ const propWeightResultEl = document.getElementById('prop-weight-result');
 const propPowerResultEl = document.getElementById('prop-power-result');
 const propTorqueResultEl = document.getElementById('prop-torque-result');
 const cgPositionResultEl = document.getElementById('cg-position-result');
-const acPositionResultEl = document.getElementById('ac-position-result');
-const staticMarginResultEl = document.getElementById('static-margin-result');
 
 const planeParams = {}; // Object to hold cached plane parameters for the animation loop
 
@@ -946,7 +940,6 @@ function updatePlaneModel() {
     const tailColor = tailColorInput.value;
     const pylonColor = pylonColorInput.value;
     const vortexColor = vortexColorInput.value;
-    const accessoryColor = accessoryColorInput.value;
     const airflowColor = airflowColorInput.value;
     const smokeColor = smokeColorInput.value;
     const backgroundColor = backgroundColorInput.value;
@@ -962,7 +955,6 @@ function updatePlaneModel() {
     engineMaterial.color.set(engineColorInput.value);
     cockpitMaterial.color.set(cockpitColorInput.value);
     propMaterial.color.set(propColorInput.value);
-    strutMaterial.color.set(strutColorInput.value);
     wheelMaterial.color.set(wheelColorInput.value);
     // سيتم تحديث لون الملحقات عند إنشائها
     energySourceMaterial.color.set(energySourceColorInput.value);
@@ -2057,7 +2049,7 @@ function calculateAerodynamics() {
     const rudderLength = getVal(rudderLengthInput); // This was a duplicate, but keeping it for context
     const rudderWidth = getVal(rudderWidthInput);
     const rudderAirfoilType = getStr(rudderAirfoilTypeInput);
-    const showCgAc = getCheck(showCgAcCheckbox);
+    const showCg = getCheck(showCgCheckbox);
     const batteryWeightGrams = getRaw(batteryWeightInput);
     const fuelTankLength = getVal(fuelTankLengthInput);
     const fuelTankWidth = getVal(fuelTankWidthInput);
@@ -2541,51 +2533,15 @@ function calculateAerodynamics() {
     const mac_y = (wingSpan / 6) * ((1 + 2 * taperRatio) / (1 + taperRatio));
     // استخدام sweepRad المعرف مسبقاً
     const mac_x_le = mac_y * Math.tan(sweepRad); // موضع الحافة الأمامية للـ MAC
-
+    
     // موضع الجناح على المحور X (من updatePlaneModel)
     const wingPositionX = (fuselageLength / 2) - wingPropDistance;
     const tailPositionX = wingPositionX - wingTailDistance;
 
-    // 2. حساب النقطة المحايدة (Neutral Point - NP) للطائرة بأكملها
-    // هذه الطريقة أكثر دقة من استخدام المركز الهوائي للجناح فقط
-
-    // المركز الهوائي للجناح (Wing AC)
-    const X_ac_w = wingPositionX + mac_x_le + (0.25 * mac);
-
-    // المركز الهوائي للذيل الأفقي (Horizontal Tail AC)
-    const X_ac_h = tailPositionX - (0.25 * tailChord);
-
-    // ميل منحنى الرفع للجناح والذيل
-    const CL_alpha_w = 2 * Math.PI * Math.cos(sweepRad);
-    const tailSweepRad = (getRaw(tailSweepAngleInput) * Math.PI / 180);
-    const CL_alpha_h = 2 * Math.PI * Math.cos(tailSweepRad);
-
-    // تأثير تدفق الهواء المنحدر (Downwash)
-    const de_da = (aspectRatio > 0) ? (2 * CL_alpha_w) / (Math.PI * aspectRatio) : 0; // d(epsilon)/d(alpha)
-
-    // مساهمة جسم الطائرة في الرفع (تقريبية)
-    // K is a factor related to the fuselage shape, typically around 2.0 for cylindrical bodies
-    const K_fuselage = 2.0;
-    const fuselageCrossSectionalArea = fuselageWidth * fuselageHeight;
-    const CL_alpha_fus = (totalWingArea > 0) ? K_fuselage * (fuselageCrossSectionalArea / totalWingArea) : 0;
-    const CL_alpha_total = CL_alpha_w + CL_alpha_fus; // Total lift curve slope for wing-body
-
-    // معامل حجم الذيل الأفقي
-    const V_h = (totalWingArea > 0 && mac > 0) ? (hStabArea * (X_ac_h - X_ac_w)) / (totalWingArea * mac) : 0; // Horizontal tail volume coefficient
-
-    // حساب النقطة المحايدة (NP)
-    const X_np = X_ac_w + (CL_alpha_h / CL_alpha_total) * (1 - de_da) * V_h * mac;
-
     // دالة مساعدة لحساب العزم
-    // تم تعديلها لتشمل العزم العمودي (Y) والجانبي (Z) في المستقبل
-    let totalMomentY = 0;
-    let totalMomentZ = 0;
-
-    const addMoment = (weightKg, positionX, positionY = 0, positionZ = 0) => {
+    const addMoment = (weightKg, positionX) => {
         if (weightKg > 0) {
             totalMoment += weightKg * positionX; // حساب العزم حول نقطة الأصل (0,0,0)
-            totalMomentY += weightKg * positionY;
-            totalMomentZ += weightKg * positionZ;
         }
     };
 
@@ -2597,7 +2553,7 @@ function calculateAerodynamics() {
         // في شكل قطرة الدمع، يميل مركز الثقل نحو الجزء الأعرض (الأمامي)
         fuselageCgX = fuselageLength * 0.1; // إزاحة تقديرية للأمام بنسبة 10%
     }
-    addMoment(fuselageWeightKg, fuselageCgX, 0, 0); // الجسم يفترض أنه متمركز
+    addMoment(fuselageWeightKg, fuselageCgX); // الجسم يفترض أنه متمركز
 
     // --- تحسين دقة مركز ثقل الجناح والذيل (فصل الأجزاء الثابتة والمتحركة) ---
     // عزم الجزء الثابت من الجناح
@@ -2664,37 +2620,37 @@ function calculateAerodynamics() {
 
     if (receiverWeightGrams > 0) {
         const receiverX = fuselageDatum - receiverPosition;
-        addMoment(receiverWeightGrams / 1000, receiverX, receiverPositionY, receiverPositionZ);
+        addMoment(receiverWeightGrams / 1000, receiverX);
     }
     if (servoG1WeightGrams > 0) {
         const servoG1X = fuselageDatum - servoG1PositionX;
-        addMoment(servoG1WeightGrams / 1000, servoG1X, servoG1PositionY, servoG1PositionZ);
+        addMoment(servoG1WeightGrams / 1000, servoG1X);
     }
     if (servoG2WeightGrams > 0) {
         const servoG2X = fuselageDatum - servoG2PositionX;
-        addMoment(servoG2WeightGrams / 1000, servoG2X, servoG2PositionY, servoG2PositionZ);
+        addMoment(servoG2WeightGrams / 1000, servoG2X);
     }
 
     if (cameraWeightGrams > 0) {
         const cameraX = fuselageDatum - cameraPosition;
-        addMoment(cameraWeightGrams / 1000, cameraX, cameraPositionY, cameraPositionZ);
+        addMoment(cameraWeightGrams / 1000, cameraX);
     }
     if (otherAccessoriesWeightGrams > 0) {
         // بما أن الغراء والمواد الأخرى موزعة، نفترض أن مركز كتلتها
         // يقع في المركز الهندسي لجسم الطائرة (x=0 في إحداثيات النموذج).
-        addMoment(otherAccessoriesWeightGrams / 1000, 0, 0, 0);
+        addMoment(otherAccessoriesWeightGrams / 1000, 0);
     }
 
     if (engineType === 'electric') {
         const batteryPositionFromNose = getVal(batteryPositionInput);
         const batteryPositionX = (fuselageLength / 2) - batteryPositionFromNose;
         // نفترض أن البطارية في المنتصف عمودياً وجانبياً، يمكن إضافة حقول إدخال لموضعها Y و Z في المستقبل
-        addMoment(batteryWeightGrams / 1000, batteryPositionX, 0, 0);
+        addMoment(batteryWeightGrams / 1000, batteryPositionX);
     } else { // ic
         const tankPositionFromNose = getVal(fuelTankPositionInput);
         const tankPositionX = (fuselageLength / 2) - tankPositionFromNose;
         // نفترض أن الخزان في المنتصف عمودياً وجانبياً
-        addMoment(energySourceWeightKg, tankPositionX, 0, 0);
+        addMoment(energySourceWeightKg, tankPositionX);
     }
 
     // عزم المحرك والمروحة بناءً على الموضع
@@ -2704,10 +2660,6 @@ function calculateAerodynamics() {
         const propPos = propellerGroup.position;
         addMoment(engineWeightKg, enginePos.x);
         addMoment(propWeightKg, propPos.x);
-
-        // إضافة تأثير الموضع العمودي على العزم العمودي
-        totalMomentY += engineWeightKg * enginePos.y;
-        totalMomentY += propWeightKg * propPos.y;
 
     } else if (enginePlacement === 'wing') {
         // الوزن الإجمالي للمحركين والمروحتين
@@ -2737,22 +2689,14 @@ function calculateAerodynamics() {
 
     // 4. حساب الموضع النهائي لمركز الجاذبية
     const cg_x = totalWeightKg > 0 ? totalMoment / totalWeightKg : 0;
-    const cg_y = totalWeightKg > 0 ? totalMomentY / totalWeightKg : 0;
-    const cg_z = totalWeightKg > 0 ? totalMomentZ / totalWeightKg : 0;
-
-    // 5. حساب الهامش الثابت
-    const staticMargin = mac > 0 ? ((X_np - cg_x) / mac) * 100 : 0;
 
     // تحديث الكرات في النموذج ثلاثي الأبعاد
     cgSphere.position.x = cg_x;
-    cgSphere.position.y = cg_y;
-    cgSphere.position.z = cg_z;
-    acSphere.position.x = X_np; // الكرة الزرقاء تمثل الآن النقطة المحايدة
-    acSphere.position.y = 0;
-    acSphere.position.z = 0;
+    cgSphere.position.y = 0; // Reset to 0 for now
+    cgSphere.position.z = 0; // Reset to 0 for now
 
     // تحديث حالة إظهار مجموعة CG/AC
-    cgAcGroup.visible = showCgAc;
+    cgAcGroup.visible = showCg;
 
     // --- تحديث علامة مركز الثقل على جسم الطائرة (CG Marker) ---
     while (cgFuselageMarkerGroup.children.length > 0) {
@@ -2762,7 +2706,7 @@ function calculateAerodynamics() {
         if (child.material) child.material.dispose(); // Clean up material
     }
 
-    if (showCgAc) {
+    if (showCg) {
         const cgMarkerMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000, depthTest: false, side: THREE.DoubleSide });
         cgMarkerMaterial.renderOrder = 1; // Ensure it's drawn on top
 
@@ -2857,57 +2801,9 @@ function calculateAerodynamics() {
 
     // عرض نتائج CG و AC (محسوبة من مقدمة الطائرة)
     const datum = fuselageLength / 2; // مقدمة الطائرة هي نقطة الصفر للمستخدم
-    const cg_from_nose = cg_x - datum;
-    const ac_from_nose = ac_x - datum;
+    const cg_from_nose = fuselageDatum - cg_x;
 
-    document.getElementById('cg-position-y-result').textContent = (cg_y * conversionFactorToDisplay).toFixed(1);
-    document.getElementById('cg-position-z-result').textContent = (cg_z * conversionFactorToDisplay).toFixed(1);
     cgPositionResultEl.textContent = (cg_from_nose * conversionFactorToDisplay).toFixed(1);
-    acPositionResultEl.textContent = ((X_np - datum) * conversionFactorToDisplay).toFixed(1);
-    staticMarginResultEl.textContent = `${staticMargin.toFixed(1)}%`;
-
-    // --- حساب استقرار الدوران (Roll Stability - Clβ) ---
-    const Cl_alpha = airfoilLiftFactor * 2 * Math.PI * Math.cos(sweepRad);
-
-    // 1. تأثير زاوية الديhedral (الأكثر أهمية)
-    const dihedralRad = dihedralAngle * (Math.PI / 180);
-    const Cl_beta_dihedral = - (Cl_alpha / 4) * dihedralRad; // تقريب شائع يأخذ في الاعتبار تأثير الجناح ثلاثي الأبعاد
-
-    // 2. تأثير زاوية ميلان الجناح (Sweep)
-    // الميلان الإيجابي للخلف يقلل من الاستقرار (Cl_beta أكثر إيجابية)
-    const Cl_beta_sweep = 0.00015 * sweepAngle; // قيمة تجريبية تقريبية
-
-    // 3. تأثير موضع الجناح (High/Low Wing)
-    let Cl_beta_position = 0;
-    if (wingPosition === 'high') {
-        Cl_beta_position = -0.008; // الجناح العلوي يزيد الاستقرار
-    } else if (wingPosition === 'low') {
-        Cl_beta_position = 0.008; // الجناح السفلي يقلل الاستقرار
-    }
-
-    // 4. تأثير الذيل العمودي (Vertical Tail)
-    let Cl_beta_vtail = 0;
-    if (totalWingArea > 0 && wingSpan > 0 && (tailType === 'conventional' || tailType === 't-tail')) {
-        const vStabArea = vStabHeight * vStabChord;
-        // ارتفاع مركز الضغط للذيل العمودي فوق المحور الطولي للطائرة
-        const Z_v = (fuselageHeight / 2) + (vStabHeight / 2);
-        // معامل قوة الرفع للذيل العمودي (مشابه للجناح)
-        const CL_alpha_v = 2 * Math.PI;
-        // حساب مساهمة الذيل العمودي في استقرار الدوران
-        Cl_beta_vtail = -CL_alpha_v * (vStabArea / totalWingArea) * (Z_v / wingSpan);
-    }
-
-    // 5. تأثير الديhedral للذيل الأفقي (Horizontal Tail Dihedral)
-    let Cl_beta_h_dihedral = 0;
-    if (hStabArea > 0) {
-        const tailDihedralRad = tailDihedralAngle * (Math.PI / 180);
-        const eta_h = 0.9; // Dynamic pressure ratio at the tail (assumed)
-        // The formula is similar to the wing's but scaled by area and dynamic pressure
-        Cl_beta_h_dihedral = -0.5 * CL_alpha_h * (hStabArea / totalWingArea) * eta_h * tailDihedralRad;
-    }
-
-    const total_Cl_beta = Cl_beta_dihedral + Cl_beta_sweep + Cl_beta_position + Cl_beta_vtail + Cl_beta_h_dihedral;
-    rollStabilityResultEl.textContent = total_Cl_beta.toFixed(3);
 }
 
 /**
