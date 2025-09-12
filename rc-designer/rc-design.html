@@ -18,8 +18,17 @@
             color: #333;
         }
         h1, h2 {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
             text-align: center;
             color: #4a4a4a;
+        }
+        .header-logo {
+            height: 50px; /* حجم الشعار */
+            width: auto;
+            border-radius: 8px; /* حواف دائرية للشعار */
         }
         .container {
             display: flex;
@@ -203,7 +212,10 @@
 </head>
 <body>
 
-    <h1>تصميم وحسابات طائرة RC</h1>
+    <h1>
+        <img src="../assets/RcPlaneLogo.webp" alt="شعار مصمم الطائرات" class="header-logo">
+        <span>تصميم وحسابات طائرة RC</span>
+    </h1>
 
     <div class="container">
         <div class="controls">
