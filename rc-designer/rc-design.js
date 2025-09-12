@@ -2546,19 +2546,49 @@ function calculateAerodynamics() {
 
     // 3. حساب العزم لكل مكون (الوزن * الذراع)
     // إضافة عزم كل مكون
-    // --- تحسين دقة مركز ثقل الجسم ---
+    // --- تحسين دقة مركز ثقل الجسم (Fuselage CG) ---
     let fuselageCgX = 0;
-    if (fuselageShape === 'teardrop') {
-        // في شكل قطرة الدمع، يميل مركز الثقل نحو الجزء الأعرض (الأمامي)
-        fuselageCgX = fuselageLength * 0.1; // إزاحة تقديرية للأمام بنسبة 10%
+    if (fuselageShape === 'rectangular' || fuselageShape === 'cylindrical') {
+        // استخدام صيغة مركز الثقل للمخروط الناقص (Frustum)
+        const L = fuselageLength;
+        let r_front, r_rear;
+
+        if (fuselageShape === 'rectangular') {
+            // استخدام "نصف القطر الفعال" للمساحات المربعة
+            r_front = Math.sqrt(fuselageWidth * fuselageHeight);
+            r_rear = r_front * fuselageTaperRatio;
+        } else { // cylindrical
+            const fuselageDiameter = getVal(fuselageDiameterInput);
+            r_front = fuselageDiameter / 2;
+            r_rear = r_front * fuselageTaperRatio;
+        }
+
+        if (Math.abs(r_front - r_rear) < 1e-6) { // Case of a perfect cylinder/box
+            fuselageCgX = 0; // Center is at the geometric middle
+        } else {
+            // Centroid of a frustum from the large base (front)
+            const x_from_front = (L / 4) * (Math.pow(r_front, 2) + 2 * r_front * r_rear + 3 * Math.pow(r_rear, 2)) / (Math.pow(r_front, 2) + r_front * r_rear + Math.pow(r_rear, 2));
+            // Convert to model coordinates (origin at center, front at +L/2)
+            fuselageCgX = (L / 2) - x_from_front;
+        }
+    } else if (fuselageShape === 'teardrop') {
+        // For teardrop, the CG is shifted towards the wider front part.
+        // A simple approximation is to shift it forward by a fraction of the length.
+        fuselageCgX = fuselageLength * 0.1; // 10% forward shift
     }
-    addMoment(fuselageWeightKg, fuselageCgX); // الجسم يفترض أنه متمركز
+    // ملاحظة: هذا الحساب لا يأخذ في الاعتبار الأغطية الطرفية (nose/tail cones) بعد.
+    // سيتم تحسينه في المستقبل لفصل وزن الجسم الرئيسي عن الأغطية.
+    addMoment(fuselageWeightKg, fuselageCgX);
 
     // --- تحسين دقة مركز ثقل الجناح والذيل (فصل الأجزاء الثابتة والمتحركة) ---
     // عزم الجزء الثابت من الجناح
-    addMoment(fixedWingWeightKg, wingPositionX + mac_x_le + (0.35 * mac)); // مركز الجزء الثابت عند ~35% MAC
+    // The geometric centroid of a uniform wing is closer to 42% of the MAC.
+    // This is a better approximation for the center of *mass* than the aerodynamic center (25%).
+    const wingCgX = wingPositionX + mac_x_le + (0.42 * mac);
+    addMoment(fixedWingWeightKg, wingCgX); // مركز الجزء الثابت عند ~42% MAC
     // عزم الجزء الثابت من الذيل
-    addMoment(fixedTailWeightKg, tailPositionX - (tailChord * 0.35)); // مركز الجزء الثابت عند ~35% من وتره
+    const tailCgX = tailPositionX - (tailChord * 0.42); // مركز الجزء الثابت عند ~42% من وتره
+    addMoment(fixedTailWeightKg, tailCgX);
 
     // --- عزم أسطح التحكم ---
     if (hasAileron && aileronWeightKg > 0) {
@@ -2580,25 +2610,25 @@ function calculateAerodynamics() {
         const aileronCgX = ((hingeX_start + hingeX_end) / 2) - (aileronWidth / 2);
         addMoment(aileronWeightKg, aileronCgX);
     }
-
     if (hasElevator && elevatorWeightKg > 0) {
-        // حساب مركز الجاذبية للرافع مع الأخذ في الاعتبار استدقاق الذيل
+        // حساب مركز الجاذبية للرافع
         const hStabRootChordEffective = tailChord - elevatorWidth;
         const elevatorCgX = tailPositionX - hStabRootChordEffective - (elevatorWidth / 2);
         addMoment(elevatorWeightKg, elevatorCgX);
     }
-
     if (hasRudder && rudderWeightKg > 0) {
+        // حساب مركز الجاذبية للدفة
         const vStabRootChordEffective = vStabChord - rudderWidth;
         const rudderCgX = tailPositionX - vStabRootChordEffective - (rudderWidth / 2);
         addMoment(rudderWeightKg, rudderCgX);
     }
 
     // عزم أطراف الجناح (يُضاف فقط إذا كانت مُفعّلة)
-    if (hasWingtip) {
-        const tipChord = wingChord * taperRatio;
-        const tipX = wingPositionX + (wingSpan / 2) * Math.tan(sweepRad) - (tipChord / 4); // تقدير الموضع X
-        addMoment(wingtipWeightKg, tipX);
+    if (hasWingtip && wingtipWeightKg > 0) {
+        // The wingtip is attached to the wing tip. Its CG is at the wing's tip CG.
+        const tipChord_wing = wingChord * taperRatio;
+        const wingTipX = wingPositionX + (wingSpan / 2) * Math.tan(sweepRad) - (tipChord_wing / 4); // Approx. quarter chord of the wing's tip
+        addMoment(wingtipWeightKg, wingTipX);
     }
 
     // عزم القمرة
