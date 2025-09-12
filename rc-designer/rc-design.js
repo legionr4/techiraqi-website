@@ -55,6 +55,10 @@ planeGroup.add(landingGearGroup);
 const strutMaterial = new THREE.MeshStandardMaterial({ color: 0x888888, side: THREE.DoubleSide });
 const wheelMaterial = new THREE.MeshStandardMaterial({ color: 0x333333, side: THREE.DoubleSide });
 
+// New: مجموعة الملحقات
+const accessoriesGroup = new THREE.Group();
+planeGroup.add(accessoriesGroup);
+
 // جسم الطائرة
 // تم تغيير fuselage إلى Group لاستيعاب الأجزاء المتعددة (الجسم، المقدمة، المؤخرة)
 const fuselageGroup = new THREE.Group();
@@ -380,6 +384,7 @@ const propColorInput = document.getElementById('prop-color');
 const cockpitColorInput = document.getElementById('cockpit-color');
 const engineColorInput = document.getElementById('engine-color');
 const pylonColorInput = document.getElementById('pylon-color');
+const accessoryColorInput = document.getElementById('accessory-color');
 const airflowColorInput = document.getElementById('airflow-color');
 const vortexColorInput = document.getElementById('vortex-color');
 const smokeColorInput = document.getElementById('smoke-color');
@@ -477,7 +482,12 @@ const otherAccessoriesWeightInput = document.getElementById('other-accessories-w
 const receiverPositionInput = document.getElementById('receiver-position');
 const servosPositionInput = document.getElementById('servos-position');
 const cameraPositionInput = document.getElementById('camera-position');
-const otherAccessoriesPositionInput = document.getElementById('other-accessories-position');
+const receiverPositionYInput = document.getElementById('receiver-position-y');
+const receiverPositionZInput = document.getElementById('receiver-position-z');
+const servosPositionYInput = document.getElementById('servos-position-y');
+const servosPositionZInput = document.getElementById('servos-position-z');
+const cameraPositionYInput = document.getElementById('camera-position-y');
+const cameraPositionZInput = document.getElementById('camera-position-z');
 
 // CG/AC Inputs
 const showCgAcCheckbox = document.getElementById('show-cg-ac');
@@ -926,6 +936,7 @@ function updatePlaneModel() {
     const tailColor = tailColorInput.value;
     const pylonColor = pylonColorInput.value;
     const vortexColor = vortexColorInput.value;
+    const accessoryColor = accessoryColorInput.value;
     const airflowColor = airflowColorInput.value;
     const smokeColor = smokeColorInput.value;
     const backgroundColor = backgroundColorInput.value;
@@ -943,6 +954,7 @@ function updatePlaneModel() {
     propMaterial.color.set(propColorInput.value);
     strutMaterial.color.set(strutColorInput.value);
     wheelMaterial.color.set(wheelColorInput.value);
+    // سيتم تحديث لون الملحقات عند إنشائها
     energySourceMaterial.color.set(energySourceColorInput.value);
 
     // تحديث ألوان جسيمات الهواء
@@ -1827,6 +1839,52 @@ function updatePlaneModel() {
         cockpitGroup.add(cockpitMesh);
     }
 
+    // --- تحديث الملحقات ---
+    // إزالة النماذج القديمة وتنظيف الذاكرة
+    while (accessoriesGroup.children.length > 0) {
+        const child = accessoriesGroup.children[0];
+        child.traverse(obj => {
+            if (obj.isMesh) {
+                if (obj.geometry) obj.geometry.dispose();
+                // لا تقم بحذف المادة إذا كانت مشتركة
+            }
+        });
+        accessoriesGroup.remove(child);
+    }
+
+    const accessoryMaterial = new THREE.MeshStandardMaterial({ color: accessoryColor, transparent: true, opacity: 0.8 });
+
+    const createAccessoryBox = (weightGrams, posX_cm, posY_cm, posZ_cm, name) => {
+        if (weightGrams <= 0) return;
+
+        const weightKg = weightGrams / 1000;
+        const densityKgM3 = 1800; // كثافة تقديرية للإلكترونيات
+        const volumeM3 = weightKg / densityKgM3;
+        const sideLength = Math.cbrt(volumeM3);
+
+        const geom = new THREE.BoxGeometry(sideLength, sideLength, sideLength);
+        const box = new THREE.Mesh(geom, accessoryMaterial);
+        box.name = name;
+
+        // تحويل المواضع من سم إلى متر وتطبيقها
+        const posX_m = posX_cm * conversionFactor;
+        const posY_m = posY_cm * conversionFactor;
+        const posZ_m = posZ_cm * conversionFactor;
+
+        // الموضع X يُحسب من مقدمة الطائرة
+        box.position.x = (fuselageLength / 2) - posX_m;
+        // المواضع Y و Z تُطبق مباشرة
+        box.position.y = posY_m;
+        box.position.z = posZ_m;
+
+        accessoriesGroup.add(box);
+    };
+
+    // استدعاء الدالة مع الإحداثيات الجديدة
+    createAccessoryBox(getValidNumber(receiverWeightInput), getValidNumber(receiverPositionInput), getValidNumber(receiverPositionYInput), getValidNumber(receiverPositionZInput), 'Receiver');
+    createAccessoryBox(getValidNumber(servoWeightInput) * getValidNumber(servoCountInput), getValidNumber(servosPositionInput), getValidNumber(servosPositionYInput), getValidNumber(servosPositionZInput), 'Servos');
+    createAccessoryBox(getValidNumber(cameraWeightInput), getValidNumber(cameraPositionInput), getValidNumber(cameraPositionYInput), getValidNumber(cameraPositionZInput), 'Camera');
+
     // --- مصدر الطاقة (بطارية/خزان وقود) - تم نقل هذا الجزء إلى هنا لضمان عمله ---
     energySourceGroup.visible = false; // إخفاؤه افتراضيًا
 
@@ -2001,7 +2059,13 @@ function calculateAerodynamics() {
     const receiverPosition = getVal(receiverPositionInput);
     const servosPosition = getVal(servosPositionInput);
     const cameraPosition = getVal(cameraPositionInput);
-    const otherAccessoriesPosition = getVal(otherAccessoriesPositionInput);
+    // قراءة قيم Y و Z (لا تؤثر حاليًا على حساب CG الطولي ولكنها ضرورية للنموذج)
+    const receiverPositionY = getVal(receiverPositionYInput);
+    const receiverPositionZ = getVal(receiverPositionZInput);
+    const servosPositionY = getVal(servosPositionYInput);
+    const servosPositionZ = getVal(servosPositionZInput);
+    const cameraPositionY = getVal(cameraPositionYInput);
+    const cameraPositionZ = getVal(cameraPositionZInput);
 
     
     // تصحيح: قراءة وزن المحرك من الحقل الصحيح لكل نوع
@@ -2540,8 +2604,9 @@ function calculateAerodynamics() {
         addMoment(cameraWeightGrams / 1000, cameraX);
     }
     if (otherAccessoriesWeightGrams > 0) {
-        const otherX = fuselageDatum - otherAccessoriesPosition;
-        addMoment(otherAccessoriesWeightGrams / 1000, otherX);
+        // بما أن الغراء والمواد الأخرى موزعة، نفترض أن مركز كتلتها
+        // يقع في المركز الهندسي لجسم الطائرة (x=0 في إحداثيات النموذج).
+        addMoment(otherAccessoriesWeightGrams / 1000, 0);
     }
 
     if (engineType === 'electric') {
@@ -3120,10 +3185,16 @@ servoWeightInput.addEventListener('input', debouncedUpdate);
 servoCountInput.addEventListener('input', debouncedUpdate);
 cameraWeightInput.addEventListener('input', debouncedUpdate);
 otherAccessoriesWeightInput.addEventListener('input', debouncedUpdate);
+accessoryColorInput.addEventListener('input', debouncedUpdate);
 receiverPositionInput.addEventListener('input', debouncedUpdate);
 servosPositionInput.addEventListener('input', debouncedUpdate);
 cameraPositionInput.addEventListener('input', debouncedUpdate);
-otherAccessoriesPositionInput.addEventListener('input', debouncedUpdate);
+receiverPositionYInput.addEventListener('input', debouncedUpdate);
+receiverPositionZInput.addEventListener('input', debouncedUpdate);
+servosPositionYInput.addEventListener('input', debouncedUpdate);
+servosPositionZInput.addEventListener('input', debouncedUpdate);
+cameraPositionYInput.addEventListener('input', debouncedUpdate);
+cameraPositionZInput.addEventListener('input', debouncedUpdate);
 enginePylonLengthInput.addEventListener('input', debouncedUpdate);
 
 pylonMaterialInput.addEventListener('change', () => {

@@ -1044,6 +1044,14 @@
                         <input type="number" id="receiver-position" value="10" step="1">
                     </div>
                     <div class="input-group">
+                        <label for="receiver-position-y">الموضع العمودي (Y) (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="receiver-position-y" value="0" step="0.5" title="موجب للأعلى، سالب للأسفل">
+                    </div>
+                    <div class="input-group">
+                        <label for="receiver-position-z">الموضع الجانبي (Z) (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="receiver-position-z" value="0" step="0.5" title="موجب لليمين، سالب لليسار">
+                    </div>
+                    <div class="input-group">
                         <label for="servo-weight">وزن السيرفو الواحد (جرام)</label>
                         <input type="number" id="servo-weight" value="9" step="1">
                     </div>
@@ -1056,6 +1064,14 @@
                         <input type="number" id="servos-position" value="50" step="1" title="الموضع المتوسط لجميع السيرفوهات. للسيرفوهات في الذيل، استخدم قيمة أكبر.">
                     </div>
                     <div class="input-group">
+                        <label for="servos-position-y">الموضع العمودي المتوسط (Y) (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="servos-position-y" value="0" step="0.5" title="موجب للأعلى، سالب للأسفل">
+                    </div>
+                    <div class="input-group">
+                        <label for="servos-position-z">الموضع الجانبي المتوسط (Z) (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="servos-position-z" value="0" step="0.5" title="موجب لليمين، سالب لليسار">
+                    </div>
+                    <div class="input-group">
                         <label for="camera-weight">وزن الكاميرا (إن وجدت) (جرام)</label>
                         <input type="number" id="camera-weight" value="0" step="5">
                     </div>
@@ -1064,12 +1080,16 @@
                         <input type="number" id="camera-position" value="5" step="1">
                     </div>
                     <div class="input-group">
-                        <label for="other-accessories-weight">أوزان أخرى (هيكل، غراء...) (جرام)</label>
-                        <input type="number" id="other-accessories-weight" value="250" step="10">
+                        <label for="camera-position-y">الموضع العمودي (Y) (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="camera-position-y" value="0" step="0.5" title="موجب للأعلى، سالب للأسفل">
                     </div>
                     <div class="input-group">
-                        <label for="other-accessories-position">الموضع المتوسط للأوزان الأخرى (من المقدمة) (<span class="unit-label">سم</span>)</label>
-                        <input type="number" id="other-accessories-position" value="50" step="1" title="الموضع المتوسط التقريبي للأوزان الموزعة مثل الغراء، الأسلاك، إلخ.">
+                        <label for="camera-position-z">الموضع الجانبي (Z) (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="camera-position-z" value="0" step="0.5" title="موجب لليمين، سالب لليسار">
+                    </div>
+                    <div class="input-group">
+                        <label for="other-accessories-weight">أوزان أخرى (هيكل، غراء...) (جرام)</label>
+                        <input type="number" id="other-accessories-weight" value="250" step="10">
                     </div>
 
                     <!-- Accessories Results -->
@@ -1192,6 +1212,10 @@
                     <div class="input-group">
                         <label for="wheel-color">لون العجلات</label>
                         <input type="color" id="wheel-color" value="#333333">
+                    </div>
+                    <div class="input-group">
+                        <label for="accessory-color">لون الملحقات</label>
+                        <input type="color" id="accessory-color" value="#9b59b6">
                     </div>
                     <div class="input-group">
                         <label for="background-color">لون الخلفية</label>
