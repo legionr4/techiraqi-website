@@ -475,19 +475,28 @@ const fuelTankPositionInput = document.getElementById('fuel-tank-position');
 
 // Accessories Inputs
 const receiverWeightInput = document.getElementById('receiver-weight');
-const servoWeightInput = document.getElementById('servo-weight');
-const servoCountInput = document.getElementById('servo-count');
 const cameraWeightInput = document.getElementById('camera-weight');
 const otherAccessoriesWeightInput = document.getElementById('other-accessories-weight');
 const receiverPositionInput = document.getElementById('receiver-position');
-const servosPositionInput = document.getElementById('servos-position');
 const cameraPositionInput = document.getElementById('camera-position');
 const receiverPositionYInput = document.getElementById('receiver-position-y');
 const receiverPositionZInput = document.getElementById('receiver-position-z');
-const servosPositionYInput = document.getElementById('servos-position-y');
-const servosPositionZInput = document.getElementById('servos-position-z');
 const cameraPositionYInput = document.getElementById('camera-position-y');
 const cameraPositionZInput = document.getElementById('camera-position-z');
+
+// Servo Group 1 Inputs
+const servoG1WeightInput = document.getElementById('servo-g1-weight');
+const servoG1CountInput = document.getElementById('servo-g1-count');
+const servoG1PositionXInput = document.getElementById('servo-g1-position-x');
+const servoG1PositionYInput = document.getElementById('servo-g1-position-y');
+const servoG1PositionZInput = document.getElementById('servo-g1-position-z');
+
+// Servo Group 2 Inputs
+const servoG2WeightInput = document.getElementById('servo-g2-weight');
+const servoG2CountInput = document.getElementById('servo-g2-count');
+const servoG2PositionXInput = document.getElementById('servo-g2-position-x');
+const servoG2PositionYInput = document.getElementById('servo-g2-position-y');
+const servoG2PositionZInput = document.getElementById('servo-g2-position-z');
 
 // CG/AC Inputs
 const showCgAcCheckbox = document.getElementById('show-cg-ac');
@@ -1882,8 +1891,10 @@ function updatePlaneModel() {
 
     // استدعاء الدالة مع الإحداثيات الجديدة
     createAccessoryBox(getValidNumber(receiverWeightInput), getValidNumber(receiverPositionInput), getValidNumber(receiverPositionYInput), getValidNumber(receiverPositionZInput), 'Receiver');
-    createAccessoryBox(getValidNumber(servoWeightInput) * getValidNumber(servoCountInput), getValidNumber(servosPositionInput), getValidNumber(servosPositionYInput), getValidNumber(servosPositionZInput), 'Servos');
     createAccessoryBox(getValidNumber(cameraWeightInput), getValidNumber(cameraPositionInput), getValidNumber(cameraPositionYInput), getValidNumber(cameraPositionZInput), 'Camera');
+    // إنشاء صناديق لمجموعات السيرفو
+    createAccessoryBox(getValidNumber(servoG1WeightInput) * getValidNumber(servoG1CountInput), getValidNumber(servoG1PositionXInput), getValidNumber(servoG1PositionYInput), getValidNumber(servoG1PositionZInput), 'Servo Group 1');
+    createAccessoryBox(getValidNumber(servoG2WeightInput) * getValidNumber(servoG2CountInput), getValidNumber(servoG2PositionXInput), getValidNumber(servoG2PositionYInput), getValidNumber(servoG2PositionZInput), 'Servo Group 2');
 
     // --- مصدر الطاقة (بطارية/خزان وقود) - تم نقل هذا الجزء إلى هنا لضمان عمله ---
     energySourceGroup.visible = false; // إخفاؤه افتراضيًا
@@ -2053,19 +2064,27 @@ function calculateAerodynamics() {
     const fuelType = getStr(fuelTypeInput);
     const fuelLevel = getRaw(fuelLevelInput);
     const receiverWeightGrams = getRaw(receiverWeightInput);
-    const servoWeightGrams = getRaw(servoWeightInput) * getRaw(servoCountInput);
     const cameraWeightGrams = getRaw(cameraWeightInput);
     const otherAccessoriesWeightGrams = getRaw(otherAccessoriesWeightInput);
     const receiverPosition = getVal(receiverPositionInput);
-    const servosPosition = getVal(servosPositionInput);
     const cameraPosition = getVal(cameraPositionInput);
     // قراءة قيم Y و Z (لا تؤثر حاليًا على حساب CG الطولي ولكنها ضرورية للنموذج)
     const receiverPositionY = getVal(receiverPositionYInput);
     const receiverPositionZ = getVal(receiverPositionZInput);
-    const servosPositionY = getVal(servosPositionYInput);
-    const servosPositionZ = getVal(servosPositionZInput);
     const cameraPositionY = getVal(cameraPositionYInput);
     const cameraPositionZ = getVal(cameraPositionZInput);
+
+    // قراءة بيانات مجموعات السيرفو
+    const servoG1WeightGrams = getRaw(servoG1WeightInput) * getRaw(servoG1CountInput);
+    const servoG1PositionX = getVal(servoG1PositionXInput);
+    const servoG1PositionY = getVal(servoG1PositionYInput);
+    const servoG1PositionZ = getVal(servoG1PositionZInput);
+
+    const servoG2WeightGrams = getRaw(servoG2WeightInput) * getRaw(servoG2CountInput);
+    const servoG2PositionX = getVal(servoG2PositionXInput);
+    const servoG2PositionY = getVal(servoG2PositionYInput);
+    const servoG2PositionZ = getVal(servoG2PositionZInput);
+
 
     
     // تصحيح: قراءة وزن المحرك من الحقل الصحيح لكل نوع
@@ -2434,7 +2453,7 @@ function calculateAerodynamics() {
     }
 
     // حساب وزن الملحقات الإضافية
-    const totalAccessoriesWeightGrams = receiverWeightGrams + servoWeightGrams + cameraWeightGrams + otherAccessoriesWeightGrams;
+    const totalAccessoriesWeightGrams = receiverWeightGrams + servoG1WeightGrams + servoG2WeightGrams + cameraWeightGrams + otherAccessoriesWeightGrams;
     const totalAccessoriesWeightKg = totalAccessoriesWeightGrams / 1000;
 
     // حساب وزن الحامل (Pylon) قبل حساب الوزن الإجمالي
@@ -2595,10 +2614,15 @@ function calculateAerodynamics() {
         const receiverX = fuselageDatum - receiverPosition;
         addMoment(receiverWeightGrams / 1000, receiverX);
     }
-    if (servoWeightGrams > 0) {
-        const servosX = fuselageDatum - servosPosition;
-        addMoment(servoWeightGrams / 1000, servosX);
+    if (servoG1WeightGrams > 0) {
+        const servoG1X = fuselageDatum - servoG1PositionX;
+        addMoment(servoG1WeightGrams / 1000, servoG1X);
     }
+    if (servoG2WeightGrams > 0) {
+        const servoG2X = fuselageDatum - servoG2PositionX;
+        addMoment(servoG2WeightGrams / 1000, servoG2X);
+    }
+
     if (cameraWeightGrams > 0) {
         const cameraX = fuselageDatum - cameraPosition;
         addMoment(cameraWeightGrams / 1000, cameraX);
@@ -3124,11 +3148,11 @@ function updateUnitLabels() {
 const debouncedUpdate = debounce(updateAll, 150); // تأخير 150ms لتحسين الأداء
 
 allControls.forEach(control => {
-    // استخدام دالة debounced للمدخلات التي تتغير بسرعة (مثل range و number)
-    if (control.type === 'range' || control.type === 'number') {
-        control.addEventListener('input', debouncedUpdate);
-    } else { // للمدخلات الأخرى (مثل select و color)، التحديث فوري عند التغيير
+    // استثناء حقول اختيار النوع والمواد من التأخير
+    if (control.tagName.toLowerCase() === 'select' || control.type === 'checkbox' || control.type === 'color') {
         control.addEventListener('change', updateAll);
+    } else { // للمدخلات الأخرى (range, number, text)، استخدم التأخير
+        control.addEventListener('input', debouncedUpdate);
     }
 });
 
@@ -3140,27 +3164,8 @@ pressureInput.addEventListener('input', () => {
     updateAirDensity();
     debouncedUpdate();
 });
-
-hasAileronInput.addEventListener('change', updateAll);
-aileronAirfoilTypeInput.addEventListener('change', updateAll);
-hasWingtipInput.addEventListener('change', updateAll);
-wingtipAirfoilTypeInput.addEventListener('change', updateAll);
-elevatorAirfoilTypeInput.addEventListener('change', updateAll);
-rudderAirfoilTypeInput.addEventListener('change', updateAll);
-wingtipShapeInput.addEventListener('change', updateAll);
-tailTypeInput.addEventListener('change', updateAll);
-hasElevatorInput.addEventListener('change', updateAll);
-hasRetractableGearInput.addEventListener('change', updateAll);
-hasLandingGearInput.addEventListener('change', updateAll);
-fuselageShapeInput.addEventListener('change', updateAll);
-hasRudderInput.addEventListener('change', updateAll);
 engineTypeInput.addEventListener('change', updateEngineUI);
-fuselageNoseShapeInput.addEventListener('change', updateAll);
 batteryVoltageInput.addEventListener('input', debouncedUpdate); // إعادة الحساب عند تغيير الفولتية
-fuselageTailShapeInput.addEventListener('change', updateAll);
-hasCockpitInput.addEventListener('change', updateAll);
-fuelTankMaterialInput.addEventListener('change', updateAll);
-fuelTypeInput.addEventListener('change', updateAll);
 fuelLevelInput.addEventListener('input', debouncedUpdate);
 
 fuelTypeInput.addEventListener('change', () => {
@@ -3173,28 +3178,9 @@ fuelTypeInput.addEventListener('change', () => {
 });
 electricMotorTypeInput.addEventListener('change', updateEngineUI);
 icEngineTypeInput.addEventListener('change', updateEngineUI);
-enginePlacementInput.addEventListener('change', updateAll);
-engineWingVerticalPosInput.addEventListener('change', updateAll);
-engineWingForeAftInput.addEventListener('change', updateAll);
-wingPropRotationInput.addEventListener('change', updateAll); // لا يؤثر على النموذج ولكنه جزء من الحالة
 engineWingDistanceInput.addEventListener('input', debouncedUpdate);
 
 // Accessories Listeners
-receiverWeightInput.addEventListener('input', debouncedUpdate);
-servoWeightInput.addEventListener('input', debouncedUpdate);
-servoCountInput.addEventListener('input', debouncedUpdate);
-cameraWeightInput.addEventListener('input', debouncedUpdate);
-otherAccessoriesWeightInput.addEventListener('input', debouncedUpdate);
-accessoryColorInput.addEventListener('input', debouncedUpdate);
-receiverPositionInput.addEventListener('input', debouncedUpdate);
-servosPositionInput.addEventListener('input', debouncedUpdate);
-cameraPositionInput.addEventListener('input', debouncedUpdate);
-receiverPositionYInput.addEventListener('input', debouncedUpdate);
-receiverPositionZInput.addEventListener('input', debouncedUpdate);
-servosPositionYInput.addEventListener('input', debouncedUpdate);
-servosPositionZInput.addEventListener('input', debouncedUpdate);
-cameraPositionYInput.addEventListener('input', debouncedUpdate);
-cameraPositionZInput.addEventListener('input', debouncedUpdate);
 enginePylonLengthInput.addEventListener('input', debouncedUpdate);
 
 pylonMaterialInput.addEventListener('change', () => {
@@ -3210,7 +3196,6 @@ pylonMaterialInput.addEventListener('change', () => {
     pylonColorInput.value = defaultColor;
     updateAll(); // تحديث النموذج والحسابات
 });
-
 
 // تحديث عرض قيم شريط التمرير
 sweepAngleInput.addEventListener('input', () => sweepValueEl.textContent = sweepAngleInput.value);
@@ -3233,14 +3218,6 @@ particleSizeInput.addEventListener('input', () => particleSizeValueEl.textConten
 vibrationIntensityInput.addEventListener('input', () => vibrationValueEl.textContent = Math.round(vibrationIntensityInput.value * 100));
 cockpitOpacityInput.addEventListener('input', () => cockpitOpacityValueEl.textContent = Math.round(cockpitOpacityInput.value * 100));
 unitSelector.addEventListener('change', updateUnitLabels);
-
-showAxesCheckbox.addEventListener('change', () => {
-    axesHelper.visible = showAxesCheckbox.checked;
-});
-
-showCgAcCheckbox.addEventListener('change', () => {
-    cgAcGroup.visible = showCgAcCheckbox.checked;
-});
 
 togglePropSpinBtn.addEventListener('click', () => {
     isPropSpinning = !isPropSpinning;
@@ -3286,22 +3263,6 @@ resetControlsBtn.addEventListener('click', () => {
     rudderControlSlider.value = 0;
     updateControlSurfacesFromSliders();
     planeGroup.rotation.set(0, 0, 0); // إعادة تعيين دوران جسم الطائرة أيضًا
-});
-
-showSmokeInput.addEventListener('change', () => {
-    setAirflowVisibility(isPropSpinning);
-});
-
-showHeatHazeInput.addEventListener('change', () => {
-    setAirflowVisibility(isPropSpinning);
-});
-
-showVorticesInput.addEventListener('change', () => {
-    setAirflowVisibility(isPropSpinning);
-});
-
-showAmbientWindInput.addEventListener('change', () => {
-    setAirflowVisibility(isPropSpinning);
 });
 
 // Event listener for toggling charts visibility
