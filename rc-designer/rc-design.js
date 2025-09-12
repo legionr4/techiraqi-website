@@ -2771,27 +2771,6 @@ function calculateAerodynamics() {
         addMoment(cockpitWeightKg, cockpitCenterX, cockpitCenterY, 0);
     }
 
-    // --- عزم عجلات الهبوط (حساب دقيق) ---
-    if (hasLandingGear && landingGearWeightKg > 0) {
-        const mainGearAssemblyWeight = singleWheelWeightKg + singleStrutWeightKg;
-        const mainGearX = (fuselageLength / 2) - mainGearPosition;
-        const mainGearY = -currentFuselageHeight / 2 - strutLength / 2;
-        const mainGearZ_offset = mainGearWidth / 2;
-
-        // Add moments for both main gears
-        addMoment(mainGearAssemblyWeight, mainGearX, mainGearY, mainGearZ_offset);  // Right
-        addMoment(mainGearAssemblyWeight, mainGearX, mainGearY, -mainGearZ_offset); // Left
-
-        if (gearType === 'tricycle') {
-            const noseGearX = fuselageLength / 2 - (wheelDiameter);
-            addMoment(mainGearAssemblyWeight, noseGearX, mainGearY, 0); // Assume same weight as main gear
-        } else if (gearType === 'taildragger') {
-            const tailWheelWeight = landingGearWeightKg - (2 * mainGearAssemblyWeight);
-            const tailWheelY = -currentFuselageHeight / 2;
-            addMoment(tailWheelWeight, tailPositionX, tailWheelY, 0);
-        }
-    }
-
     // --- عزم الملحقات (بطريقة دقيقة) ---
     const fuselageDatum = fuselageLength / 2; // مقدمة الجسم هي نقطة الصفر للمستخدم
 
@@ -2877,6 +2856,32 @@ function calculateAerodynamics() {
         }
     }
 
+    // --- عزم عجلات الهبوط (حساب دقيق) ---
+    if (hasLandingGear && landingGearWeightKg > 0) {
+        const mainGearAssemblyWeight = singleWheelWeightKg + singleStrutWeightKg;
+        const mainGearX = (fuselageLength / 2) - mainGearPosition;
+        const mainGearY = -currentFuselageHeight / 2 - strutLength / 2;
+        const mainGearWidth = getVal(mainGearWidthInput);
+        const mainGearZ_offset = mainGearWidth / 2;
+
+        // إضافة عزم العجلات الرئيسية
+        addMoment(mainGearAssemblyWeight, mainGearX, mainGearY, mainGearZ_offset);  // اليمنى
+        addMoment(mainGearAssemblyWeight, mainGearX, mainGearY, -mainGearZ_offset); // اليسرى
+
+        if (gearType === 'tricycle') {
+            const noseGearX = fuselageLength / 2 - (wheelDiameter);
+            // نفترض أن وزن عجلة الأنف بنفس وزن العجلة الرئيسية
+            addMoment(mainGearAssemblyWeight, noseGearX, mainGearY, 0);
+        } else if (gearType === 'taildragger') {
+            // حساب وزن عجلة الذيل المتبقي
+            const tailWheelWeight = landingGearWeightKg - (2 * mainGearAssemblyWeight);
+            if (tailWheelWeight > 0) {
+                const tailWheelY = -currentFuselageHeight / 2;
+                // يتم وضع عجلة الذيل عند موضع الذيل العام
+                addMoment(tailWheelWeight, tailPositionX, tailWheelY, 0);
+            }
+        }
+    }
 
     // 4. حساب الموضع النهائي لمركز الجاذبية
     const cg_x = totalWeightKg > 0 ? totalMoment / totalWeightKg : 0;
