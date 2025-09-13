@@ -58,6 +58,9 @@
             /* تثبيت الواجهة في مكانها عند التمرير */
             position: sticky;
             top: 20px;
+            /* تعديل الإطار ليصبح أفتح وأكثر نعومة */
+            border: 1px solid #ccc;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08); /* ظل خفيف لإبراز الواجهة */
         }
         #viewer-canvas {
             width: 100%;
@@ -118,15 +121,36 @@
             font-weight: bold;
             color: #1976d2;
         }
+        /* New style for suggestions box */
+        .suggestions-box {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e8f5e9; /* Light green */
+            border: 1px solid #a5d6a7; /* Green border */
+            border-radius: 5px;
+        }
+        .suggestions-box h2 {
+            margin-top: 0;
+            font-size: 1.2em;
+            color: #2e7d32; /* Darker green */
+            /* Make it a flex container to align icon and text */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
         .charts-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
+            display: flex; /* Changed from grid to flex */
+            flex-wrap: wrap; /* Allow charts to wrap to the next line */
+            justify-content: center; /* Center the charts */
             gap: 20px;
             padding: 20px;
             max-width: 1200px;
             margin: 20px auto;
         }
         .chart-card {
+            flex: 1 1 45%; /* Allow charts to grow and shrink, with a base of 45% to fit two per row */
+            min-width: 400px; /* Prevent charts from becoming too small */
             background-color: #fff;
             padding: 20px;
             border-radius: 8px;
@@ -140,7 +164,7 @@
         }
         @media (max-width: 992px) {
             .charts-container {
-                grid-template-columns: 1fr;
+                flex-direction: column; /* Stack charts vertically on smaller screens */
             }
         }
         .chart-wrapper {
@@ -208,6 +232,10 @@
             text-align: center;
             font-size: 1.1em;
         }
+        /* Style for checkbox inputs in input-group */
+        .input-group input[type="checkbox"] {
+            flex-basis: auto; margin-left: auto;
+        }
     </style>
 </head>
 <body>
@@ -219,7 +247,7 @@
 
     <div class="container">
         <div class="controls">
-            <h2>المعلمات والنتائج</h2>
+            <h2>لوحة التحكم</h2>
             <form id="plane-form">
                 <fieldset class="collapsible-fieldset">
                     <legend class="collapsible-legend">
@@ -377,10 +405,6 @@
                             <label for="wingtip-thickness">سمك الطرف (<span class="unit-label">سم</span>):</label>
                             <input type="number" id="wingtip-thickness" value="1.5" step="0.1">
                         </div>
-                        <div class="input-group">
-                            <label for="wingtip-position">المسافة من نهاية الجناح (<span class="unit-label">سم</span>):</label>
-                            <input type="number" id="wingtip-position" value="0" step="1">
-                        </div>
 
                         <div class="input-group">
                             <label for="wingtip-angle">زاوية الطرف (Cant) (°):</label>
@@ -422,6 +446,147 @@
                     </div>
 
 
+                </fieldset>
+
+                <fieldset class="collapsible-fieldset">
+                    <legend class="collapsible-legend">
+                        <div>
+                            <i class="fas fa-plane-body legend-icon"></i>
+                            <span>جسم الطائرة</span>
+                        </div>
+                        <i class="fas fa-chevron-down toggle-icon"></i>
+                    </legend>
+                    <div class="collapsible-content">
+                    <div class="input-group">
+                        <label for="fuselage-shape">شكل الجسم</label>
+                        <select id="fuselage-shape">
+                            <option value="rectangular" selected>مستطيل (Rectangular)</option>
+                            <option value="cylindrical">أسطواني (Cylindrical)</option>
+                            <option value="teardrop">قطرة (Teardrop)</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="fuselage-length">طول الجسم (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="fuselage-length" value="100" step="1">
+                    </div>
+                    <!-- Rectangular specific inputs -->
+                    <div class="input-group fuselage-shape-input" id="fuselage-rectangular-width-group">
+                        <label for="fuselage-width">عرض الجسم (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="fuselage-width" value="15" step="0.5">
+                    </div>
+                    <div class="input-group fuselage-shape-input" id="fuselage-rectangular-height-group">
+                        <label for="fuselage-height">ارتفاع الجسم (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="fuselage-height" value="15" step="0.5">
+                    </div>
+                    <!-- Cylindrical specific inputs -->
+                    <div class="input-group fuselage-shape-input" id="fuselage-cylindrical-diameter-group" style="display:none;">
+                        <label for="fuselage-diameter">قطر الجسم (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="fuselage-diameter" value="15" step="0.5">
+                    </div>
+                    <!-- Teardrop specific inputs -->
+                    <div class="input-group fuselage-shape-input" id="fuselage-teardrop-front-diameter-group" style="display:none;">
+                        <label for="fuselage-front-diameter">قطر المقدمة (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="fuselage-front-diameter" value="20" step="0.5">
+                    </div>
+                    <div class="input-group fuselage-shape-input" id="fuselage-teardrop-rear-diameter-group" style="display:none;">
+                        <label for="fuselage-rear-diameter">قطر المؤخرة (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="fuselage-rear-diameter" value="5" step="0.5">
+                    </div>
+                    <!-- New Fuselage Taper Ratio input -->
+                    <div class="input-group fuselage-shape-input" id="fuselage-taper-group" style="display:none;">
+                        <label for="fuselage-taper-ratio">نسبة الاستدقاق (Taper): <span id="fuselage-taper-value">1.00</span></label>
+                        <input type="range" id="fuselage-taper-ratio" min="0.2" max="1.0" value="1.0" step="0.05">
+                    </div>
+                    <!-- New Fuselage Ends Controls (conditionally visible) -->
+                    <div id="fuselage-ends-controls" style="display:none; margin-top: 10px; border-top: 1px solid #eee; padding-top: 10px;">
+                        <div class="input-group">
+                            <label for="fuselage-nose-shape">شكل المقدمة الانسيابي</label>
+                            <select id="fuselage-nose-shape">
+                                <option value="flat" selected>مسطح (Flat)</option>
+                                <option value="rounded">مستدير (Rounded)</option>
+                                <option value="ogival">بيضوي (Ogival)</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="fuselage-tail-shape">شكل المؤخرة الانسيابي</label>
+                            <select id="fuselage-tail-shape">
+                                <option value="flat" selected>مسطح (Flat)</option>
+                                <option value="rounded">مستدير (Rounded)</option>
+                            </select>
+                        </div>
+                    </div>
+                     <div class="input-group">
+                        <label for="wing-nose-distance">موضع الجناح من المقدمة (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="wing-nose-distance" value="20" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="wing-prop-distance">المسافة بين الجناح والمروحة (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="wing-prop-distance" value="20" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="wing-tail-distance">المسافة بين الجناح والذيل (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="wing-tail-distance" value="60" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="fuselage-opacity">شفافية الجسم: <span id="fuselage-opacity-value">100</span>%</label>
+                        <input type="range" id="fuselage-opacity" min="0" max="1" value="1" step="0.05">
+                    </div>
+                    <div class="input-group">
+                        <label for="fuselage-wall-thickness">سمك جدار الجسم (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="fuselage-wall-thickness" value="0.5" step="0.1" min="0.1" title="يستخدم لحساب الوزن بناءً على مساحة السطح (أكثر دقة للهياكل المجوفة).">
+                    </div>
+
+                    <!-- Cockpit Controls -->
+                    <div class="input-group" style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 10px;">
+                        <label for="has-cockpit">إضافة قمرة قيادة؟</label>
+                        <input type="checkbox" id="has-cockpit" checked style="flex-basis: auto; margin-left: auto;">
+                    </div>
+                    <div id="cockpit-controls" style="display:none; padding-right: 15px; border-right: 3px solid #eee;">
+                        <div class="input-group">
+                            <label for="cockpit-shape">شكل القمرة</label>
+                            <select id="cockpit-shape">
+                                <option value="bubble" selected>محدب (Bubble)</option>
+                                <option value="streamlined">انسيابي (Streamlined)</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="cockpit-length">طول القمرة (<span class="unit-label">سم</span>)</label>
+                            <input type="number" id="cockpit-length" value="30" step="1">
+                        </div>
+                        <div class="input-group">
+                            <label for="cockpit-width">عرض القمرة (<span class="unit-label">سم</span>)</label>
+                            <input type="number" id="cockpit-width" value="14" step="0.5">
+                        </div>
+                        <div class="input-group">
+                            <label for="cockpit-height">ارتفاع القمرة (<span class="unit-label">سم</span>)</label>
+                            <input type="number" id="cockpit-height" value="10" step="0.5">
+                        </div>
+                        <div class="input-group">
+                            <label for="cockpit-position">الموضع من المقدمة (<span class="unit-label">سم</span>)</label>
+                            <input type="number" id="cockpit-position" value="5" step="1">
+                        </div>
+                        <div class="input-group">
+                            <label for="cockpit-opacity">شفافية القمرة: <span id="cockpit-opacity-value">70</span>%</label>
+                            <input type="range" id="cockpit-opacity" min="0" max="1" value="0.7" step="0.05">
+                        </div>
+                    </div>
+                    </div>
+
+                    <!-- Fuselage & Cockpit Results -->
+                    <div class="fieldset-results">
+                        <div class="result-item">
+                            <p>وزن الجسم التقديري (جرام):</p>
+                            <span id="fuselage-weight-result">0</span>
+                        </div>
+                        <div class="result-item">
+                            <p>مساحة سطح الجسم (م²):</p>
+                            <span id="fuselage-area-result">0.00</span>
+                        </div>
+                        <div class="result-item" style="display: none;"> <!-- Initially hidden, controlled by JS -->
+                            <p>وزن القمرة التقديري (جرام):</p>
+                            <span id="cockpit-weight-result">0</span>
+                        </div>
+                    </div>
                 </fieldset>
 
                 <fieldset class="collapsible-fieldset">
@@ -554,139 +719,6 @@
                         <div class="result-item">
                             <p>وزن الذيل التقديري (جرام):</p>
                             <span id="tail-weight-result">0</span>
-                        </div>
-                    </div>
-                </fieldset>
-
-                <fieldset class="collapsible-fieldset">
-                    <legend class="collapsible-legend">
-                        <div>
-                            <i class="fas fa-plane-body legend-icon"></i>
-                            <span>جسم الطائرة</span>
-                        </div>
-                        <i class="fas fa-chevron-down toggle-icon"></i>
-                    </legend>
-                    <div class="collapsible-content">
-                    <div class="input-group">
-                        <label for="fuselage-shape">شكل الجسم</label>
-                        <select id="fuselage-shape">
-                            <option value="rectangular" selected>مستطيل (Rectangular)</option>
-                            <option value="cylindrical">أسطواني (Cylindrical)</option>
-                            <option value="teardrop">قطرة (Teardrop)</option>
-                        </select>
-                    </div>
-                    <div class="input-group">
-                        <label for="fuselage-length">طول الجسم (<span class="unit-label">سم</span>)</label>
-                        <input type="number" id="fuselage-length" value="100" step="1">
-                    </div>
-                    <!-- Rectangular specific inputs -->
-                    <div class="input-group fuselage-shape-input" id="fuselage-rectangular-width-group">
-                        <label for="fuselage-width">عرض الجسم (<span class="unit-label">سم</span>)</label>
-                        <input type="number" id="fuselage-width" value="15" step="0.5">
-                    </div>
-                    <div class="input-group fuselage-shape-input" id="fuselage-rectangular-height-group">
-                        <label for="fuselage-height">ارتفاع الجسم (<span class="unit-label">سم</span>)</label>
-                        <input type="number" id="fuselage-height" value="15" step="0.5">
-                    </div>
-                    <!-- Cylindrical specific inputs -->
-                    <div class="input-group fuselage-shape-input" id="fuselage-cylindrical-diameter-group" style="display:none;">
-                        <label for="fuselage-diameter">قطر الجسم (<span class="unit-label">سم</span>)</label>
-                        <input type="number" id="fuselage-diameter" value="15" step="0.5">
-                    </div>
-                    <!-- Teardrop specific inputs -->
-                    <div class="input-group fuselage-shape-input" id="fuselage-teardrop-front-diameter-group" style="display:none;">
-                        <label for="fuselage-front-diameter">قطر المقدمة (<span class="unit-label">سم</span>)</label>
-                        <input type="number" id="fuselage-front-diameter" value="20" step="0.5">
-                    </div>
-                    <div class="input-group fuselage-shape-input" id="fuselage-teardrop-rear-diameter-group" style="display:none;">
-                        <label for="fuselage-rear-diameter">قطر المؤخرة (<span class="unit-label">سم</span>)</label>
-                        <input type="number" id="fuselage-rear-diameter" value="5" step="0.5">
-                    </div>
-                    <!-- New Fuselage Taper Ratio input -->
-                    <div class="input-group fuselage-shape-input" id="fuselage-taper-group" style="display:none;">
-                        <label for="fuselage-taper-ratio">نسبة الاستدقاق (Taper): <span id="fuselage-taper-value">1.00</span></label>
-                        <input type="range" id="fuselage-taper-ratio" min="0.2" max="1.0" value="1.0" step="0.05">
-                    </div>
-                    <!-- New Fuselage Ends Controls (conditionally visible) -->
-                    <div id="fuselage-ends-controls" style="display:none; margin-top: 10px; border-top: 1px solid #eee; padding-top: 10px;">
-                        <div class="input-group">
-                            <label for="fuselage-nose-shape">شكل المقدمة الانسيابي</label>
-                            <select id="fuselage-nose-shape">
-                                <option value="flat" selected>مسطح (Flat)</option>
-                                <option value="rounded">مستدير (Rounded)</option>
-                                <option value="ogival">بيضوي (Ogival)</option>
-                            </select>
-                        </div>
-                        <div class="input-group">
-                            <label for="fuselage-tail-shape">شكل المؤخرة الانسيابي</label>
-                            <select id="fuselage-tail-shape">
-                                <option value="flat" selected>مسطح (Flat)</option>
-                                <option value="rounded">مستدير (Rounded)</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="input-group">
-                        <label for="wing-prop-distance">المسافة بين الجناح والمروحة (<span class="unit-label">سم</span>)</label>
-                        <input type="number" id="wing-prop-distance" value="20" step="1">
-                    </div>
-                    <div class="input-group">
-                        <label for="wing-tail-distance">المسافة بين الجناح والذيل (<span class="unit-label">سم</span>)</label>
-                        <input type="number" id="wing-tail-distance" value="60" step="1">
-                    </div>
-                    <div class="input-group">
-                        <label for="fuselage-opacity">شفافية الجسم: <span id="fuselage-opacity-value">100</span>%</label>
-                        <input type="range" id="fuselage-opacity" min="0" max="1" value="1" step="0.05">
-                    </div>
-
-                    <!-- Cockpit Controls -->
-                    <div class="input-group" style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 10px;">
-                        <label for="has-cockpit">إضافة قمرة قيادة؟</label>
-                        <input type="checkbox" id="has-cockpit" checked style="flex-basis: auto; margin-left: auto;">
-                    </div>
-                    <div id="cockpit-controls" style="display:none; padding-right: 15px; border-right: 3px solid #eee;">
-                        <div class="input-group">
-                            <label for="cockpit-shape">شكل القمرة</label>
-                            <select id="cockpit-shape">
-                                <option value="bubble" selected>محدب (Bubble)</option>
-                                <option value="streamlined">انسيابي (Streamlined)</option>
-                            </select>
-                        </div>
-                        <div class="input-group">
-                            <label for="cockpit-length">طول القمرة (<span class="unit-label">سم</span>)</label>
-                            <input type="number" id="cockpit-length" value="30" step="1">
-                        </div>
-                        <div class="input-group">
-                            <label for="cockpit-width">عرض القمرة (<span class="unit-label">سم</span>)</label>
-                            <input type="number" id="cockpit-width" value="14" step="0.5">
-                        </div>
-                        <div class="input-group">
-                            <label for="cockpit-height">ارتفاع القمرة (<span class="unit-label">سم</span>)</label>
-                            <input type="number" id="cockpit-height" value="10" step="0.5">
-                        </div>
-                        <div class="input-group">
-                            <label for="cockpit-position">الموضع من المقدمة (<span class="unit-label">سم</span>)</label>
-                            <input type="number" id="cockpit-position" value="5" step="1">
-                        </div>
-                        <div class="input-group">
-                            <label for="cockpit-opacity">شفافية القمرة: <span id="cockpit-opacity-value">70</span>%</label>
-                            <input type="range" id="cockpit-opacity" min="0" max="1" value="0.7" step="0.05">
-                        </div>
-                    </div>
-                    </div>
-
-                    <!-- Fuselage & Cockpit Results -->
-                    <div class="fieldset-results">
-                        <div class="result-item">
-                            <p>وزن الجسم التقديري (جرام):</p>
-                            <span id="fuselage-weight-result">0</span>
-                        </div>
-                        <div class="result-item">
-                            <p>مساحة سطح الجسم (م²):</p>
-                            <span id="fuselage-area-result">0.00</span>
-                        </div>
-                        <div class="result-item" style="display: none;"> <!-- Initially hidden, controlled by JS -->
-                            <p>وزن القمرة التقديري (جرام):</p>
-                            <span id="cockpit-weight-result">0</span>
                         </div>
                     </div>
                 </fieldset>
@@ -839,6 +871,179 @@
                 <fieldset class="collapsible-fieldset">
                     <legend class="collapsible-legend">
                         <div>
+                            <i class="fas fa-circle-dot legend-icon"></i>
+                            <span>عجلات الهبوط (Landing Gear)</span>
+                        </div>
+                        <i class="fas fa-chevron-down toggle-icon"></i>
+                    </legend>
+                    <div class="collapsible-content">
+                    <div class="input-group">
+                        <label for="has-landing-gear">إضافة عجلات هبوط؟</label>
+                        <input type="checkbox" id="has-landing-gear" checked style="flex-basis: auto; margin-left: auto;">
+                    </div>
+                    <div id="landing-gear-controls" style="display:none;">
+                        <div class="input-group">
+                            <label for="has-retractable-gear">قابلة للسحب (Retractable)؟</label>
+                            <input type="checkbox" id="has-retractable-gear" style="flex-basis: auto; margin-left: auto;">
+                        </div>
+                        <div class="input-group">
+                            <label for="gear-type">نوع العجلات</label>
+                            <select id="gear-type">
+                                <option value="tricycle" selected>ثلاثية (Tricycle)</option>
+                                <option value="taildragger">ذيلية (Taildragger)</option>
+                                <option value="main-only">رئيسية فقط (Main Only)</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="wheel-diameter">قطر العجلة (<span class="unit-label">سم</span>)</label>
+                            <input type="number" id="wheel-diameter" value="8" step="0.5">
+                        </div>
+                        <div class="input-group">
+                            <label for="wheel-thickness">سمك العجلة (<span class="unit-label">سم</span>)</label>
+                            <input type="number" id="wheel-thickness" value="2" step="0.2">
+                        </div>
+                        <div class="input-group">
+                            <label for="strut-length">طول الدعامة (<span class="unit-label">سم</span>)</label>
+                            <input type="number" id="strut-length" value="12" step="1">
+                        </div>
+                        <div class="input-group">
+                            <label for="strut-thickness">سمك الدعامة (<span class="unit-label">سم</span>)</label>
+                            <input type="number" id="strut-thickness" value="1" step="0.1">
+                        </div>
+                        <div class="input-group">
+                            <label for="main-gear-position">موضع العجلات الرئيسية (من المقدمة) (<span class="unit-label">سم</span>)</label>
+                            <input type="number" id="main-gear-position" value="25" step="1">
+                        </div>
+                        <div class="input-group">
+                            <label for="main-gear-width">المسافة بين العجلات الرئيسية (<span class="unit-label">سم</span>)</label>
+                            <input type="number" id="main-gear-width" value="15" step="1">
+                        </div>
+                        </div>
+                    </div>
+
+                        <!-- Landing Gear Results -->
+                        <div class="fieldset-results">
+                            <div class="result-item">
+                                <p>وزن العجلة الواحدة (جرام):</p>
+                                <span id="wheel-weight-result">0</span>
+                            </div>
+                            <div class="result-item">
+                                <p>وزن الدعامة الواحدة (جرام):</p>
+                                <span id="strut-weight-result">0</span>
+                            </div>
+                            <div class="result-item">
+                                <p>الوزن الإجمالي للعجلات (جرام):</p>
+                                <span id="landing-gear-weight-result">0</span>
+                            </div>
+                        </div>
+                </fieldset>
+
+                <fieldset class="collapsible-fieldset">
+                    <legend class="collapsible-legend">
+                        <div>
+                            <i class="fas fa-weight-hanging legend-icon"></i>
+                            <span>ملحقات وأوزان إضافية</span>
+                        </div>
+                        <i class="fas fa-chevron-down toggle-icon"></i>
+                    </legend>
+                    <div class="collapsible-content">
+                    <div class="input-group">
+                        <label for="receiver-weight">وزن جهاز الاستقبال (جرام)</label>
+                        <input type="number" id="receiver-weight" value="15" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="receiver-position">موضع جهاز الاستقبال (من المقدمة) (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="receiver-position" value="10" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="receiver-position-y">الموضع العمودي (Y) (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="receiver-position-y" value="0" step="0.5" title="موجب للأعلى، سالب للأسفل">
+                    </div>
+                    <div class="input-group">
+                        <label for="receiver-position-z">الموضع الجانبي (Z) (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="receiver-position-z" value="0" step="0.5" title="موجب لليمين، سالب لليسار">
+                    </div>
+
+                    <!-- Servo Group 1: Wing Servos -->
+                    <p style="font-weight: bold; color: #0056b3; margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px;">مجموعة السيرفو 1 (مثال: للجناح)</p>
+                    <div class="input-group">
+                        <label for="servo-g1-weight">وزن السيرفو الواحد (جرام)</label>
+                        <input type="number" id="servo-g1-weight" value="9" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="servo-g1-count">العدد</label>
+                        <input type="number" id="servo-g1-count" value="2" step="1" min="0">
+                    </div>
+                    <div class="input-group">
+                        <label for="servo-g1-position-x">الموضع من المقدمة (X) (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="servo-g1-position-x" value="30" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="servo-g1-position-y">الموضع العمودي (Y) (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="servo-g1-position-y" value="0" step="0.5" title="موجب للأعلى، سالب للأسفل">
+                    </div>
+                    <div class="input-group">
+                        <label for="servo-g1-position-z">الموضع الجانبي (Z) (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="servo-g1-position-z" value="0" step="0.5" title="موضع متوسط، مثال: 0 إذا كانت السيرفوهات متناظرة">
+                    </div>
+
+                    <!-- Servo Group 2: Tail Servos -->
+                    <p style="font-weight: bold; color: #0056b3; margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px;">مجموعة السيرفو 2 (مثال: للذيل)</p>
+                    <div class="input-group">
+                        <label for="servo-g2-weight">وزن السيرفو الواحد (جرام)</label>
+                        <input type="number" id="servo-g2-weight" value="9" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="servo-g2-count">العدد</label>
+                        <input type="number" id="servo-g2-count" value="2" step="1" min="0">
+                    </div>
+                    <div class="input-group">
+                        <label for="servo-g2-position-x">الموضع من المقدمة (X) (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="servo-g2-position-x" value="85" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="servo-g2-position-y">الموضع العمودي (Y) (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="servo-g2-position-y" value="0" step="0.5" title="موجب للأعلى، سالب للأسفل">
+                    </div>
+                    <div class="input-group">
+                        <label for="servo-g2-position-z">الموضع الجانبي (Z) (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="servo-g2-position-z" value="0" step="0.5" title="موضع متوسط، مثال: 0 إذا كانت السيرفوهات متناظرة">
+                    </div>
+
+                    <div class="input-group">
+                        <label for="camera-weight">وزن الكاميرا (إن وجدت) (جرام)</label>
+                        <input type="number" id="camera-weight" value="0" step="5">
+                    </div>
+                    <div class="input-group">
+                        <label for="camera-position">موضع الكاميرا (من المقدمة) (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="camera-position" value="5" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="camera-position-y">الموضع العمودي (Y) (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="camera-position-y" value="0" step="0.5" title="موجب للأعلى، سالب للأسفل">
+                    </div>
+                    <div class="input-group">
+                        <label for="camera-position-z">الموضع الجانبي (Z) (<span class="unit-label">سم</span>)</label>
+                        <input type="number" id="camera-position-z" value="0" step="0.5" title="موجب لليمين، سالب لليسار">
+                    </div>
+                    <div class="input-group">
+                        <label for="other-accessories-weight">أوزان أخرى (هيكل، غراء...) (جرام)</label>
+                        <input type="number" id="other-accessories-weight" value="250" step="10">
+                    </div>
+                    </div>
+
+                    <!-- Accessories Results -->
+                    <div class="fieldset-results">
+                        <div class="result-item">
+                            <p>الوزن الإجمالي للملحقات (جرام):</p>
+                            <span id="accessories-weight-result">0</span>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <fieldset class="collapsible-fieldset">
+                    <legend class="collapsible-legend">
+                        <div>
                             <i class="fas fa-battery-full legend-icon"></i>
                             <span>الطاقة (Energy Source)</span>
                         </div>
@@ -948,6 +1153,15 @@
                         <input type="number" id="prop-diameter" value="10" step="1">
                     </div>
                     <div class="input-group">
+                        <label for="prop-blade-shape">شكل شفرة المروحة</label>
+                        <select id="prop-blade-shape">
+                            <option value="flat-bottom" selected>شبه انسيابي (Flat Bottom)</option>
+                            <option value="symmetrical">متماثل (Symmetrical)</option>
+                            <option value="rectangular">بسيط (Rectangular)</option>
+                            <option value="scimitar">منحني (Scimitar)</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
                         <label for="prop-pitch">خطوة المروحة (بوصة)</label>
                         <input type="number" id="prop-pitch" value="6" step="1">
                     </div>
@@ -979,6 +1193,8 @@
                             <p>وزن المروحة التقديري (جرام):</p>
                             <span id="prop-weight-result">0</span>
                         </div>
+                    <!-- حاوية جديدة للنتائج المتقدمة القابلة للطي -->
+                    <div id="prop-advanced-results">
                         <div class="result-item" title="الطاقة التي تسحبها المروحة من المحرك لتدور بالسرعة المحددة.">
                             <p>الطاقة المستهلكة (واط):</p>
                             <span id="prop-power-result">0</span>
@@ -987,78 +1203,29 @@
                             <p>العزم المطلوب (N.m):</p>
                             <span id="prop-torque-result">0.000</span>
                         </div>
-                    </div>
-
-                </fieldset>
-
-                <fieldset class="collapsible-fieldset">
-                    <legend class="collapsible-legend">
-                        <div>
-                            <i class="fas fa-circle-dot legend-icon"></i>
-                            <span>عجلات الهبوط (Landing Gear)</span>
+                        <div class="result-item" title="معامل الدفع (Thrust Coefficient): رقم بلا أبعاد يصف كفاءة المروحة في توليد الدفع.">
+                            <p>معامل الدفع (Ct):</p>
+                            <span id="prop-ct-result">0.0000</span>
                         </div>
-                        <i class="fas fa-chevron-down toggle-icon"></i>
-                    </legend>
-                    <div class="collapsible-content">
-                    <div class="input-group">
-                        <label for="has-landing-gear">إضافة عجلات هبوط؟</label>
-                        <input type="checkbox" id="has-landing-gear" checked style="flex-basis: auto; margin-left: auto;">
-                    </div>
-                    <div id="landing-gear-controls" style="display:none;">
-                        <div class="input-group">
-                            <label for="has-retractable-gear">قابلة للسحب (Retractable)؟</label>
-                            <input type="checkbox" id="has-retractable-gear" style="flex-basis: auto; margin-left: auto;">
+                        <div class="result-item" title="معامل القدرة (Power Coefficient): رقم بلا أبعاد يصف كمية القدرة التي تستهلكها المروحة.">
+                            <p>معامل القدرة (Cp):</p>
+                            <span id="prop-cp-result">0.0000</span>
                         </div>
-                        <div class="input-group">
-                            <label for="gear-type">نوع العجلات</label>
-                            <select id="gear-type">
-                                <option value="tricycle" selected>ثلاثية (Tricycle)</option>
-                                <option value="taildragger">ذيلية (Taildragger)</option>
-                                <option value="main-only">رئيسية فقط (Main Only)</option>
-                            </select>
+                        <div class="result-item" title="نسبة التقدم (Advance Ratio, J): نسبة سرعة الطائرة إلى سرعة دوران المروحة.">
+                            <p>نسبة التقدم (J):</p>
+                            <span id="prop-j-result">0.000</span>
                         </div>
-                        <div class="input-group">
-                            <label for="wheel-diameter">قطر العجلة (<span class="unit-label">سم</span>)</label>
-                            <input type="number" id="wheel-diameter" value="8" step="0.5">
+                        <div class="result-item" title="كفاءة المروحة: النسبة المئوية للقدرة التي يتم تحويلها إلى دفع مفيد.">
+                            <p><strong>كفاءة المروحة (%):</strong></p>
+                            <span id="prop-efficiency-result">0.0</span>
                         </div>
-                        <div class="input-group">
-                            <label for="wheel-thickness">سمك العجلة (<span class="unit-label">سم</span>)</label>
-                            <input type="number" id="wheel-thickness" value="2" step="0.2">
                         </div>
-                        <div class="input-group">
-                            <label for="strut-length">طول الدعامة (<span class="unit-label">سم</span>)</label>
-                            <input type="number" id="strut-length" value="12" step="1">
-                        </div>
-                        <div class="input-group">
-                            <label for="strut-thickness">سمك الدعامة (<span class="unit-label">سم</span>)</label>
-                            <input type="number" id="strut-thickness" value="1" step="0.1">
-                        </div>
-                        <div class="input-group">
-                            <label for="main-gear-position">موضع العجلات الرئيسية (من المقدمة) (<span class="unit-label">سم</span>)</label>
-                            <input type="number" id="main-gear-position" value="25" step="1">
-                        </div>
-                        <div class="input-group">
-                            <label for="main-gear-width">المسافة بين العجلات الرئيسية (<span class="unit-label">سم</span>)</label>
-                            <input type="number" id="main-gear-width" value="15" step="1">
-                        </div>
+                        <div class="result-item" title="سرعة طرف شفرة المروحة. إذا اقتربت من سرعة الصوت (حوالي 343 م/ث)، تقل كفاءة المروحة بشكل كبير.">
+                            <p>سرعة طرف المروحة (م/ث):</p>
+                            <span id="prop-tip-speed-result">0.0</span>
                         </div>
                     </div>
 
-                        <!-- Landing Gear Results -->
-                        <div class="fieldset-results">
-                            <div class="result-item">
-                                <p>وزن العجلة الواحدة (جرام):</p>
-                                <span id="wheel-weight-result">0</span>
-                            </div>
-                            <div class="result-item">
-                                <p>وزن الدعامة الواحدة (جرام):</p>
-                                <span id="strut-weight-result">0</span>
-                            </div>
-                            <div class="result-item">
-                                <p>الوزن الإجمالي للعجلات (جرام):</p>
-                                <span id="landing-gear-weight-result">0</span>
-                            </div>
-                        </div>
                 </fieldset>
 
                 <fieldset class="collapsible-fieldset">
@@ -1175,117 +1342,53 @@
                     <legend class="collapsible-legend">
                         <div>
                             <i class="fas fa-chart-line legend-icon"></i>
-                            <span>الرسوم البيانية والتحليلات</span>
+                            <span>التحكم بالرسوم البيانية</span>
                         </div>
                         <i class="fas fa-chevron-down toggle-icon"></i>
                     </legend>
                     <div class="collapsible-content">
-                    <div class="input-group">
-                        <label for="toggle-charts-btn">إظهار/إخفاء الرسوم البيانية</label>
-                        <button type="button" id="toggle-charts-btn" style="flex-basis: 45%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; background-color: #e9ecef;">إظهار</button>
-                    </div>
-                    </div>
-                </fieldset>
-
-                <fieldset class="collapsible-fieldset">
-                    <legend class="collapsible-legend">
-                        <div>
-                            <i class="fas fa-weight-hanging legend-icon"></i>
-                            <span>ملحقات وأوزان إضافية</span>
+                        <div class="input-group">
+                            <label>التحكم بجميع المخططات</label>
+                            <div style="flex-basis: 45%; display: flex; gap: 10px;">
+                                <button type="button" id="show-all-charts-btn" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; background-color: #e9ecef;">إظهار الكل</button>
+                                <button type="button" id="hide-all-charts-btn" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; background-color: #f8f9fa;">إخفاء الكل</button>
+                            </div>
                         </div>
-                        <i class="fas fa-chevron-down toggle-icon"></i>
-                    </legend>
-                    <div class="collapsible-content">
-                    <div class="input-group">
-                        <label for="receiver-weight">وزن جهاز الاستقبال (جرام)</label>
-                        <input type="number" id="receiver-weight" value="15" step="1">
-                    </div>
-                    <div class="input-group">
-                        <label for="receiver-position">موضع جهاز الاستقبال (من المقدمة) (<span class="unit-label">سم</span>)</label>
-                        <input type="number" id="receiver-position" value="10" step="1">
-                    </div>
-                    <div class="input-group">
-                        <label for="receiver-position-y">الموضع العمودي (Y) (<span class="unit-label">سم</span>)</label>
-                        <input type="number" id="receiver-position-y" value="0" step="0.5" title="موجب للأعلى، سالب للأسفل">
-                    </div>
-                    <div class="input-group">
-                        <label for="receiver-position-z">الموضع الجانبي (Z) (<span class="unit-label">سم</span>)</label>
-                        <input type="number" id="receiver-position-z" value="0" step="0.5" title="موجب لليمين، سالب لليسار">
-                    </div>
-
-                    <!-- Servo Group 1: Wing Servos -->
-                    <p style="font-weight: bold; color: #0056b3; margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px;">مجموعة السيرفو 1 (مثال: للجناح)</p>
-                    <div class="input-group">
-                        <label for="servo-g1-weight">وزن السيرفو الواحد (جرام)</label>
-                        <input type="number" id="servo-g1-weight" value="9" step="1">
-                    </div>
-                    <div class="input-group">
-                        <label for="servo-g1-count">العدد</label>
-                        <input type="number" id="servo-g1-count" value="2" step="1" min="0">
-                    </div>
-                    <div class="input-group">
-                        <label for="servo-g1-position-x">الموضع من المقدمة (X) (<span class="unit-label">سم</span>)</label>
-                        <input type="number" id="servo-g1-position-x" value="30" step="1">
-                    </div>
-                    <div class="input-group">
-                        <label for="servo-g1-position-y">الموضع العمودي (Y) (<span class="unit-label">سم</span>)</label>
-                        <input type="number" id="servo-g1-position-y" value="0" step="0.5" title="موجب للأعلى، سالب للأسفل">
-                    </div>
-                    <div class="input-group">
-                        <label for="servo-g1-position-z">الموضع الجانبي (Z) (<span class="unit-label">سم</span>)</label>
-                        <input type="number" id="servo-g1-position-z" value="0" step="0.5" title="موضع متوسط، مثال: 0 إذا كانت السيرفوهات متناظرة">
-                    </div>
-
-                    <!-- Servo Group 2: Tail Servos -->
-                    <p style="font-weight: bold; color: #0056b3; margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px;">مجموعة السيرفو 2 (مثال: للذيل)</p>
-                    <div class="input-group">
-                        <label for="servo-g2-weight">وزن السيرفو الواحد (جرام)</label>
-                        <input type="number" id="servo-g2-weight" value="9" step="1">
-                    </div>
-                    <div class="input-group">
-                        <label for="servo-g2-count">العدد</label>
-                        <input type="number" id="servo-g2-count" value="2" step="1" min="0">
-                    </div>
-                    <div class="input-group">
-                        <label for="servo-g2-position-x">الموضع من المقدمة (X) (<span class="unit-label">سم</span>)</label>
-                        <input type="number" id="servo-g2-position-x" value="85" step="1">
-                    </div>
-                    <div class="input-group">
-                        <label for="servo-g2-position-y">الموضع العمودي (Y) (<span class="unit-label">سم</span>)</label>
-                        <input type="number" id="servo-g2-position-y" value="0" step="0.5" title="موجب للأعلى، سالب للأسفل">
-                    </div>
-                    <div class="input-group">
-                        <label for="servo-g2-position-z">الموضع الجانبي (Z) (<span class="unit-label">سم</span>)</label>
-                        <input type="number" id="servo-g2-position-z" value="0" step="0.5" title="موضع متوسط، مثال: 0 إذا كانت السيرفوهات متناظرة">
-                    </div>
-
-                    <div class="input-group">
-                        <label for="camera-weight">وزن الكاميرا (إن وجدت) (جرام)</label>
-                        <input type="number" id="camera-weight" value="0" step="5">
-                    </div>
-                    <div class="input-group">
-                        <label for="camera-position">موضع الكاميرا (من المقدمة) (<span class="unit-label">سم</span>)</label>
-                        <input type="number" id="camera-position" value="5" step="1">
-                    </div>
-                    <div class="input-group">
-                        <label for="camera-position-y">الموضع العمودي (Y) (<span class="unit-label">سم</span>)</label>
-                        <input type="number" id="camera-position-y" value="0" step="0.5" title="موجب للأعلى، سالب للأسفل">
-                    </div>
-                    <div class="input-group">
-                        <label for="camera-position-z">الموضع الجانبي (Z) (<span class="unit-label">سم</span>)</label>
-                        <input type="number" id="camera-position-z" value="0" step="0.5" title="موجب لليمين، سالب لليسار">
-                    </div>
-                    <div class="input-group">
-                        <label for="other-accessories-weight">أوزان أخرى (هيكل، غراء...) (جرام)</label>
-                        <input type="number" id="other-accessories-weight" value="250" step="10">
-                    </div>
-                    </div>
-
-                    <!-- Accessories Results -->
-                    <div class="fieldset-results">
-                        <div class="result-item">
-                            <p>الوزن الإجمالي للملحقات (جرام):</p>
-                            <span id="accessories-weight-result">0</span>
+                        <div class="input-group">
+                            <label for="toggle-lift-chart">إظهار مخطط الرفع</label>
+                            <input type="checkbox" id="toggle-lift-chart">
+                        </div>
+                        <div class="input-group">
+                            <label for="toggle-drag-chart">إظهار مخطط السحب</label>
+                            <input type="checkbox" id="toggle-drag-chart">
+                        </div>
+                        <div class="input-group">
+                            <label for="toggle-thrust-chart">إظهار مخطط الدفع</label>
+                            <input type="checkbox" id="toggle-thrust-chart">
+                        </div>
+                        <div class="input-group">
+                            <label for="toggle-prop-efficiency-chart">إظهار مخطط كفاءة المروحة</label>
+                            <input type="checkbox" id="toggle-prop-efficiency-chart">
+                        </div>
+                        <div class="input-group">
+                            <label for="toggle-ld-ratio-chart">إظهار مخطط نسبة الرفع/السحب</label>
+                            <input type="checkbox" id="toggle-ld-ratio-chart">
+                        </div>
+                        <div class="input-group">
+                            <label for="toggle-stability-chart">إظهار مخطط هامش الاستقرار</label>
+                            <input type="checkbox" id="toggle-stability-chart">
+                        </div>
+                        <div class="input-group">
+                            <label for="toggle-pitching-moment-chart">إظهار مخطط عزم الانحدار</label>
+                            <input type="checkbox" id="toggle-pitching-moment-chart">
+                        </div>
+                        <div class="input-group">
+                            <label for="toggle-power-chart">إظهار مخطط القدرة</label>
+                            <input type="checkbox" id="toggle-power-chart">
+                        </div>
+                        <div class="input-group">
+                            <label for="toggle-lift-curve-chart">إظهار منحنى الرفع (Cl vs AoA)</label>
+                            <input type="checkbox" id="toggle-lift-curve-chart">
                         </div>
                     </div>
                 </fieldset>
@@ -1370,6 +1473,10 @@
                         <label for="show-cg">إظهار مركز الجاذبية (CG)</label>
                         <input type="checkbox" id="show-cg" checked style="flex-basis: auto; margin-left: auto;">
                     </div>
+                    <div class="input-group">
+                        <label for="show-ac">إظهار المركز الهوائي (AC)</label>
+                        <input type="checkbox" id="show-ac" checked style="flex-basis: auto; margin-left: auto;">
+                    </div>
                     </div>
                     <!-- Pitching Moment Result -->
                     <div class="fieldset-results">
@@ -1434,6 +1541,10 @@
                         <input type="color" id="smoke-color" value="#CCCCCC">
                     </div>
                     <div class="input-group">
+                        <label for="sonic-boom-color">لون تأثير كسر حاجز الصوت</label>
+                        <input type="color" id="sonic-boom-color" value="#ffffff">
+                    </div>
+                    <div class="input-group">
                         <label for="cockpit-color">لون قمرة القيادة</label>
                         <input type="color" id="cockpit-color" value="#6ab0de">
                     </div>
@@ -1475,10 +1586,84 @@
                         </div>
                     </div>
                 </fieldset>
+
+                <fieldset class="collapsible-fieldset">
+                    <legend class="collapsible-legend">
+                        <div>
+                            <i class="fas fa-dollar-sign legend-icon"></i>
+                            <span>تقدير التكلفة (Cost Estimation)</span>
+                        </div>
+                        <i class="fas fa-chevron-down toggle-icon"></i>
+                    </legend>
+                    <div class="collapsible-content fieldset-results">
+                        <div class="result-item">
+                            <p>تكلفة الجسم والقمرة (دولار):</p>
+                            <span id="fuselage-cost-result">0.00</span>
+                        </div>
+                        <div class="result-item">
+                            <p>تكلفة الجناح (دولار):</p>
+                            <span id="wing-cost-result">0.00</span>
+                        </div>
+                        <div class="result-item">
+                            <p>تكلفة الذيل (دولار):</p>
+                            <span id="tail-cost-result">0.00</span>
+                        </div>
+                        <div class="result-item">
+                            <p>تكلفة نظام الدفع (محرك ومروحة) (دولار):</p>
+                            <span id="propulsion-cost-result">0.00</span>
+                        </div>
+                        <div class="result-item">
+                            <p>تكلفة الإلكترونيات (بطارية، سيرفو..) (دولار):</p>
+                            <span id="electronics-cost-result">0.00</span>
+                        </div>
+                        <div class="result-item">
+                            <p>تكلفة عجلات الهبوط (دولار):</p>
+                            <span id="landing-gear-cost-result">0.00</span>
+                        </div>
+                    </div>
+                    <div class="fieldset-results" style="border-top: 2px solid #90caf9; margin-top: 10px; padding-top: 10px;">
+                        <div class="result-item">
+                            <p><strong>التكلفة الإجمالية التقديرية (دولار):</strong></p>
+                            <span id="total-cost-result" style="font-size: 1.2em;">0.00</span>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <div class="suggestions-box">
+                    <h2><i class="fas fa-lightbulb"></i><span>اقتراحات التصميم</span></h2>
+                    <div class="input-group" style="padding: 0 10px; margin-bottom: 15px;">
+                        <label for="desired-twr-input">نسبة الدفع/الوزن المرغوبة:</label>
+                        <input type="number" id="desired-twr-input" value="0.5" step="0.05" min="0.2" max="2.0" title="0.3-0.5 للمدربات, 0.6-0.9 للطائرات الرياضية, 1.0+ للاستعراض ثلاثي الأبعاد.">
+                    </div>
+                    <div class="input-group" style="padding: 0 10px; margin-bottom: 15px;">
+                        <label for="desired-wing-loading-input">تحميل الجناح المرغوب (جرام/ديسيمتر²):</label>
+                        <input type="number" id="desired-wing-loading-input" value="50" step="5" min="20" max="120" title="30-50 للمدربات, 50-70 للطائرات الرياضية, 70+ للمتسابقات.">
+                    </div>
+                    <div class="result-item" title="قوة الرفع التي يجب أن يولدها الجناح لمعادلة وزن الطائرة في الطيران الأفقي.">
+                        <p><strong>الرفع المطلوب (نيوتن):</strong></p>
+                        <span id="recommended-lift-result">0.00</span>
+                    </div>
+                    <div class="result-item" title="قوة الدفع المقترحة لتحقيق أداء جيد بناءً على النسبة المحددة.">
+                        <p><strong>الدفع المقترح (نيوتن):</strong></p>
+                        <span id="recommended-thrust-result">0.00</span>
+                    </div>
+                    <div class="result-item" title="مساحة الجناح المقترحة لتحقيق تحميل الجناح المرغوب، مما يوفر توازنًا جيدًا بين الاستقرار والقدرة على المناورة.">
+                        <p><strong>مساحة الجناح المقترحة (م²):</strong></p>
+                        <span id="recommended-wing-area-result">0.00</span>
+                    </div>
+                    <div class="result-item" title="مساحة الذيل الكلية المقترحة (أفقي + عمودي) لتحقيق استقرار جيد بناءً على حجم الجناح والمسافة بينهما.">
+                        <p><strong>مساحة الذيل المقترحة (م²):</strong></p>
+                        <span id="recommended-tail-area-result">0.00</span>
+                    </div>
+                    <div class="result-item" title="مساحة سطح الجسم المقترحة لتحقيق نسبة طول إلى عرض جيدة (Fineness Ratio)، مما يقلل السحب.">
+                        <p><strong>مساحة سطح الجسم المقترحة (م²):</strong></p>
+                        <span id="recommended-fuselage-area-result">0.00</span>
+                    </div>
+                </div>
             </form>
 
             <div class="results">
-                <h2>النتائج</h2>
+                <h2><i class="fas fa-poll"></i><span>النتائج</span></h2>
                 <p style="font-size: 0.8em; text-align: center; color: #555;">(قيم تقريبية لأغراض توضيحية)</p>
                 <div class="result-item">
                     <p>قوة الرفع (نيوتن):</p>
@@ -1504,9 +1689,33 @@
                     <p><strong>سرعة الانهيار (م/ث):</strong></p>
                     <span id="stall-speed-result">0.00</span>
                 </div>
+                <div class="result-item" title="الوزن مقسوماً على مساحة الجناح. يؤثر على سرعة الانهيار والقدرة على المناورة.">
+                    <p>تحميل الجناح (جرام/ديسيمتر²):</p>
+                    <span id="wing-loading-result">0.00</span>
+                </div>
+                <div class="result-item" title="نسبة طول الجناح إلى عرضه. القيم الأعلى تعني سحبًا مستحثًا أقل وكفاءة طيران أعلى.">
+                    <p>نسبة العرض إلى الارتفاع (AR):</p>
+                    <span id="aspect-ratio-result">0.00</span>
+                </div>
+                <div class="result-item" title="نسبة قوة الرفع إلى قوة السحب. مقياس للكفاءة الديناميكية الهوائية للطائرة.">
+                    <p>نسبة الرفع إلى السحب (L/D):</p>
+                    <span id="ld-ratio-result">0.00</span>
+                </div>
+                <div class="result-item" title="معامل حجم الذيل الأفقي. يحدد مدى استقرار الطائرة الطولي. القيم النموذجية بين 0.3 و 0.6.">
+                    <p>معامل حجم الذيل الأفقي (Vh):</p>
+                    <span id="h-tail-volume-result">0.000</span>
+                </div>
+                <div class="result-item" title="معامل حجم الذيل العمودي. يحدد مدى استقرار الطائرة الاتجاهي. القيم النموذجية بين 0.02 و 0.05.">
+                    <p>معامل حجم الذيل العمودي (Vv):</p>
+                    <span id="v-tail-volume-result">0.000</span>
+                </div>
                 <div class="result-item" style="border-top: 2px solid #90caf9; padding-top: 10px; margin-top: 10px;" title="موضع مركز الجاذبية من مقدمة الطائرة">
                     <p>موضع مركز الجاذبية (CG) (سم):</p>
                     <span id="cg-position-result">0.0</span>
+                </div>
+                <div class="result-item" id="ac-position-result-item" title="موضع المركز الهوائي الكلي للطائرة (النقطة المحايدة). يجب أن يكون خلف مركز الجاذبية لتحقيق الاستقرار.">
+                    <p>موضع المركز الهوائي (AC) (سم):</p>
+                    <span id="ac-position-result">0.0</span>
                 </div>
                 <div class="result-item" title="الموضع العمودي لمركز الجاذبية (موجب للأعلى)">
                     <p>موضع CG العمودي (Y) (سم):</p>
@@ -1516,13 +1725,21 @@
                     <p>موضع CG الجانبي (Z) (سم):</p>
                     <span id="cg-position-z-result">0.0</span>
                 </div>
-                <div class="result-item" id="pitching-moment-result-item" title="العزم الذي يولده المحرك حول مركز الجاذبية. القيمة السالبة تعني ميلان للأسفل (nose-down)، والموجبة للأعلى (nose-up)." style="display: none;">
-                    <p><strong>عزم الانحدار من الدفع (N.m):</strong></p>
-                    <span id="pitching-moment-result">0.00</span>
+                <div class="result-item" id="pitching-moment-thrust-result-item" title="العزم الدوراني حول المحور الجانبي (Pitch) الناتج عن قوة الدفع. القيمة السالبة تعني ميلان للأسفل (مستقر)، والموجبة للأعلى (غير مستقر)." style="display: none;">
+                    <p>عزم الانحدار من الدفع (N.m):</p>
+                    <span id="pitching-moment-thrust-result">0.00</span>
                 </div>
-                <div class="result-item" id="yawing-moment-result-item" title="العزم الذي يولده المحرك حول المحور العمودي. القيمة الموجبة تعني انعراج لليمين (nose-right)." style="display: none;">
-                    <p><strong>عزم الانعراج من الدفع (N.m):</strong></p>
-                    <span id="yawing-moment-result">0.00</span>
+                <div class="result-item" id="yawing-moment-thrust-result-item" title="العزم الدوراني حول المحور العمودي (Yaw) الناتج عن قوة الدفع. يستخدم الميلان الجانبي للمحرك لمعادلة هذا العزم." style="display: none;">
+                    <p>عزم الانعراج من الدفع (N.m):</p>
+                    <span id="yawing-moment-thrust-result">0.00</span>
+                </div>
+                <div class="result-item" id="torque-roll-result-item" title="رد فعل عزم دوران المحرك الذي يسبب ميلان الطائرة للدوران. القيمة السالبة تعني ميلان لليسار (عكس عقارب الساعة)." style="display: none;">
+                    <p>عزم الدوران (Roll) من المحرك (N.m):</p>
+                    <span id="torque-roll-result">0.000</span>
+                </div>
+                <div class="result-item" id="p-factor-yaw-result-item" title="عزم الانعراج الناتج عن الدفع غير المتماثل للمروحة عند زوايا الهجوم العالية. القيمة السالبة تعني انعراج لليسار." style="display: none;">
+                    <p>عزم الانعراج (P-Factor) (N.m):</p>
+                    <span id="p-factor-yaw-result">0.000</span>
                 </div>
             </div>
         </div>
@@ -1532,22 +1749,58 @@
     </div>
     
     <div class="charts-container" id="charts-container">
-        <div class="chart-card">
+        <div class="chart-card" id="lift-chart-card">
             <h3>الرفع مقابل سرعة الهواء</h3>
             <div class="chart-wrapper">
                 <canvas id="lift-chart"></canvas>
             </div>
         </div>
-        <div class="chart-card">
+        <div class="chart-card" id="drag-chart-card">
             <h3>السحب مقابل سرعة الهواء</h3>
             <div class="chart-wrapper">
                 <canvas id="drag-chart"></canvas>
             </div>
         </div>
-        <div class="chart-card" style="grid-column: 1 / -1;">
+        <div class="chart-card" id="thrust-chart-card">
             <h3>الدفع المتاح مقابل الدفع المطلوب (السحب)</h3>
             <div class="chart-wrapper">
                 <canvas id="thrust-chart"></canvas>
+            </div>
+        </div>
+        <div class="chart-card" id="prop-efficiency-chart-card">
+            <h3>كفاءة المروحة مقابل سرعة الهواء</h3>
+            <div class="chart-wrapper">
+                <canvas id="prop-efficiency-chart"></canvas>
+            </div>
+        </div>
+        <div class="chart-card" id="ld-ratio-chart-card">
+            <h3>نسبة الرفع إلى السحب (L/D) مقابل زاوية الهجوم</h3>
+            <div class="chart-wrapper">
+                <canvas id="ld-ratio-chart"></canvas>
+            </div>
+        </div>
+        <div class="chart-card" id="stability-chart-card">
+            <h3>هامش الاستقرار مقابل موضع CG (النطاق الآمن 5-15%)</h3>
+            <div class="chart-wrapper">
+                <canvas id="stability-chart"></canvas>
+            </div>
+        </div>
+        <div class="chart-card" id="pitching-moment-chart-card">
+            <h3>عزم الانحدار مقابل زاوية الهجوم (الاستقرار الطولي)</h3>
+            <div class="chart-wrapper">
+                <canvas id="pitching-moment-chart"></canvas>
+            </div>
+        </div>
+        <div class="chart-card" id="power-chart-card">
+            <h3>القدرة المتاحة مقابل القدرة المطلوبة (واط)</h3>
+            <div class="chart-wrapper">
+                <canvas id="power-chart"></canvas>
+            </div>
+        </div>
+        <div class="chart-card" id="lift-curve-chart-card">
+            <h3>منحنى الرفع (معامل الرفع مقابل زاوية الهجوم)</h3>
+            <div class="chart-wrapper">
+                <canvas id="lift-curve-chart"></canvas>
             </div>
         </div>
     </div>
