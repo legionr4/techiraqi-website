@@ -451,7 +451,7 @@
                 <fieldset class="collapsible-fieldset">
                     <legend class="collapsible-legend">
                         <div>
-                            <i class="fas fa-plane-body legend-icon"></i>
+                            <i class="fas fa-plane legend-icon"></i>
                             <span>جسم الطائرة</span>
                         </div>
                         <i class="fas fa-chevron-down toggle-icon"></i>
@@ -1273,6 +1273,11 @@
                         <label for="toggle-prop-spin">تشغيل المحاكاة (الدوران والهواء)</label>
                         <button type="button" id="toggle-prop-spin" style="flex-basis: 45%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; background-color: #e9ecef;">تشغيل</button>
                     </div>
+                    <!-- شريط التحكم الجديد لسرعة المروحة -->
+                    <div class="input-group">
+                        <label for="prop-rpm-control">سرعة المروحة (RPM): <span id="prop-rpm-control-value">8000</span></label>
+                        <input type="range" id="prop-rpm-control" min="0" max="8000" value="8000" step="50">
+                    </div>
                     <div class="input-group">
                         <label for="toggle-sound-btn">صوت المحرك</label>
                         <button type="button" id="toggle-sound-btn" style="flex-basis: 45%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; background-color: #e9ecef;">كتم الصوت</button>
@@ -1327,6 +1332,10 @@
                         <label for="vibration-intensity">شدة اهتزاز المحرك: <span id="vibration-value">100</span>%</label>
                         <input type="range" id="vibration-intensity" min="0" max="1" value="1" step="0.1">
                     </div>
+                    <div class="input-group">
+                        <label for="flutter-intensity">شدة اهتزاز الجناح: <span id="flutter-value">0</span>%</label>
+                        <input type="range" id="flutter-intensity" min="0" max="1" value="0" step="0.1">
+                    </div>
                     <!-- تم نقله هنا - يظهر فقط عند اختيار محركات الجناح -->
                     <div class="input-group" id="wing-prop-rotation-group" style="display: none;">
                         <label for="wing-prop-rotation">اتجاه دوران المراوح (للجناح)</label>
@@ -1334,6 +1343,25 @@
                             <option value="counter" selected>متعاكس (Counter-rotating)</option>
                             <option value="same">نفس الاتجاه (Same Direction)</option>
                         </select>
+                    </div>
+                    <!-- New Streamline Controls Section -->
+                    <div style="border-top: 1px dashed #ccc; margin-top: 15px; padding-top: 15px;">
+                        <div class="input-group">
+                            <label for="show-streamlines">إظهار خطوط التدفق الانسيابي</label>
+                            <input type="checkbox" id="show-streamlines" checked style="flex-basis: auto; margin-left: auto;">
+                        </div>
+                        <div class="input-group">
+                            <label for="streamline-density">كثافة خطوط التدفق: <span id="streamline-density-value">50</span></label>
+                            <input type="range" id="streamline-density" min="10" max="200" value="50" step="5">
+                        </div>
+                        <div class="input-group">
+                            <label for="streamline-points">طول/دقة خطوط التدفق: <span id="streamline-points-value">40</span></label>
+                            <input type="range" id="streamline-points" min="20" max="100" value="40" step="2">
+                        </div>
+                        <div class="input-group">
+                            <label for="show-pressure-map">إظهار خريطة الضغط على الجناح</label>
+                            <input type="checkbox" id="show-pressure-map" checked style="flex-basis: auto; margin-left: auto;">
+                        </div>
                     </div>
                     </div>
                 </fieldset>
@@ -1385,6 +1413,10 @@
                         <div class="input-group">
                             <label for="toggle-power-chart">إظهار مخطط القدرة</label>
                             <input type="checkbox" id="toggle-power-chart">
+                        </div>
+                        <div class="input-group">
+                            <label for="toggle-roc-chart">إظهار مخطط معدل التسلق</label>
+                            <input type="checkbox" id="toggle-roc-chart">
                         </div>
                         <div class="input-group">
                             <label for="toggle-lift-curve-chart">إظهار منحنى الرفع (Cl vs AoA)</label>
@@ -1480,6 +1512,14 @@
                     </div>
                     <!-- Pitching Moment Result -->
                     <div class="fieldset-results">
+                        <div class="result-item" title="موضع مركز الجاذبية (CG) من مقدمة الطائرة.">
+                            <p>موضع CG (<span class="unit-label">سم</span>):</p>
+                            <span id="cg-position-result-fieldset">0.0</span>
+                        </div>
+                        <div class="result-item" title="موضع المركز الهوائي (AC) من مقدمة الطائرة.">
+                            <p>موضع AC (<span class="unit-label">سم</span>):</p>
+                            <span id="ac-position-result-fieldset">0.0</span>
+                        </div>
                         <div class="result-item" title="العزم الكلي حول مركز الجاذبية. القيمة السالبة تعني ميلان للأسفل (مستقر)، والموجبة للأعلى (غير مستقر).">
                             <p><strong>عزم الانحدار (N.m):</strong></p>
                             <span id="pitching-moment-result">0.00</span>
@@ -1506,7 +1546,7 @@
                     </div>
                     <div class="input-group">
                         <label for="wing-color">لون الجناح</label>
-                        <input type="color" id="wing-color" value="#cccccc">
+                        <input type="color" id="wing-color" value="#ffffff">
                     </div>
                     <div class="input-group">
                         <label for="tail-color">لون الذيل</label>
@@ -1537,6 +1577,18 @@
                         <input type="color" id="vortex-color" value="#ffffff">
                     </div>
                     <div class="input-group">
+                        <label for="streamline-color">لون خطوط التدفق</label>
+                        <input type="color" id="streamline-color" value="#00ff00">
+                    </div>
+                    <div class="input-group">
+                        <label for="pressure-map-low-color">لون الضغط المنخفض (شفط)</label>
+                        <input type="color" id="pressure-map-low-color" value="#8800ff">
+                    </div>
+                    <div class="input-group">
+                        <label for="pressure-map-high-color">لون الضغط المرتفع</label>
+                        <input type="color" id="pressure-map-high-color" value="#ff4500">
+                    </div>
+                    <div class="input-group">
                         <label for="smoke-color">لون الدخان (للمحرك الميكانيكي)</label>
                         <input type="color" id="smoke-color" value="#CCCCCC">
                     </div>
@@ -1564,6 +1616,21 @@
                         <label for="background-color">لون الخلفية</label>
                         <input type="color" id="background-color" value="#eeeeee">
                     </div>
+                    </div>
+                </fieldset>
+                <fieldset class="collapsible-fieldset">
+                    <legend class="collapsible-legend">
+                        <div>
+                            <i class="fas fa-undo-alt legend-icon"></i>
+                            <span>اعادة ضبط الافتراضي</span>
+                        </div>
+                        <i class="fas fa-chevron-down toggle-icon"></i>
+                    </legend>
+                    <div class="collapsible-content">
+                        <div class="input-group">
+                            <label for="reset-all-btn">إعادة تعيين جميع المدخلات للقيم الافتراضية</label>
+                            <button type="button" id="reset-all-btn" style="flex-basis: 45%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; background-color: #dc3545; color: white;">إعادة تعيين</button>
+                        </div>
                     </div>
                 </fieldset>
                 <fieldset class="collapsible-fieldset">
@@ -1685,6 +1752,18 @@
                     <p>نسبة الدفع إلى الوزن:</p>
                     <span id="twr-result">0.00</span>
                 </div>
+                <div class="result-item" title="السرعة العمودية للطائرة (متر/ثانية). تعتمد على فائض الدفع عند سرعة الهواء الحالية. القيمة الموجبة تعني تسلق، والسالبة هبوط.">
+                    <p><strong>معدل التسلق (م/ث):</strong></p>
+                    <span id="roc-result">0.00</span>
+                </div>
+                <div class="result-item" title="أقصى سرعة عمودية يمكن للطائرة تحقيقها في الظروف الحالية.">
+                    <p><strong>أقصى معدل تسلق (م/ث):</strong></p>
+                    <span id="max-roc-result">0.00</span>
+                </div>
+                <div class="result-item" title="السرعة الجوية التي تحقق أقصى معدل تسلق (Vy).">
+                    <p><strong>سرعة أقصى تسلق (Vy) (م/ث):</strong></p>
+                    <span id="vy-speed-result">0.00</span>
+                </div>
                 <div class="result-item" title="أقل سرعة يمكن للطائرة الطيران بها في وضع أفقي قبل أن تفقد الرفع.">
                     <p><strong>سرعة الانهيار (م/ث):</strong></p>
                     <span id="stall-speed-result">0.00</span>
@@ -1700,6 +1779,18 @@
                 <div class="result-item" title="نسبة قوة الرفع إلى قوة السحب. مقياس للكفاءة الديناميكية الهوائية للطائرة.">
                     <p>نسبة الرفع إلى السحب (L/D):</p>
                     <span id="ld-ratio-result">0.00</span>
+                </div>
+                <div class="result-item" id="top-pressure-result-item" title="الضغط على السطح العلوي للجناح. القيمة الأقل من الضغط الجوي تسبب قوة شفط للأعلى.">
+                    <p>الضغط العلوي (باسكال):</p>
+                    <span id="top-pressure-result">0</span>
+                </div>
+                <div class="result-item" id="bottom-pressure-result-item" title="الضغط على السطح السفلي للجناح. القيمة الأعلى من الضغط الجوي تسبب قوة دفع للأعلى.">
+                    <p>الضغط السفلي (باسكال):</p>
+                    <span id="bottom-pressure-result">0</span>
+                </div>
+                <div class="result-item" title="أصغر زاوية هبوط يمكن للطائرة تحقيقها (أفضل انزلاق). تحدث عند زاوية الهجوم التي تعطي أقصى نسبة رفع إلى سحب.">
+                    <p><strong>زاوية الانزلاق الأفضل (°):</strong></p>
+                    <span id="best-glide-angle-result">0.00</span>
                 </div>
                 <div class="result-item" title="معامل حجم الذيل الأفقي. يحدد مدى استقرار الطائرة الطولي. القيم النموذجية بين 0.3 و 0.6.">
                     <p>معامل حجم الذيل الأفقي (Vh):</p>
@@ -1774,7 +1865,7 @@
             </div>
         </div>
         <div class="chart-card" id="ld-ratio-chart-card">
-            <h3>نسبة الرفع إلى السحب (L/D) مقابل زاوية الهجوم</h3>
+            <h3>كفاءة الانزلاق (L/D) مقابل زاوية الهجوم</h3>
             <div class="chart-wrapper">
                 <canvas id="ld-ratio-chart"></canvas>
             </div>
@@ -1795,6 +1886,12 @@
             <h3>القدرة المتاحة مقابل القدرة المطلوبة (واط)</h3>
             <div class="chart-wrapper">
                 <canvas id="power-chart"></canvas>
+            </div>
+        </div>
+        <div class="chart-card" id="roc-chart-card">
+            <h3>معدل التسلق مقابل سرعة الهواء</h3>
+            <div class="chart-wrapper">
+                <canvas id="roc-chart"></canvas>
             </div>
         </div>
         <div class="chart-card" id="lift-curve-chart-card">

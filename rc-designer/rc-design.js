@@ -68,7 +68,11 @@ const fuselageMaterial = new THREE.MeshStandardMaterial({
     side: THREE.DoubleSide,
     transparent: true // تفعيل الشفافية
 });
-const wingMaterial = new THREE.MeshStandardMaterial({ color: 0xcccccc, side: THREE.DoubleSide });
+const wingMaterial = new THREE.MeshStandardMaterial({
+    color: 0xffffff, // اللون الافتراضي للجناح (أبيض)
+    side: THREE.DoubleSide,
+    vertexColors: true // تفعيل الألوان لكل رأس
+});
 const tailMaterial = new THREE.MeshStandardMaterial({ color: 0xdddddd, side: THREE.DoubleSide });
 const aileronMaterial = new THREE.MeshStandardMaterial({ color: 0xffc107, side: THREE.DoubleSide });
 const cockpitMaterial = new THREE.MeshStandardMaterial({
@@ -101,6 +105,9 @@ planeGroup.add(fuselageGroup);
 // علامة مركز الثقل على جسم الطائرة - سيتم إنشاؤها ديناميكيًا
 const cgFuselageMarkerGroup = new THREE.Group();
 cgFuselageMarkerGroup.name = 'cgFuselageMarker';
+// علامة المركز الهوائي على جسم الطائرة - سيتم إنشاؤها ديناميكيًا
+const acFuselageMarkerGroup = new THREE.Group();
+acFuselageMarkerGroup.name = 'acFuselageMarker';
 // مجموعة الجناح (سيتم إنشاؤها ديناميكيًا)
 const wingGroup = new THREE.Group();
 planeGroup.add(wingGroup);
@@ -469,6 +476,17 @@ const particleDensityValueEl = document.getElementById('particle-density-value')
 const particleSizeValueEl = document.getElementById('particle-size-value');
 const vibrationValueEl = document.getElementById('vibration-value');
 const cockpitOpacityValueEl = document.getElementById('cockpit-opacity-value');
+const flutterIntensityInput = document.getElementById('flutter-intensity');
+const flutterValueEl = document.getElementById('flutter-value');
+const showStreamlinesInput = document.getElementById('show-streamlines');
+const streamlineColorInput = document.getElementById('streamline-color');
+const streamlineDensityInput = document.getElementById('streamline-density');
+const streamlineDensityValueEl = document.getElementById('streamline-density-value');
+const streamlinePointsInput = document.getElementById('streamline-points');
+const streamlinePointsValueEl = document.getElementById('streamline-points-value');
+const showPressureMapInput = document.getElementById('show-pressure-map');
+const pressureMapLowColorInput = document.getElementById('pressure-map-low-color');
+const pressureMapHighColorInput = document.getElementById('pressure-map-high-color');
 const unitLabels = document.querySelectorAll('.unit-label');
 
 // Landing Gear Inputs
@@ -576,6 +594,7 @@ const toggleLdRatioChart = document.getElementById('toggle-ld-ratio-chart');
 const toggleStabilityChart = document.getElementById('toggle-stability-chart');
 const togglePitchingMomentChart = document.getElementById('toggle-pitching-moment-chart');
 const togglePowerChart = document.getElementById('toggle-power-chart');
+const toggleRocChart = document.getElementById('toggle-roc-chart');
 const toggleLiftCurveChart = document.getElementById('toggle-lift-curve-chart');
 const showAllChartsBtn = document.getElementById('show-all-charts-btn');
 
@@ -604,12 +623,17 @@ const liftResultEl = document.getElementById('lift-result');
 const dragResultEl = document.getElementById('drag-result');
 const thrustResultEl = document.getElementById('thrust-result');
 const twrResultEl = document.getElementById('twr-result');
+const rocResultEl = document.getElementById('roc-result');
 const wingLoadingResultEl = document.getElementById('wing-loading-result');
 const aspectRatioResultEl = document.getElementById('aspect-ratio-result');
 const ldRatioResultEl = document.getElementById('ld-ratio-result');
 const hTailVolumeResultEl = document.getElementById('h-tail-volume-result');
 const vTailVolumeResultEl = document.getElementById('v-tail-volume-result');
 const acPositionResultEl = document.getElementById('ac-position-result');
+const topPressureResultEl = document.getElementById('top-pressure-result');
+const topPressureResultItemEl = document.getElementById('top-pressure-result-item');
+const bottomPressureResultEl = document.getElementById('bottom-pressure-result');
+const bottomPressureResultItemEl = document.getElementById('bottom-pressure-result-item');
 const stallSpeedResultEl = document.getElementById('stall-speed-result');
 const wingAreaResultEl = document.getElementById('wing-area-result');
 const wingWeightResultEl = document.getElementById('wing-weight-result');
@@ -652,7 +676,7 @@ const propTipSpeedResultEl = document.getElementById('prop-tip-speed-result');
 
 const planeParams = {}; // Object to hold cached plane parameters for the animation loop
 
-let liftChart, dragChart, thrustChart, propEfficiencyChart, ldRatioChart, stabilityChart, pitchingMomentChart, powerChart, liftCurveChart;
+let liftChart, dragChart, thrustChart, propEfficiencyChart, ldRatioChart, stabilityChart, pitchingMomentChart, powerChart, rocChart, liftCurveChart;
 let isPropSpinning = false; // متغير لتتبع حالة دوران المروحة
 let propParticleSystem, propParticleCount = 400; // لتدفق هواء المروحة (تم تقليل العدد)
 let wingAirflowParticleSystem, wingAirflowParticleCount = 2500; // لتدفق الهواء العام
@@ -661,6 +685,7 @@ let smokeParticleSystem, smokeParticleCount = 500; // لدخان محرك IC
 let sonicBoomParticleSystem, sonicBoomParticleCount = 500; // لتأثير كسر حاجز الصوت
 let isSonicBoomActive = false;
 let sonicBoomTime = 0;
+let streamlinesGroup, streamlineLines = [], streamlineVelocities = []; // Streamline variables
 let hasBoomed = false; // لمنع إعادة تفعيل التأثير في كل إطار
 
 let heatHazeParticleSystem, heatHazeParticleCount = 300; // لتأثير الحرارة
@@ -1092,6 +1117,7 @@ function updatePlaneModel() {
     const smokeColor = smokeColorInput.value;
     const sonicBoomColor = sonicBoomColorInput.value;
     const backgroundColor = backgroundColorInput.value;
+    const streamlineColor = streamlineColorInput.value;
     const accessoryColor = accessoryColorInput.value; // FIX: Define accessoryColor
 
 
@@ -1124,6 +1150,9 @@ function updatePlaneModel() {
     }
     if (sonicBoomParticleSystem && sonicBoomParticleSystem.material.uniforms.color) {
         sonicBoomParticleSystem.material.uniforms.color.value.set(sonicBoomColor);
+    }
+    if (streamlinesGroup) {
+        streamlinesGroup.children.forEach(line => line.material.color.set(streamlineColor));
     }
     scene.background.set(backgroundColor);
 
@@ -1319,10 +1348,18 @@ function updatePlaneModel() {
     wingGeometry.setIndex(indices);
     wingGeometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
     wingGeometry.computeVertexNormals(); // لحساب الإضاءة بشكل صحيح
+    // NEW: Add color attribute for pressure map
+    const colors = new Float32Array(vertices.length);
+    wingGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    wingGeometry.computeVertexNormals(); // لحساب الإضاءة بشكل صحيح
 
     const rightWing = new THREE.Mesh(wingGeometry, wingMaterial);
-    const leftWing = rightWing.clone();
+    // --- FIX: Clone geometry before mesh to handle original positions separately ---
+    const leftWingGeom = wingGeometry.clone();
+    const leftWing = new THREE.Mesh(leftWingGeom, wingMaterial);
     leftWing.scale.z = -1; // عكس الجناح الأيسر
+    rightWing.geometry.userData.originalPositions = rightWing.geometry.attributes.position.array.slice();
+    leftWing.geometry.userData.originalPositions = leftWing.geometry.attributes.position.array.slice();
 
     // --- تطبيق زاوية الديhedral ---
     // يتم الدوران حول المحور X (المحور الممتد من مقدمة الجناح لمؤخرته)
@@ -1450,7 +1487,10 @@ function updatePlaneModel() {
         const child = tailAssembly.children[0];
         // Recursively dispose of geometries and materials to prevent memory leaks
         child.traverse(obj => {
-            if (obj.isMesh) { if (obj.geometry) obj.geometry.dispose(); if (obj.material) obj.material.dispose(); }
+            if (obj.isMesh) {
+                if (obj.geometry) obj.geometry.dispose();
+                // FIX: Do NOT dispose of material, as it's reused (e.g., tailMaterial, aileronMaterial)
+            }
         });
         tailAssembly.remove(child);
     }
@@ -1620,6 +1660,7 @@ function updatePlaneModel() {
     }
     // إعادة إضافة مجموعة علامة مركز الثقل بعد مسح المجموعة لضمان عدم حذفها
     fuselageGroup.add(cgFuselageMarkerGroup);
+    fuselageGroup.add(acFuselageMarkerGroup);
     if (fuselageShape === 'rectangular') {
         const rearWidth = currentFuselageWidth * fuselageTaperRatio;
         const rearHeight = currentFuselageHeight * fuselageTaperRatio;
@@ -2427,6 +2468,27 @@ function calculateAerodynamics() {
     const cl = airfoilLiftFactor * 2 * Math.PI * alphaRad * Math.cos(sweepRad);
     const lift = 0.5 * cl * airDensity * Math.pow(airSpeed, 2) * totalWingArea;
 
+    // --- NEW: Pressure Calculation (conditional) ---
+    const showPressureMap = getCheck(showPressureMapInput);
+    let topPressure = 0, bottomPressure = 0;
+
+    if (showPressureMap) {
+        const ambientPressure = getRaw(pressureInput);
+        topPressure = ambientPressure;
+        bottomPressure = ambientPressure;
+
+        if (totalWingArea > 0 && lift > 0) {
+            const avgPressureDifference = lift / totalWingArea; // ΔP = F/A
+            topPressure = ambientPressure - (avgPressureDifference * (2 / 3));
+            bottomPressure = ambientPressure + (avgPressureDifference * (1 / 3));
+        }
+        topPressureResultItemEl.style.display = 'flex';
+        bottomPressureResultItemEl.style.display = 'flex';
+    } else {
+        topPressureResultItemEl.style.display = 'none';
+        bottomPressureResultItemEl.style.display = 'none';
+    }
+
     // 2. قوة السحب (Drag)
     // D = 0.5 * Cd * rho * V^2 * A
     // Cd = Cdp + Cdi (سحب طفيلي + سحب مستحث)
@@ -2942,6 +3004,16 @@ function calculateAerodynamics() {
     // 5. نسبة الدفع إلى الوزن (Thrust-to-Weight Ratio)
     const weightInNewtons = totalWeightKg * 9.81;
     const twr = weightInNewtons > 0 ? (thrust / weightInNewtons) : 0;
+
+    // 5.1. حساب معدل التسلق (Rate of Climb)
+    const excessThrust = thrust - totalDrag;
+    let rateOfClimb = 0;
+    // يمكن حساب معدل التسلق فقط إذا كان هناك وزن لمقاومته
+    if (weightInNewtons > 0) {
+        // RoC (m/s) = Excess Power / Weight = (Excess Thrust * Velocity) / Weight
+        // إذا كان فائض الدفع سالبًا، سيكون معدل التسلق سالبًا (هبوط)
+        rateOfClimb = (excessThrust * airSpeed) / weightInNewtons;
+    }
 
     // --- إضافة تحذير لنسبة الدفع إلى الوزن (TWR) ---
     const TWR_LOW_THRESHOLD = 0.3;
@@ -3606,6 +3678,45 @@ function calculateAerodynamics() {
     }
     cgFuselageMarkerGroup.position.x = cg_x;
     // عرض النتائج
+
+    // --- تحديث علامة المركز الهوائي على جسم الطائرة (AC Marker) ---
+    while (acFuselageMarkerGroup.children.length > 0) {
+        const child = acFuselageMarkerGroup.children[0];
+        acFuselageMarkerGroup.remove(child);
+        if (child.geometry) child.geometry.dispose();
+        if (child.material) child.material.dispose();
+    }
+
+    if (showAc) {
+        const acMarkerMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff, depthTest: false, side: THREE.DoubleSide });
+        acMarkerMaterial.renderOrder = 1;
+
+        // حساب أبعاد الجسم عند موضع المركز الهوائي
+        const t_ac = (neutral_point_x + fuselageLength / 2) / fuselageLength;
+
+        if (fuselageShape === 'rectangular') {
+            const frontWidth = fuselageWidth;
+            const rearWidth = fuselageWidth * fuselageTaperRatio;
+            const currentWidth = rearWidth + t_ac * (frontWidth - rearWidth);
+            const frontHeight = fuselageHeight;
+            const rearHeight = fuselageHeight * fuselageTaperRatio;
+            const currentHeight = rearHeight + t_ac * (frontHeight - rearHeight);
+            const points = [new THREE.Vector3(0, currentHeight / 2, currentWidth / 2), new THREE.Vector3(0, currentHeight / 2, -currentWidth / 2), new THREE.Vector3(0, -currentHeight / 2, -currentWidth / 2), new THREE.Vector3(0, -currentHeight / 2, currentWidth / 2)];
+            const frameGeom = new THREE.BufferGeometry().setFromPoints(points);
+            const acFrame = new THREE.LineLoop(frameGeom, new THREE.LineBasicMaterial({ color: 0x0000ff, depthTest: false, renderOrder: 1 }));
+            acFuselageMarkerGroup.add(acFrame);
+        } else { // Cylindrical or Teardrop
+            let radiusFront, radiusRear;
+            if (fuselageShape === 'cylindrical') { radiusFront = fuselageDiameter / 2; radiusRear = radiusFront * fuselageTaperRatio; }
+            else { radiusFront = fuselageFrontDiameter / 2; radiusRear = fuselageRearDiameter / 2; }
+            const currentRadius = Math.max(0.001, radiusRear + t_ac * (radiusFront - radiusRear));
+            const tubeRadius = 0.005;
+            const ringGeom = new THREE.TorusGeometry(currentRadius + tubeRadius, tubeRadius, 8, 48);
+            ringGeom.rotateY(Math.PI / 2);
+            acFuselageMarkerGroup.add(new THREE.Mesh(ringGeom, acMarkerMaterial));
+        }
+    }
+    acFuselageMarkerGroup.position.x = neutral_point_x;
     // عرض الأهداف المقترحة
     recommendedLiftResultEl.textContent = recommendedLift.toFixed(2);
     recommendedTailAreaResultEl.textContent = recommendedTotalTailArea.toFixed(2);
@@ -3672,8 +3783,13 @@ function calculateAerodynamics() {
     propTipSpeedResultEl.textContent = tipSpeed.toFixed(1);
     totalWeightResultEl.textContent = (totalWeightKg * 1000).toFixed(0);
     twrResultEl.textContent = twr > 0 ? twr.toFixed(2) : '0.00';
+    rocResultEl.textContent = rateOfClimb.toFixed(2);
     wingLoadingResultEl.textContent = wingLoading.toFixed(2);
     aspectRatioResultEl.textContent = aspectRatio.toFixed(2);
+    if (showPressureMap) {
+        topPressureResultEl.textContent = topPressure.toFixed(0);
+        bottomPressureResultEl.textContent = bottomPressure.toFixed(0);
+    }
     ldRatioResultEl.textContent = ldRatio.toFixed(2);
     hTailVolumeResultEl.textContent = tail_volume_Vh.toFixed(3);
     vTailVolumeResultEl.textContent = verticalTailVolume.toFixed(3);
@@ -3687,6 +3803,10 @@ function calculateAerodynamics() {
     document.getElementById('cg-position-z-result').textContent = (cg_z * conversionFactorToDisplay).toFixed(1);
     cgPositionResultEl.textContent = (cg_from_nose * conversionFactorToDisplay).toFixed(1);
     const ac_from_nose = fuselageDatum - neutral_point_x;
+    // --- NEW: Update the new fieldset results ---
+    document.getElementById('cg-position-result-fieldset').textContent = (cg_from_nose * conversionFactorToDisplay).toFixed(1);
+    document.getElementById('ac-position-result-fieldset').textContent = (ac_from_nose * conversionFactorToDisplay).toFixed(1);
+
     acPositionResultEl.textContent = (ac_from_nose * conversionFactorToDisplay).toFixed(1);
 
     pitchingMomentResultEl.textContent = totalPitchingMoment.toFixed(2);
@@ -3952,6 +4072,58 @@ function calculateAerodynamics() {
     electronicsCostResultEl.textContent = electronicsCost.toFixed(2);
     landingGearCostResultEl.textContent = landingGearCost.toFixed(2);
     totalCostResultEl.textContent = totalCost.toFixed(2);
+
+    // --- NEW: Update Wing Pressure Map Visualization ---
+    const baseWingColor = new THREE.Color(getStr(wingColorInput));
+    const rightWing = wingGroup.children[0];
+    const leftWing = wingGroup.children[1];
+
+    if (rightWing && leftWing) {
+        const geometries = [rightWing.geometry, leftWing.geometry];
+        
+        // Define pressure-to-color mapping
+        const lowPressureColor = new THREE.Color(getStr(pressureMapLowColorInput));
+        const highPressureColor = new THREE.Color(getStr(pressureMapHighColorInput));
+
+        // --- NEW: Calculate separate color intensities for top and bottom surfaces ---
+        const avgPressureDifference = (totalWingArea > 0 && lift > 0) ? (lift / totalWingArea) : 0;
+        // A reference pressure difference for maximum color intensity.
+        // 1000 Pa corresponds to significant lift at medium speeds.
+        const REFERENCE_PRESSURE = 1000;
+        
+        // The top surface (suction) contributes about 2/3 of the lift.
+        const topIntensity = Math.min(1.0, (avgPressureDifference * (2/3)) / REFERENCE_PRESSURE);
+        // The bottom surface (pressure) contributes about 1/3.
+        const bottomIntensity = Math.min(1.0, (avgPressureDifference * (1/3)) / REFERENCE_PRESSURE);
+
+        geometries.forEach(geom => {
+            if (!geom.attributes.color) return; // Safety check
+
+            const positions = geom.attributes.position.array;
+            const colors = geom.attributes.color.array;
+            const numVertices = positions.length / 3;
+
+            for (let i = 0; i < numVertices; i++) {
+                const i3 = i * 3;
+                const y = positions[i3 + 1]; // Local Y coordinate determines top/bottom surface
+
+                let targetColor = baseWingColor;
+
+                if (showPressureMap && avgPressureDifference > 0) {
+                    if (y > 0) { // Top surface (low pressure)
+                        targetColor = new THREE.Color().lerpColors(baseWingColor, lowPressureColor, topIntensity);
+                    } else { // Bottom surface (high pressure)
+                        targetColor = new THREE.Color().lerpColors(baseWingColor, highPressureColor, bottomIntensity);
+                    }
+                }
+
+                colors[i3] = targetColor.r;
+                colors[i3 + 1] = targetColor.g;
+                colors[i3 + 2] = targetColor.b;
+            }
+            geom.attributes.color.needsUpdate = true;
+        });
+    }
 }
 
 /**
@@ -3999,6 +4171,7 @@ function initCharts() {
     const stabilityChartCanvas = document.getElementById('stability-chart');
     const pitchingMomentChartCanvas = document.getElementById('pitching-moment-chart');
     const powerChartCanvas = document.getElementById('power-chart');
+    const rocChartCanvas = document.getElementById('roc-chart');
     const liftCurveChartCanvas = document.getElementById('lift-curve-chart');
 
 
@@ -4290,6 +4463,44 @@ function initCharts() {
         }
     });
 
+    // New Rate of Climb Chart
+    rocChart = new Chart(rocChartCanvas.getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: [], // Airspeed
+            datasets: [{
+                label: 'معدل التسلق (م/ث)',
+                data: [],
+                borderColor: 'rgba(23, 162, 184, 1)', // Info Blue/Cyan
+                backgroundColor: 'rgba(23, 162, 184, 0.1)',
+                fill: true,
+                tension: 0.1
+            }, { // New dataset for the Vy point
+                label: 'أقصى معدل تسلق (Vy)',
+                type: 'scatter',
+                data: [], // Will be a single point {x, y}
+                backgroundColor: 'rgba(40, 167, 69, 1)', // Green
+                borderColor: 'rgba(255, 255, 255, 1)',
+                borderWidth: 2,
+                radius: 8,
+                hoverRadius: 10,
+                pointStyle: 'star',
+            }]
+        },
+        options: {
+            ...commonOptions,
+            scales: {
+                x: { title: { display: true, text: 'سرعة الهواء (م/ث)' } },
+                y: {
+                    title: { display: true, text: 'معدل التسلق (م/ث)' },
+                    // لا تبدأ من الصفر، يمكن أن يكون معدل التسلق سالبًا (هبوط)
+                }
+            },
+            plugins: { legend: { display: true } }
+        }
+    });
+
+
     // New Lift Curve (Cl vs AoA) Chart
     liftCurveChart = new Chart(liftCurveChartCanvas.getContext('2d'), {
         type: 'line',
@@ -4341,6 +4552,9 @@ function updateCharts() {
     const propBladeShape = propBladeShapeInput.value;
     const propRpm = getValidNumber(propRpmInput);
 
+    const totalWeightKg = parseFloat(totalWeightResultEl.textContent) / 1000; // Get weight from results
+    const weightInNewtons = totalWeightKg * 9.81;
+
     const tipChord = wingChord * taperRatio;
     const wingArea = wingSpan * (wingChord + tipChord) / 2;
     if (wingArea <= 0) return;
@@ -4380,7 +4594,7 @@ function updateCharts() {
     const cp_static = 0.04 * pitch_diameter_ratio * propShapeEfficiencyFactor;
 
     const speedPoints = [], liftPoints = [], dragPoints = [], thrustAvailablePoints = [], propEfficiencyPoints = [];
-    const powerAvailablePoints = [], powerRequiredPoints = [];
+    const powerAvailablePoints = [], powerRequiredPoints = [], rocPoints = [];
     for (let i = 0; i <= 25; i++) {
         const speed = i * 2; // from 0 to 50 m/s
         speedPoints.push(speed);
@@ -4410,6 +4624,14 @@ function updateCharts() {
         // Power calculations
         powerAvailablePoints.push(thrust * speed);
         powerRequiredPoints.push(totalDrag * speed);
+
+        // Rate of Climb calculation
+        let rateOfClimb = 0;
+        if (weightInNewtons > 0) {
+            const excessThrust = thrust - totalDrag;
+            rateOfClimb = (excessThrust * speed) / weightInNewtons;
+        }
+        rocPoints.push(rateOfClimb);
     }
 
     liftChart.data.labels = speedPoints;
@@ -4433,6 +4655,21 @@ function updateCharts() {
     powerChart.data.datasets[0].data = powerAvailablePoints;
     powerChart.data.datasets[1].data = powerRequiredPoints;
     powerChart.update();
+
+    // --- Find max Rate of Climb (Vy) ---
+    let maxRoc = -Infinity;
+    let vySpeed = 0;
+    for (let i = 0; i < rocPoints.length; i++) {
+        if (rocPoints[i] > maxRoc) {
+            maxRoc = rocPoints[i];
+            vySpeed = speedPoints[i];
+        }
+    }
+
+    rocChart.data.labels = speedPoints;
+    rocChart.data.datasets[0].data = rocPoints;
+    rocChart.data.datasets[1].data = (maxRoc > -Infinity) ? [{ x: vySpeed, y: maxRoc }] : [];
+    rocChart.update();
 
     // --- New L/D Ratio vs AoA Chart Calculation ---
     const aoaPoints = [];
@@ -4662,6 +4899,11 @@ function updateUnitLabels() {
 // --- ربط الأحداث ---
 const debouncedUpdate = debounce(updateAll, 150); // تأخير 150ms لتحسين الأداء
 
+// --- ربط شريط التحكم الجديد بسرعة المروحة ---
+const propRpmControlSlider = document.getElementById('prop-rpm-control');
+const propRpmControlValueEl = document.getElementById('prop-rpm-control-value');
+
+
 allControls.forEach(control => {
     // استثناء حقول اختيار النوع والمواد من التأخير
     if (control.tagName.toLowerCase() === 'select' || control.type === 'checkbox' || control.type === 'color') {
@@ -4712,6 +4954,80 @@ pylonMaterialInput.addEventListener('change', () => {
     updateAll(); // تحديث النموذج والحسابات
 });
 
+// 1. عند تغيير قيمة RPM الرئيسية، قم بتحديث الحد الأقصى لشريط التحكم
+propRpmInput.addEventListener('input', () => {
+    const newMax = getValidNumber(propRpmInput);
+    if (newMax >= 0) {
+        propRpmControlSlider.max = newMax;
+        // قم أيضًا بتحديث القيمة الحالية للشريط إذا تجاوزت الحد الأقصى الجديد
+        if (parseFloat(propRpmControlSlider.value) > newMax) {
+            propRpmControlSlider.value = newMax;
+            propRpmControlValueEl.textContent = newMax;
+        }
+    }
+});
+
+// 2. عند تغيير قيمة شريط التحكم، قم بتحديث حقل RPM الرئيسي والعرض
+propRpmControlSlider.addEventListener('input', () => {
+    const newRpm = propRpmControlSlider.value;
+    propRpmInput.value = newRpm;
+    propRpmControlValueEl.textContent = newRpm;
+    // Trigger the debounced update to recalculate everything
+    debouncedUpdate();
+});
+
+/**
+ * Initializes the master reset button functionality.
+ */
+function initResetButton() {
+    const resetBtn = document.getElementById('reset-all-btn');
+    if (!resetBtn) return;
+
+    resetBtn.addEventListener('click', () => {
+        if (!confirm("هل أنت متأكد من أنك تريد إعادة تعيين جميع المدخلات إلى قيمها الافتراضية؟ سيتم فقدان جميع التغييرات الحالية.")) {
+            return;
+        }
+
+        // Iterate over all form controls and reset them to their default values
+        allControls.forEach(control => {
+            switch (control.type) {
+                case 'checkbox':
+                    control.checked = control.defaultChecked;
+                    break;
+                case 'select-one':
+                    const defaultOption = control.querySelector('option[selected]');
+                    if (defaultOption) {
+                        control.value = defaultOption.value;
+                    } else if (control.options.length > 0) {
+                        control.value = control.options[0].value;
+                    }
+                    break;
+                case 'range':
+                case 'number':
+                case 'color':
+                case 'text':
+                    control.value = control.defaultValue;
+                    break;
+                default:
+                    // For other types like 'file', 'button', etc., do nothing
+                    break;
+            }
+        });
+
+        // Manually trigger 'input' events for range sliders to update their text displays
+        const rangeInputs = form.querySelectorAll('input[type="range"]');
+        rangeInputs.forEach(range => {
+            range.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+
+        // Reset simulation controls and camera
+        resetControlsBtn.click();
+        controls.reset();
+
+        // Trigger a full update to apply all default values to the model and calculations
+        updateAll();
+    });
+}
 // تحديث عرض قيم شريط التمرير
 sweepAngleInput.addEventListener('input', () => sweepValueEl.textContent = sweepAngleInput.value);
 taperRatioInput.addEventListener('input', () => taperValueEl.textContent = parseFloat(taperRatioInput.value).toFixed(2));
@@ -4733,6 +5049,22 @@ particleSizeInput.addEventListener('input', () => particleSizeValueEl.textConten
 vibrationIntensityInput.addEventListener('input', () => vibrationValueEl.textContent = Math.round(vibrationIntensityInput.value * 100));
 cockpitOpacityInput.addEventListener('input', () => cockpitOpacityValueEl.textContent = Math.round(cockpitOpacityInput.value * 100));
 unitSelector.addEventListener('change', updateUnitLabels);
+const debouncedInitStreamlines = debounce(initStreamlines, 300);
+
+streamlineDensityInput.addEventListener('input', () => {
+    streamlineDensityValueEl.textContent = streamlineDensityInput.value;
+    debouncedInitStreamlines();
+});
+
+streamlinePointsInput.addEventListener('input', () => {
+    streamlinePointsValueEl.textContent = streamlinePointsInput.value;
+    debouncedInitStreamlines();
+});
+
+flutterIntensityInput.addEventListener('input', () => {
+    flutterValueEl.textContent = Math.round(flutterIntensityInput.value * 100);
+});
+
 
 togglePropSpinBtn.addEventListener('click', () => {
     isPropSpinning = !isPropSpinning;
@@ -4799,22 +5131,8 @@ function animate() {
         // --- [تصحيح] تحديث رؤية التأثيرات البصرية بشكل فوري ---
         // يتم التحقق من حالة مربعات الاختيار في كل إطار وتحديث الرؤية مباشرة.
         if (propParticleSystem) {
-            propParticleSystem.visible = true; // مرئي دائمًا عند التشغيل
         }
-        if (wingAirflowParticleSystem) {
-            wingAirflowParticleSystem.visible = showAmbientWindInput.checked;
-        }
-        if (vortexParticleSystem) {
-            vortexParticleSystem.visible = showVorticesInput.checked;
-        }
-        if (smokeParticleSystem) {
-            const engineType = engineTypeInput.value;
-            smokeParticleSystem.visible = showSmokeInput.checked && engineType === 'ic';
-        }
-        if (heatHazeParticleSystem) {
-            const engineType = engineTypeInput.value;
-            heatHazeParticleSystem.visible = showHeatHazeInput.checked && engineType === 'ic';
-        }
+        // تم نقل التحكم في رؤية خطوط التدفق إلى الأسفل لربطها بحالة isPropSpinning
 
         // --- قراءة قيم المحرك مباشرة من المدخلات للتحديث الفوري ---
         const currentRpm = getValidNumber(propRpmInput);
@@ -4830,6 +5148,17 @@ function animate() {
         const propRadius = (getValidNumber(propDiameterInput) * 0.0254) / 2;
         const rotationalTipSpeed = (currentRpm / 60) * 2 * Math.PI * propRadius;
         const tipSpeed = Math.sqrt(Math.pow(rotationalTipSpeed, 2) + Math.pow(mainAirSpeed, 2));
+
+        // --- تحديث الحقول المرئية فقط، بدون إعادة الحسابات الثقيلة ---
+        airSpeedInput.value = mainAirSpeed.toFixed(1);
+
+        // --- تحديث التأثيرات البصرية ---
+        if (propParticleSystem) propParticleSystem.visible = true;
+        if (wingAirflowParticleSystem) wingAirflowParticleSystem.visible = showAmbientWindInput.checked;
+        if (vortexParticleSystem) vortexParticleSystem.visible = showVorticesInput.checked;
+        const engineType = engineTypeInput.value;
+        if (smokeParticleSystem) smokeParticleSystem.visible = showSmokeInput.checked && engineType === 'ic';
+        if (heatHazeParticleSystem) heatHazeParticleSystem.visible = showHeatHazeInput.checked && engineType === 'ic';
 
         // --- تحديث صوت المحرك ---
         if (isAudioPlaying && engineSourceNode) {
@@ -4880,6 +5209,7 @@ function animate() {
         const userParticleSize = getValidNumber(particleSizeInput);
         const userVibrationIntensity = getValidNumber(vibrationIntensityInput);
         const airflowTransparency = getValidNumber(airflowTransparencyInput);
+        const flutterIntensity = getValidNumber(flutterIntensityInput);
 
         const densityFactor = userParticleDensity * 2; // مضاعفة لجعل 50% هو الافتراضي
         const sizeFactor = userParticleSize * 2;       // مضاعفة لجعل 50% هو الافتراضي
@@ -4905,9 +5235,7 @@ function animate() {
             }
         } else { // أمامي أو خلفي
             // يجب تدوير محتويات المجموعة، وليس المجموعة نفسها، لأن المجموعة لها دوران خاص بالدفع
-            if (propellerGroup.children.length > 0) {
-                propellerGroup.children[0].rotation.x += rotationPerSecond * deltaTime;
-            }
+            propellerGroup.rotation.x += rotationPerSecond * deltaTime;
         }
 
         // --- التحكم في دوران جسم الطائرة بناءً على أشرطة التحكم ---
@@ -5423,10 +5751,104 @@ function animate() {
                 sonicBoomParticleSystem.visible = false;
             }
         }
+        // --- تحديث خطوط التدفق الانسيابي ---
+        if (streamlinesGroup && streamlinesGroup.visible) {
+            const objectsToTest = [...wingGroup.children, ...fuselageGroup.children, ...tailAssembly.children];
+            const raycaster = new THREE.Raycaster();
+            raycaster.far = 0.2; // مسافة قصيرة للاختبار
 
+            const numStreamlines = streamlineLines.length;
+            for (let i = 0; i < numStreamlines; i++) {
+                const line = streamlineLines[i];
+                if (!line) continue; // Safety check
+                const pointsPerStreamline = line.geometry.attributes.position.count;
+                const positions = line.geometry.attributes.position.array;
+                const velocities = streamlineVelocities[i];
 
+                // تحديث النقطة الأولى (الرائدة)
+                positions[0] -= mainAirSpeed * deltaTime;
+                velocities[0].set(-mainAirSpeed, 0, 0);
 
+                // إعادة تعيين الخط إذا خرج من المشهد
+                if (positions[0] < -planeParams.fuselageLength) {
+                    const emissionWidth = planeParams.wingSpan * 1.1 || 3;
+                    const emissionHeight = 2;
+                    const startX = 2.0;
+                    const startY = (Math.random() - 0.5) * emissionHeight;
+                    const startZ = (Math.random() - 0.5) * emissionWidth; for (let j = 0; j < pointsPerStreamline; j++) {
+                        positions[j * 3] = startX - (j * 0.15);
+                        positions[j * 3 + 1] = startY;
+                        positions[j * 3 + 2] = startZ;
+                        velocities[j].set(-mainAirSpeed, 0, 0);
+                    }
+                }
 
+                // تحديث بقية النقاط بناءً على النقطة التي تسبقها
+                for (let j = 1; j < pointsPerStreamline; j++) {
+                    const currentPointIndex = j * 3;
+                    const prevPointIndex = (j - 1) * 3;
+
+                    // النقطة الحالية تحاول اللحاق بالنقطة التي تسبقها
+                    const targetPos = new THREE.Vector3(positions[prevPointIndex], positions[prevPointIndex + 1], positions[prevPointIndex + 2]);
+                    const currentPos = new THREE.Vector3(positions[currentPointIndex], positions[currentPointIndex + 1], positions[currentPointIndex + 2]);
+
+                    // حساب متجه الحركة نحو الهدف
+                    let moveVector = targetPos.clone().sub(currentPos);
+
+                    // --- فحص الاصطدام وتعديل المسار ---
+                    raycaster.set(currentPos, moveVector.clone().normalize());
+                    raycaster.far = moveVector.length(); // لا تبحث أبعد من المسافة إلى النقطة التالية
+                    const intersects = raycaster.intersectObjects(objectsToTest, true);
+
+                    if (intersects.length > 0 && intersects[0].face) {
+                        const intersectedObject = intersects[0].object;
+                        const normal = intersects[0].face.normal.clone();
+                        normal.transformDirection(intersects[0].object.matrixWorld);
+
+                        // جعل متجه الحركة ينزلق على السطح بدلاً من اختراقه
+                        moveVector.projectOnPlane(normal);
+
+                        // --- تأثير أسطح التحكم (موجود مسبقًا) ---
+                        const deflectionStrength = 2.0; // مضاعف لزيادة قوة التأثير البصري
+                        let deflection = 0;
+
+                        const aileronValue = parseFloat(aileronControlSlider.value);
+                        const elevatorValue = parseFloat(elevatorControlSlider.value);
+                        const rudderValue = parseFloat(rudderControlSlider.value);
+
+                        switch (intersectedObject.name) {
+                            case 'rightAileron':
+                                deflection = aileronValue;
+                                break;
+                            case 'leftAileron':
+                                deflection = -aileronValue; // الجنيح الأيسر يتحرك بعكس الأيمن
+                                break;
+                            case 'rightElevator':
+                            case 'leftElevator':
+                            case 'rightRuddervator': // V-Tail pitch
+                            case 'leftRuddervator':
+                                deflection = elevatorValue;
+                                break;
+                            case 'rudder':
+                                deflection = rudderValue;
+                                break;
+                        }
+
+                        // إضافة "دفعة" للسرعة في اتجاه الناظم، متناسبة مع مقدار الانحراف
+                        const kick = normal.clone().multiplyScalar(deflection * deflectionStrength * deltaTime * 50); // تم تعديل القوة لتكون متناسبة مع الزمن
+                        moveVector.add(kick);
+                    }
+
+                    // تحديث الموضع بناءً على متجه الحركة النهائي
+                    positions[currentPointIndex] = currentPos.x + moveVector.x;
+                    positions[currentPointIndex + 1] = currentPos.y + moveVector.y;
+                    positions[currentPointIndex + 2] = currentPos.z + moveVector.z;
+                }
+
+                line.geometry.attributes.position.needsUpdate = true;
+                line.computeLineDistances(); // تحديث حساب المسافات للخط المتقطع
+            }
+        }
         // --- تحديث دخان محرك IC ---
         if (smokeParticleSystem && smokeParticleSystem.visible) {
             const positions = smokeParticleSystem.geometry.attributes.position.array;
@@ -5520,6 +5942,12 @@ function animate() {
 
     }
     else {
+        // --- NEW: إخفاء خطوط التدفق عند إيقاف المحاكاة ---
+        if (streamlinesGroup && streamlinesGroup.visible) {
+            streamlinesGroup.visible = false;
+        }
+        // --- End of new code ---
+
         lastVibrationRotation.set(0, 0, 0);
     }
     // إذا لم تكن المحاكاة قيد التشغيل، لا تقم بإعادة تعيين الدوران
@@ -5527,6 +5955,12 @@ function animate() {
     // يتم إعادة التعيين الآن عبر زر "إعادة تعيين".
 
     controls.update(); // ضروري إذا تم تفعيل enableDamping
+
+    // --- تحديث رؤية خطوط التدفق بشكل مستمر ---
+    // هذا يضمن أن مربع الاختيار يعمل بشكل صحيح أثناء تشغيل المحاكاة
+    if (streamlinesGroup) {
+        streamlinesGroup.visible = isPropSpinning && showStreamlinesInput.checked;
+    }
 
     renderer.render(scene, camera);
 }
@@ -5704,6 +6138,68 @@ function initSonicBoomParticles() {
     planeGroup.add(sonicBoomParticleSystem);
 }
 
+/** Initializes the particle system for streamlines. */
+function initStreamlines() {
+    // --- NEW: Cleanup existing streamlines before creating new ones ---
+    if (streamlinesGroup) {
+        // Dispose of geometries to free up GPU memory
+        streamlinesGroup.children.forEach(line => {
+            if (line.geometry) line.geometry.dispose();
+        });
+        // Dispose of the shared material
+        if (streamlinesGroup.children.length > 0 && streamlinesGroup.children[0].material) {
+            streamlinesGroup.children[0].material.dispose();
+        }
+        scene.remove(streamlinesGroup);
+    }
+
+    const numStreamlines = getValidNumber(streamlineDensityInput);
+    const pointsPerStreamline = getValidNumber(streamlinePointsInput);
+
+    streamlinesGroup = new THREE.Group();
+    streamlineLines = [];
+    streamlineVelocities = [];
+    
+    const emissionWidth = 3;
+    const emissionHeight = 2;
+
+    for (let i = 0; i < numStreamlines; i++) {
+        const positions = new Float32Array(pointsPerStreamline * 3);
+        const velocities = [];
+        const geometry = new THREE.BufferGeometry();
+
+        // --- FIX: Create a new material for each line to prevent disposal issues ---
+        const material = new THREE.LineDashedMaterial({
+            color: streamlineColorInput.value,
+            transparent: true,
+            opacity: 0.7,
+            linewidth: 1.5,
+            dashSize: 0.05,
+            gapSize: 0.03
+        });
+
+        const startX = 2.0;
+        const startY = (Math.random() - 0.5) * emissionHeight;
+        const startZ = (Math.random() - 0.5) * emissionWidth;
+
+        for (let j = 0; j < pointsPerStreamline; j++) {
+            positions[j * 3] = startX - (j * 0.15); // Stagger points
+            positions[j * 3 + 1] = startY;
+            positions[j * 3 + 2] = startZ;
+            velocities.push(new THREE.Vector3(-20, 0, 0)); // Initial velocity
+        }
+        
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        const line = new THREE.Line(geometry, material);
+        line.computeLineDistances(); // ضروري لعرض الخطوط المتقطعة
+        streamlineLines.push(line);
+        streamlineVelocities.push(velocities);
+        streamlinesGroup.add(line);
+    }
+    streamlinesGroup.visible = showStreamlinesInput.checked; // Set visibility based on checkbox
+    scene.add(streamlinesGroup);
+}
+
 /**
  * Initializes the collapsible fieldset functionality.
  */
@@ -5766,6 +6262,7 @@ function setupChartToggles() {
         { checkbox: toggleStabilityChart, card: document.getElementById('stability-chart-card') },
         { checkbox: togglePitchingMomentChart, card: document.getElementById('pitching-moment-chart-card') },
         { checkbox: togglePowerChart, card: document.getElementById('power-chart-card') },
+        { checkbox: toggleRocChart, card: document.getElementById('roc-chart-card') },
         { checkbox: toggleLiftCurveChart, card: document.getElementById('lift-curve-chart-card') }
     ];
 
@@ -5930,6 +6427,16 @@ function initSaveLoad() {
     });
 }
 
+/**
+ * Initializes the simulation RPM slider based on the main RPM input.
+ */
+function initRpmSlider() {
+    const initialRpm = getValidNumber(propRpmInput);
+    propRpmControlSlider.max = initialRpm;
+    propRpmControlSlider.value = initialRpm;
+    propRpmControlValueEl.textContent = initialRpm;
+}
+
 // --- التشغيل الأولي ---
 initPropAirflowParticles();
 initWingAirflowParticles();
@@ -5937,10 +6444,13 @@ initVortexParticles();
 initSmokeParticles();
 initHeatHazeParticles();
 initSonicBoomParticles(); // Initialize the sonic boom effect
+initStreamlines();
 initAudio(); // Initialize the Web Audio API
 initCharts();
 initSaveLoad();
 setupChartToggles();
+initResetButton(); // تهيئة زر إعادة التعيين الجديد
+initRpmSlider(); // تهيئة شريط التحكم الجديد عند التحميل
 updateUnitLabels();
 // استدعاء updateEngineUI أولاً لملء حقول المحرك بالقيم الافتراضية.
 // هذه الدالة ستقوم بدورها باستدعاء updateAll() لضمان تحديث كل شيء.
