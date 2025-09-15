@@ -13,14 +13,13 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     };
 
-    // --- Feature Initializers ---
 
     /**
      * Initializes the theme toggle (dark/light mode).
      */
     const initTheme = () => {
         const themeToggleButtons = document.querySelectorAll('.theme-toggle-button');
-        const currentTheme = localStorage.getItem('theme') || 'light';
+        const currentTheme = localStorage.getItem('theme') || 'dark'; // تفعيل الوضع الليلي كافتراضي
 
         if (currentTheme === 'dark') {
             document.body.classList.add('dark-mode');
@@ -320,4 +319,3 @@ document.addEventListener('DOMContentLoaded', () => {
 
     executeRoutes(); // Run the router
 });
-ئ

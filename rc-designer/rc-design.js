@@ -44,13 +44,14 @@ function createAxisLabel(text, color, position) {
     const texture = new THREE.CanvasTexture(canvas);
     const spriteMaterial = new THREE.SpriteMaterial({ map: texture, depthTest: false });
     const sprite = new THREE.Sprite(spriteMaterial);
-    sprite.scale.set(0.06, 0.06,0.06);
+    sprite.scale.set(0.06, 0.06, 0.06);
     sprite.position.copy(position);
     return sprite;
 }
-scene.add(createAxisLabel('X', '#ff0000', new THREE.Vector3(2.2, 0, 0))); // Red
-scene.add(createAxisLabel('Y', '#00ff00', new THREE.Vector3(0, 2.2, 0))); // Green
-scene.add(createAxisLabel('Z', '#0000ff', new THREE.Vector3(0, 0, 2.2))); // Blue
+const xAxisLabel = createAxisLabel('X', '#ff0000', new THREE.Vector3(2.2, 0, 0)); // Red
+const yAxisLabel = createAxisLabel('Y', '#00ff00', new THREE.Vector3(0, 2.2, 0)); // Green
+const zAxisLabel = createAxisLabel('Z', '#0000ff', new THREE.Vector3(0, 0, 2.2)); // Blue
+scene.add(xAxisLabel, yAxisLabel, zAxisLabel);
 
 // --- Web Audio API for Gapless Loop ---
 let audioContext;
@@ -70,7 +71,7 @@ const fuselageMaterial = new THREE.MeshStandardMaterial({
 });
 const wingMaterial = new THREE.MeshStandardMaterial({
     color: 0xffffff, // اللون الافتراضي للجناح (أبيض)
-    side: THREE.DoubleSide,
+    side: THREE.DoubleSide, // FIX: Always use white, as vertex colors will be used for both base color and pressure map.
     vertexColors: true // تفعيل الألوان لكل رأس
 });
 const tailMaterial = new THREE.MeshStandardMaterial({ color: 0xdddddd, side: THREE.DoubleSide });
@@ -153,6 +154,18 @@ const acGeom = new THREE.SphereGeometry(0.02, 16, 16);
 const acMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff }); // أزرق
 const acSphere = new THREE.Mesh(acGeom, acMaterial);
 cgAcGroup.add(acSphere);
+
+// --- NEW: Line for static margin ---
+const staticMarginLineMaterial = new THREE.LineDashedMaterial({
+    color: 0x28a745,
+    linewidth: 2,
+    dashSize: 0.02,
+    gapSize: 0.01
+});
+const staticMarginLineGeometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+const staticMarginLine = new THREE.Line(staticMarginLineGeometry, staticMarginLineMaterial);
+staticMarginLine.computeLineDistances(); // Initial computation for dashed line
+cgAcGroup.add(staticMarginLine);
 
 planeGroup.add(cgAcGroup);
 
@@ -359,7 +372,7 @@ const wingtipAirfoilTypeInput = document.getElementById('wingtip-airfoil-type');
 const wingtipShapeInput = document.getElementById('wingtip-shape');
 const wingtipLengthInput = document.getElementById('wingtip-length');
 const wingtipWidthInput = document.getElementById('wingtip-width');
-const wingtipThicknessInput = document.getElementById('wingtip-thickness'); 
+const wingtipThicknessInput = document.getElementById('wingtip-thickness');
 const wingtipAngleInput = document.getElementById('wingtip-angle');
 const wingtipTwistAngleInput = document.getElementById('wingtip-twist-angle');
 const wingtipTaperRatioInput = document.getElementById('wingtip-taper-ratio');
@@ -596,6 +609,8 @@ const togglePitchingMomentChart = document.getElementById('toggle-pitching-momen
 const togglePowerChart = document.getElementById('toggle-power-chart');
 const toggleRocChart = document.getElementById('toggle-roc-chart');
 const toggleLiftCurveChart = document.getElementById('toggle-lift-curve-chart');
+const toggleWeightDistChart = document.getElementById('toggle-weight-dist-chart');
+const toggleCostDistChart = document.getElementById('toggle-cost-dist-chart');
 const showAllChartsBtn = document.getElementById('show-all-charts-btn');
 
 const engineSound = document.getElementById('engine-sound');
@@ -661,22 +676,22 @@ const propCpResultEl = document.getElementById('prop-cp-result');
 const propJResultEl = document.getElementById('prop-j-result');
 const staticMarginResultEl = document.getElementById('static-margin-result');
 const propEfficiencyResultEl = document.getElementById('prop-efficiency-result');
-    // عناصر عرض عزوم الدفع الجديدة
-    const pitchingMomentThrustResultEl = document.getElementById('pitching-moment-thrust-result');
-    const yawingMomentThrustResultEl = document.getElementById('yawing-moment-thrust-result');
-    const pitchingMomentThrustItemEl = document.getElementById('pitching-moment-thrust-result-item');
-    const yawingMomentThrustItemEl = document.getElementById('yawing-moment-thrust-result-item');
-    // عناصر عرض عزوم المحرك الجديدة
-    const torqueRollResultEl = document.getElementById('torque-roll-result');
-    const pFactorYawResultEl = document.getElementById('p-factor-yaw-result');
-    const torqueRollItemEl = document.getElementById('torque-roll-result-item');
-    const pFactorYawItemEl = document.getElementById('p-factor-yaw-result-item');
+// عناصر عرض عزوم الدفع الجديدة
+const pitchingMomentThrustResultEl = document.getElementById('pitching-moment-thrust-result');
+const yawingMomentThrustResultEl = document.getElementById('yawing-moment-thrust-result');
+const pitchingMomentThrustItemEl = document.getElementById('pitching-moment-thrust-result-item');
+const yawingMomentThrustItemEl = document.getElementById('yawing-moment-thrust-result-item');
+// عناصر عرض عزوم المحرك الجديدة
+const torqueRollResultEl = document.getElementById('torque-roll-result');
+const pFactorYawResultEl = document.getElementById('p-factor-yaw-result');
+const torqueRollItemEl = document.getElementById('torque-roll-result-item');
+const pFactorYawItemEl = document.getElementById('p-factor-yaw-result-item');
 
 const propTipSpeedResultEl = document.getElementById('prop-tip-speed-result');
 
 const planeParams = {}; // Object to hold cached plane parameters for the animation loop
 
-let liftChart, dragChart, thrustChart, propEfficiencyChart, ldRatioChart, stabilityChart, pitchingMomentChart, powerChart, rocChart, liftCurveChart;
+let liftChart, dragChart, thrustChart, propEfficiencyChart, ldRatioChart, stabilityChart, pitchingMomentChart, powerChart, rocChart, liftCurveChart, weightDistChart, costDistChart;
 let isPropSpinning = false; // متغير لتتبع حالة دوران المروحة
 let propParticleSystem, propParticleCount = 400; // لتدفق هواء المروحة (تم تقليل العدد)
 let wingAirflowParticleSystem, wingAirflowParticleCount = 2500; // لتدفق الهواء العام
@@ -686,6 +701,9 @@ let sonicBoomParticleSystem, sonicBoomParticleCount = 500; // لتأثير كس�
 let isSonicBoomActive = false;
 let sonicBoomTime = 0;
 let streamlinesGroup, streamlineLines = [], streamlineVelocities = []; // Streamline variables
+// --- FIX: Debounced function for recalculating aerodynamics during animation ---
+const debouncedRecalculateAero = debounce(calculateAerodynamics, 100); // 100ms delay
+
 let hasBoomed = false; // لمنع إعادة تفعيل التأثير في كل إطار
 
 let heatHazeParticleSystem, heatHazeParticleCount = 300; // لتأثير الحرارة
@@ -1016,8 +1034,12 @@ function updatePlaneModel() {
     const conversionFactor = UNIT_CONVERSIONS[unitSelector.value];
     const engineType = engineTypeInput.value;
 
-    // --- FIX: Handle AxesHelper visibility ---
-    axesHelper.visible = showAxesCheckbox.checked;
+    // --- FIX: Handle AxesHelper and Labels visibility ---
+    const showAxes = showAxesCheckbox.checked;
+    axesHelper.visible = showAxes;
+    xAxisLabel.visible = showAxes;
+    yAxisLabel.visible = showAxes;
+    zAxisLabel.visible = showAxes;
 
 
     // قراءة قيم الجناح
@@ -1124,7 +1146,7 @@ function updatePlaneModel() {
     // تحديث الألوان
     fuselageMaterial.color.set(fuselageColor);
     fuselageMaterial.opacity = fuselageOpacity;
-    wingMaterial.color.set(wingColor);
+    // wingMaterial.color.set(wingColor); // FIX: This is now handled by vertex colors in calculateAerodynamics
     tailMaterial.color.set(tailColor);
     aileronMaterial.color.set(aileronColorInput.value);
     // The pylon material is created locally, so no global update needed here.
@@ -1240,15 +1262,18 @@ function updatePlaneModel() {
 
     // تغيير تسميات حقول الذيل العمودي وميلانه عند اختيار V-Tail
     const vStabSweepLabel = document.getElementById('vstab-sweep-angle').parentElement.querySelector('label');
+    const vStabSweepLabelText = document.getElementById('vstab-sweep-label-text');
 
     if (isVTail) {
         vStabHeightLabel.innerHTML = 'طول لوح الذيل V (<span class="unit-label">سم</span>)';
         vStabChordLabel.innerHTML = 'عرض لوح الذيل V (<span class="unit-label">سم</span>)';
         vStabSweepLabel.innerHTML = 'ميلان لوح الذيل V (Sweep): <span id="vstab-sweep-value">0</span>°';
+        if (vStabSweepLabelText) vStabSweepLabelText.textContent = 'ميلان لوح الذيل V (Sweep):';
     } else {
         vStabHeightLabel.innerHTML = 'ارتفاع الذيل العمودي (<span class="unit-label">سم</span>)';
         vStabChordLabel.innerHTML = 'عرض الذيل العمودي (<span class="unit-label">سم</span>)';
         vStabSweepLabel.innerHTML = 'ميلان الذيل العمودي (Sweep): <span id="vstab-sweep-value">0</span>°';
+        if (vStabSweepLabelText) vStabSweepLabelText.textContent = 'ميلان الذيل العمودي (Sweep):';
     }
 
     // --- FIX: Hide Elevator controls for V-Tail as they are not applicable ---
@@ -1355,10 +1380,13 @@ function updatePlaneModel() {
 
     const rightWing = new THREE.Mesh(wingGeometry, wingMaterial);
     // --- FIX: Clone geometry before mesh to handle original positions separately ---
-    const leftWingGeom = wingGeometry.clone();
+    // --- FIX for OBJ/STL Export: Mirror geometry instead of scaling the mesh ---
+    const leftWingGeom = wingGeometry.clone().applyMatrix4(new THREE.Matrix4().makeScale(1, 1, -1));
+    // --- FIX: Recompute normals after mirroring to fix lighting issues ---
+    leftWingGeom.computeVertexNormals();
     const leftWing = new THREE.Mesh(leftWingGeom, wingMaterial);
-    leftWing.scale.z = -1; // عكس الجناح الأيسر
     rightWing.geometry.userData.originalPositions = rightWing.geometry.attributes.position.array.slice();
+    // The left wing geometry is already mirrored, so its original positions are correct as they are.
     leftWing.geometry.userData.originalPositions = leftWing.geometry.attributes.position.array.slice();
 
     // --- تطبيق زاوية الديhedral ---
@@ -1446,8 +1474,15 @@ function updatePlaneModel() {
         // Create pivot groups to handle positioning, sweep, and rotation
         const rightAileronPivot = new THREE.Group();
         rightAileronPivot.add(rightAileron);
-        const leftAileronPivot = rightAileronPivot.clone();
-        leftAileronPivot.children[0].name = 'leftAileron';
+
+        // --- FIX: Create a mirrored geometry for the left aileron ---
+        const leftAileronGeom = aileronGeom.clone().applyMatrix4(new THREE.Matrix4().makeScale(1, 1, -1));
+        // --- FIX: Recompute normals to fix lighting ---
+        leftAileronGeom.computeVertexNormals();
+        const leftAileron = new THREE.Mesh(leftAileronGeom, aileronMaterial);
+        leftAileron.name = 'leftAileron';
+        const leftAileronPivot = new THREE.Group();
+        leftAileronPivot.add(leftAileron);
 
         // --- حساب موضع ودوران محور الجنيح ---
         const hingeLineSlope = Math.tan(sweepRad) + (rootChord * (1 - taperRatio)) / wingSpan;
@@ -1458,11 +1493,11 @@ function updatePlaneModel() {
         const hingeX = (sweepAtHingeStart - (chordAtAileronStart / 2)) + aileronWidth;
         const finalPivotZ = aileronStartZ;
 
+        // --- FIX: Correctly position both pivots in their respective local wing spaces ---
         rightAileronPivot.position.set(hingeX, 0, finalPivotZ);
-        rightAileronPivot.rotation.y = hingeAngle;
-
-        leftAileronPivot.position.set(hingeX, 0, finalPivotZ);
-        leftAileronPivot.rotation.y = hingeAngle;
+        leftAileronPivot.position.set(hingeX, 0, -finalPivotZ); // FIX: Mirror the Z position for the left wing
+        rightAileronPivot.rotation.y = hingeAngle; // Apply the same rotation to both
+        leftAileronPivot.rotation.y = -hingeAngle; // FIX: Mirror the hinge angle for the mirrored wing
 
         // Add pivots to the wings
         rightWing.add(rightAileronPivot);
@@ -1523,8 +1558,11 @@ function updatePlaneModel() {
         rightHStab.position.x = -hStabChordEffective / 2; // Position relative to tailAssembly
         rightHStab.rotation.x = tailDihedralRad;
         // Clone and mirror for the left half
-        const leftHStab = rightHStab.clone();
-        leftHStab.scale.z = -1;
+        const leftHStabGeom = rightHStab.geometry.clone().applyMatrix4(new THREE.Matrix4().makeScale(1, 1, -1));
+        leftHStabGeom.computeVertexNormals(); // FIX: Recompute normals
+        const leftHStab = new THREE.Mesh(leftHStabGeom, rightHStab.material);
+        leftHStab.position.copy(rightHStab.position);
+        leftHStab.rotation.copy(rightHStab.rotation);
 
         const vStabGeom = createSurface(vStabHeight, vStabChordEffective, tailTaperRatio, vStabSweepAngle, tailThickness, tailAirfoilType, true);
         const vStab = new THREE.Mesh(vStabGeom, tailMaterial);
@@ -1544,8 +1582,11 @@ function updatePlaneModel() {
         rightHStab.rotation.x = tailDihedralRad;
 
         // Clone and mirror for the left half
-        const leftHStab = rightHStab.clone(); // Corrected: leftHStab was not defined
-        leftHStab.scale.z = -1;
+        const leftHStabGeom = rightHStab.geometry.clone().applyMatrix4(new THREE.Matrix4().makeScale(1, 1, -1));
+        leftHStabGeom.computeVertexNormals(); // FIX: Recompute normals
+        const leftHStab = new THREE.Mesh(leftHStabGeom, rightHStab.material);
+        leftHStab.position.copy(rightHStab.position);
+        leftHStab.rotation.copy(rightHStab.rotation);
 
         const vStabGeom = createSurface(vStabHeight, vStabChordEffective, tailTaperRatio, vStabSweepAngle, tailThickness, tailAirfoilType, true);
         const vStab = new THREE.Mesh(vStabGeom, tailMaterial);
@@ -1592,9 +1633,12 @@ function updatePlaneModel() {
         rightElevatorPivot.add(rightElevator);
 
         // الرافع الأيسر (استنساخ وعكس)
-        const leftElevatorPivot = rightElevatorPivot.clone();
-        leftElevatorPivot.scale.z = -1;
-        leftElevatorPivot.children[0].name = 'leftElevator';
+        const leftElevatorGeom = rightElevator.geometry.clone().applyMatrix4(new THREE.Matrix4().makeScale(1, 1, -1));
+        leftElevatorGeom.computeVertexNormals(); // FIX: Recompute normals
+        const leftElevator = new THREE.Mesh(leftElevatorGeom, rightElevator.material);
+        const leftElevatorPivot = new THREE.Group();
+        leftElevatorPivot.add(leftElevator);
+        leftElevator.name = 'leftElevator'; // FIX: Name the mesh directly
 
         // نضع المحور عند الحافة الخلفية للجزء الثابت من الذيل
         const hStabRootChordEffective = tailChord - elevatorWidth;
@@ -1636,8 +1680,12 @@ function updatePlaneModel() {
         const rightRuddervatorPivot = new THREE.Group();
         rightRuddervatorPivot.add(rightRuddervator);
 
-        const leftRuddervatorPivot = rightRuddervatorPivot.clone();
-        leftRuddervatorPivot.children[0].name = 'leftRuddervator';
+        // --- FIX: Create a mirrored geometry for the left ruddervator ---
+        const leftRuddervatorGeom = ruddervatorGeom.clone().applyMatrix4(new THREE.Matrix4().makeScale(1, 1, -1));
+        const leftRuddervator = new THREE.Mesh(leftRuddervatorGeom, aileronMaterial);
+        leftRuddervator.name = 'leftRuddervator';
+        const leftRuddervatorPivot = new THREE.Group();
+        leftRuddervatorPivot.add(leftRuddervator);
 
         // موضع المحور عند الحافة الخلفية للجزء الثابت من الذيل V
         const vStabRootChordEffective = vStabChord - rudderWidth;
@@ -1771,11 +1819,11 @@ function updatePlaneModel() {
     // تصحيح: مسح محركات الجناح القديمة قبل إعادة بنائها
     const rightWingEngineGrp = scene.getObjectByName("rightWingEngineGroup");
     if (rightWingEngineGrp) {
-        while(rightWingEngineGrp.children.length > 0) rightWingEngineGrp.remove(rightWingEngineGrp.children[0]);
+        while (rightWingEngineGrp.children.length > 0) rightWingEngineGrp.remove(rightWingEngineGrp.children[0]);
     }
     const leftWingEngineGrp = scene.getObjectByName("leftWingEngineGroup");
     if (leftWingEngineGrp) {
-        while(leftWingEngineGrp.children.length > 0) leftWingEngineGrp.remove(leftWingEngineGrp.children[0]);
+        while (leftWingEngineGrp.children.length > 0) leftWingEngineGrp.remove(leftWingEngineGrp.children[0]);
     }
 
 
@@ -2362,7 +2410,7 @@ function calculateAerodynamics() {
     const servoG2PositionZ = getVal(servoG2PositionZInput);
 
 
-    
+
     // تصحيح: قراءة وزن المحرك من الحقل الصحيح لكل نوع
     let engineWeightGrams = (engineType === 'electric') ? getRaw(electricMotorWeightInput) : getRaw(icEngineWeightInput);
     let engineWeightKg = engineWeightGrams / 1000;
@@ -2559,10 +2607,10 @@ function calculateAerodynamics() {
     let propShapeEfficiencyFactor = 1.0;
     if (propBladeShape === 'symmetrical') {
         propShapeEfficiencyFactor = 1.05; // أكثر كفاءة قليلاً
-    } else if (propBladeShape === 'rectangular') {
+    } else if (propBladeShape === 'rectangular' || propBladeShape === 'flat-bottom') {
         propShapeEfficiencyFactor = 0.9; // أقل كفاءة
     } else if (propBladeShape === 'scimitar') {
-        propShapeEfficiencyFactor = 1.10; // كفاءة عالية
+        propShapeEfficiencyFactor = 1.12; // كفاءة عالية
     }
 
     // نموذج تجريبي لحساب معامل الدفع (Ct) ومعامل القدرة (Cp) بناءً على J و P/D
@@ -2573,8 +2621,9 @@ function calculateAerodynamics() {
     // افتراض علاقة خطية لمعامل الدفع مع نسبة التقدم
     const prop_ct = Math.max(0, ct_static * (1 - (advance_ratio_J / (pitch_diameter_ratio * 1.1))));
 
-    // افتراض أن معامل القدرة يتأثر بشكل أقل بنسبة التقدم (تبسيط)
-    const prop_cp = cp_static;
+    // FIX: تحسين نموذج معامل القدرة ليعتمد على نسبة التقدم
+    // Cp يقل قليلاً مع زيادة J. هذا تقدير خطي بسيط.
+    const prop_cp = Math.max(0.01, cp_static * (1 - 0.5 * advance_ratio_J));
 
     // حساب الدفع والقدرة باستخدام المعاملات
     const thrust = prop_ct * airDensity * Math.pow(n_rps, 2) * Math.pow(propDiameterMeters, 4);
@@ -2582,10 +2631,10 @@ function calculateAerodynamics() {
     const torque_required_Nm = n_rps > 0 ? power_consumed_watts / (2 * Math.PI * n_rps) : 0;
 
     // --- إضافة تحذير لعزم دوران المروحة ---
-    const available_torque = (engineType === 'electric') 
-        ? getRaw(electricMotorTorqueInput) 
+    const available_torque = (engineType === 'electric')
+        ? getRaw(electricMotorTorqueInput)
         : getRaw(icEngineTorqueInput);
-    
+
     const propTorqueParentEl = propTorqueResultEl.parentElement;
 
     if (available_torque > 0 && torque_required_Nm > available_torque) {
@@ -2748,8 +2797,8 @@ function calculateAerodynamics() {
     // الوزن الإجمالي للذيل هو مجموع الأجزاء الثابتة والمتحركة (الرافع والدفة)
     const tailWeightKg = fixedTailWeightKg + elevatorWeightKg + rudderWeightKg;
     const tailCost = (hStabArea * tailThickness * structureMaterialCost) +
-                     (vStabArea * tailThickness * structureMaterialCost) +
-                     elevatorCost + rudderCost;
+        (vStabArea * tailThickness * structureMaterialCost) +
+        elevatorCost + rudderCost;
 
 
     // قراءة زوايا ميلان الذيل بالراديان
@@ -2861,7 +2910,7 @@ function calculateAerodynamics() {
         if (a > 0 && b > 0 && c > 0) {
             const p = 1.6075;
             // Area of the full ellipsoid
-            const fullEllipsoidArea = 4 * Math.PI * Math.pow( (Math.pow(a*b, p) + Math.pow(a*c, p) + Math.pow(b*c, p)) / 3, 1/p);
+            const fullEllipsoidArea = 4 * Math.PI * Math.pow((Math.pow(a * b, p) + Math.pow(a * c, p) + Math.pow(b * c, p)) / 3, 1 / p);
             // Area of the base ellipse
             const baseArea = Math.PI * a * c;
             // Total area is half the ellipsoid's surface + the base
@@ -2939,7 +2988,7 @@ function calculateAerodynamics() {
         // إظهار/إخفاء الحقول المناسبة
         document.getElementById('energy-source-weight-item').style.display = 'flex'; // إظهار وزن الخزان
         document.getElementById('fuel-tank-area-item').style.display = 'flex'; // إظهار مساحة الخزان
-        
+
         // حساب وزن مصدر الطاقة (الوقود + الخزان) بشكل دقيق
         const fuelTankLength = getVal(fuelTankLengthInput);
         const fuelTankWidth = getVal(fuelTankWidthInput);
@@ -3101,7 +3150,7 @@ function calculateAerodynamics() {
     const mac_y = (wingSpan / 6) * ((1 + 2 * taperRatio) / (1 + taperRatio));
     // استخدام sweepRad المعرف مسبقاً
     const mac_x_le = mac_y * Math.tan(sweepRad); // موضع الحافة الأمامية للـ MAC
-    
+
     // --- FIX: Recalculate component positions based on the new logic ---
     // Wing is positioned relative to the nose
     const wingPositionX = (fuselageLength / 2) - wingNoseDistance;
@@ -3157,19 +3206,19 @@ function calculateAerodynamics() {
     // The geometric centroid of a uniform wing is closer to 42% of the MAC.
     // This is a better approximation for the center of *mass* than the aerodynamic center (25%).
     // --- حساب الموضع النسبي لمركز ثقل نصف الجناح (قبل دوران الميلان) ---
+    const dihedralRad = dihedralAngle * Math.PI / 180;
     const wingCgSpanwise = (wingSpan / 6) * ((1 + 2 * taperRatio) / (1 + taperRatio)); // الموضع العرضي لمركز ثقل نصف الجناح
-    const halfWingCgX_offset = wingCgSpanwise * Math.tan(sweepRad);
-    const wingCgY_offset_dihedral = wingCgSpanwise * Math.tan(dihedralAngle * Math.PI / 180);
-    const wingCgX_offset_sweep = halfWingCgX_offset + (0.42 * mac);
+    const wingCgX_offset_local = wingCgSpanwise * Math.tan(sweepRad) + (0.42 * mac); // Local X offset due to sweep and MAC
+    const wingCgY_offset_local = wingCgSpanwise * Math.tan(dihedralRad); // Local Y offset due to dihedral
 
-    // --- تطبيق دوران زاوية الميلان (Incidence) على موضع مركز الثقل ---
+    // --- تطبيق دوران زاوية ميلان الجناح (Incidence) على موضع مركز الثقل ---
     const wingIncidenceRad = wingIncidenceAngle * (Math.PI / 180);
     const cosIncidence = Math.cos(wingIncidenceRad);
     const sinIncidence = Math.sin(wingIncidenceRad);
 
-    // حساب الموضع النسبي بعد الدوران
-    const rotatedCgX_offset = wingCgX_offset_sweep * cosIncidence - wingCgY_offset_dihedral * sinIncidence;
-    const rotatedCgY_offset = wingCgX_offset_sweep * sinIncidence + wingCgY_offset_dihedral * cosIncidence;
+    // FIX: تطبيق دوران الميلان على الموضع المحلي لمركز الثقل
+    const rotatedCgX_offset = wingCgX_offset_local * cosIncidence; // Y-offset does not affect X in this rotation
+    const rotatedCgY_offset = wingCgX_offset_local * sinIncidence + wingCgY_offset_local; // Add Y offset after rotation
 
     // حساب الموضع Y العام للجناح
     let wingYPosition;
@@ -3203,7 +3252,7 @@ function calculateAerodynamics() {
         const aileronCgX = ((hingeX_start + hingeX_end) / 2) - (aileronWidth / 2);
         // --- حساب المسافة الجانبية من مركز الجسم للجنيح ---
         const aileronCenterZ = (aileronZStart + aileronZEnd) / 2;
-        
+
         // The Y position of the aileron is the same as the wing's
         const aileronCgY = finalCgY; // FIX: Use the correct variable name for the wing's final Y position
 
@@ -3326,10 +3375,10 @@ function calculateAerodynamics() {
             const a = wingtipWidth; // root chord
             const b = wingtipWidth * wingtipTaperRatio; // tip chord
             const h = wingtipLength; // span (height of trapezoid)
-            
+
             // Centroid along the span (local Z)
             local_cg_z_unrotated = (h / 3) * ((a + 2 * b) / (a + b));
-            
+
             // Centroid along the chord (local X), considering sweep
             const x_offset_due_to_sweep = local_cg_z_unrotated * Math.tan(wingtipSweepRad);
             const chord_at_centroid = a + (b - a) * (local_cg_z_unrotated / h);
@@ -3516,8 +3565,13 @@ function calculateAerodynamics() {
     let verticalTailVolume = 0;
 
     if (totalWingArea > 0 && hStabArea > 0 && mac > 0) {
-        // 1. حساب المركز الهوائي للجناح والذيل
-        const wing_ac_x = wingPositionX + mac_x_le + (0.25 * mac);
+        // 1. حساب المركز الهوائي للجناح والذيل (AC)
+        // تصحيح 6: إصلاح نهائي وجذري لمنطق حساب المركز الهوائي للجناح.
+        // المرجع هو الحافة الأمامية لوتر جذر الجناح (wing root leading edge).
+        const wingRootLe_x = wingPositionX + (wingChord / 2);
+        // المركز الهوائي للجناح = موضع الحافة الأمامية للجذر - إزاحة الميلان للخلف - ربع الوتر المتوسط.
+        // mac_x_le تكون موجبة للميلان للخلف، وسالبة للميلان للأمام. طرحها يعطي النتيجة الصحيحة في كلا الحالتين.
+        const wing_ac_x = wingRootLe_x - mac_x_le - (0.25 * mac);
         const tail_ac_x = tailPositionX - (0.25 * tailChord);
 
         // 2. ذراع الذيل (المسافة بين المركزين الهوائيين)
@@ -3542,8 +3596,8 @@ function calculateAerodynamics() {
         const dCm_fus_dalpha = (Kf * Math.pow(currentFuselageWidth, 2) * fuselageLength) / (totalWingArea * mac);
         const np_contribution_from_fuselage = - (dCm_fus_dalpha / CL_alpha_wing);
 
-        // حساب معامل حجم الذيل العمودي (Vv)
-        verticalTailVolume = (totalWingArea > 0 && wingSpan > 0) ? (tail_arm_lh * vStabArea) / (wingSpan * totalWingArea) : 0;
+        // حساب معامل حجم الذيل العمودي (Vv) - يستخدم نفس ذراع الذيل الأفقي
+        verticalTailVolume = (totalWingArea > 0 && wingSpan > 0 && tail_arm_lh > 0) ? (tail_arm_lh * vStabArea) / (wingSpan * totalWingArea) : 0;
 
         // الموضع النهائي للنقطة المحايدة يأخذ في الاعتبار الجناح، الذيل، وجسم الطائرة
         neutral_point_x = wing_ac_x + (np_contribution_from_tail * mac) + (np_contribution_from_fuselage * mac);
@@ -3556,6 +3610,14 @@ function calculateAerodynamics() {
     acSphere.position.y = 0; // تبسيط: نفترض أن المركز الهوائي على المحور المركزي
     acSphere.position.z = 0;
     acSphere.visible = showAc;
+
+    // --- NEW: Update the static margin line ---
+    const linePositions = staticMarginLine.geometry.attributes.position;
+    linePositions.setXYZ(0, cgSphere.position.x, cgSphere.position.y, cgSphere.position.z);
+    linePositions.setXYZ(1, acSphere.position.x, acSphere.position.y, acSphere.position.z);
+    linePositions.needsUpdate = true;
+    staticMarginLine.computeLineDistances(); // Required for dashed lines to render correctly
+    staticMarginLine.visible = showCg && showAc; // Only show if both spheres are visible
 
 
     // --- حساب عزم الانحدار (Pitching Moment) حول مركز الجاذبية ---
@@ -3591,20 +3653,20 @@ function calculateAerodynamics() {
     let yawingMomentFromThrust = 0;
     let rollingMomentFromThrust = 0;
 
-    if (thrust > 0) {
-        // حساب متجه قوة الدفع (F)
-        const thrustVector = new THREE.Vector3(1, 0, 0).applyEuler(engineGroup.rotation).multiplyScalar(thrust);
+    if (thrust > 0 && engineGroup) {
+        // FIX: استخدام الضرب الاتجاهي لحساب العزم بدقة حول جميع المحاور
+        // حساب متجه قوة الدفع (F) في الإحداثيات العالمية
+        const thrustVector = new THREE.Vector3(1, 0, 0).applyQuaternion(engineGroup.quaternion).multiplyScalar(thrust);
 
         // حساب متجه ذراع القوة (r) من مركز الجاذبية إلى نقطة تطبيق الدفع (المحرك)
-        const enginePosition = engineGroup.position;
         const leverArmVector = new THREE.Vector3(
-            enginePosition.x - cg_x,
-            enginePosition.y - cg_y,
-            enginePosition.z - cg_z
+            engineGroup.position.x - cg_x,
+            engineGroup.position.y - cg_y,
+            engineGroup.position.z - cg_z
         );
 
         // حساب العزم باستخدام الضرب الاتجاهي: M = r x F
-        const momentVector = new THREE.Vector3().crossVectors(leverArmVector, thrustVector);
+        const momentVector = new THREE.Vector3().crossVectors(leverArmVector, thrustVector); // M = r x F
 
         // استخلاص مكونات العزم
         // عزم الدوران (Roll) حول المحور X
@@ -3612,8 +3674,8 @@ function calculateAerodynamics() {
         // عزم الانعراج (Yaw) حول المحور Y
         yawingMomentFromThrust = momentVector.y;
         // عزم الانحدار (Pitch) حول المحور Z
-        pitchingMomentFromThrust = momentVector.z;
-
+        pitchingMomentFromThrust = -momentVector.z; // FIX: في three.js، الدوران الموجب حول Z هو عكس عقارب الساعة، بينما في الطيران، عزم الانحدار الموجب (nose-up) هو مع عقارب الساعة.
+        
         // إضافة عزم الانحدار من الدفع إلى العزم الكلي
         totalPitchingMoment += pitchingMomentFromThrust;
 
@@ -3643,7 +3705,6 @@ function calculateAerodynamics() {
 
     if (showCg) {
         const cgMarkerMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000, depthTest: false, side: THREE.DoubleSide });
-        cgMarkerMaterial.renderOrder = 1; // Ensure it's drawn on top
 
         // حساب أبعاد الجسم عند موضع مركز الثقل لضبط حجم العلامة
         const t = (cg_x + fuselageLength / 2) / fuselageLength; // 0 at rear, 1 at front
@@ -3661,7 +3722,8 @@ function calculateAerodynamics() {
             const halfH = currentHeight / 2;
             const points = [new THREE.Vector3(0, halfH, halfW), new THREE.Vector3(0, halfH, -halfW), new THREE.Vector3(0, -halfH, -halfW), new THREE.Vector3(0, -halfH, halfW)];
             const frameGeom = new THREE.BufferGeometry().setFromPoints(points);
-            const cgFrame = new THREE.LineLoop(frameGeom, new THREE.LineBasicMaterial({ color: 0xff0000, depthTest: false, renderOrder: 1 }));
+            const cgFrame = new THREE.LineLoop(frameGeom, new THREE.LineBasicMaterial({ color: 0xff0000, depthTest: false }));
+            cgFrame.renderOrder = 1; // FIX: Set renderOrder on the object, not the material
             cgFuselageMarkerGroup.add(cgFrame);
 
         } else { // Cylindrical or Teardrop
@@ -3673,7 +3735,9 @@ function calculateAerodynamics() {
             const tubeRadius = 0.005; // Thickness of the ring itself
             const ringGeom = new THREE.TorusGeometry(currentRadius + tubeRadius, tubeRadius, 8, 48);
             ringGeom.rotateY(Math.PI / 2); // Rotate to wrap around the X-axis
-            cgFuselageMarkerGroup.add(new THREE.Mesh(ringGeom, cgMarkerMaterial));
+            const cgRing = new THREE.Mesh(ringGeom, cgMarkerMaterial);
+            cgRing.renderOrder = 1; // FIX: Set renderOrder on the object
+            cgFuselageMarkerGroup.add(cgRing);
         }
     }
     cgFuselageMarkerGroup.position.x = cg_x;
@@ -3689,7 +3753,6 @@ function calculateAerodynamics() {
 
     if (showAc) {
         const acMarkerMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff, depthTest: false, side: THREE.DoubleSide });
-        acMarkerMaterial.renderOrder = 1;
 
         // حساب أبعاد الجسم عند موضع المركز الهوائي
         const t_ac = (neutral_point_x + fuselageLength / 2) / fuselageLength;
@@ -3703,7 +3766,8 @@ function calculateAerodynamics() {
             const currentHeight = rearHeight + t_ac * (frontHeight - rearHeight);
             const points = [new THREE.Vector3(0, currentHeight / 2, currentWidth / 2), new THREE.Vector3(0, currentHeight / 2, -currentWidth / 2), new THREE.Vector3(0, -currentHeight / 2, -currentWidth / 2), new THREE.Vector3(0, -currentHeight / 2, currentWidth / 2)];
             const frameGeom = new THREE.BufferGeometry().setFromPoints(points);
-            const acFrame = new THREE.LineLoop(frameGeom, new THREE.LineBasicMaterial({ color: 0x0000ff, depthTest: false, renderOrder: 1 }));
+            const acFrame = new THREE.LineLoop(frameGeom, new THREE.LineBasicMaterial({ color: 0x0000ff, depthTest: false }));
+            acFrame.renderOrder = 1; // FIX: Set renderOrder on the object, not the material
             acFuselageMarkerGroup.add(acFrame);
         } else { // Cylindrical or Teardrop
             let radiusFront, radiusRear;
@@ -3713,7 +3777,9 @@ function calculateAerodynamics() {
             const tubeRadius = 0.005;
             const ringGeom = new THREE.TorusGeometry(currentRadius + tubeRadius, tubeRadius, 8, 48);
             ringGeom.rotateY(Math.PI / 2);
-            acFuselageMarkerGroup.add(new THREE.Mesh(ringGeom, acMarkerMaterial));
+            const acRing = new THREE.Mesh(ringGeom, acMarkerMaterial);
+            acRing.renderOrder = 1; // FIX: Set renderOrder on the object
+            acFuselageMarkerGroup.add(acRing);
         }
     }
     acFuselageMarkerGroup.position.x = neutral_point_x;
@@ -3826,19 +3892,24 @@ function calculateAerodynamics() {
     if (staticMargin < 0) {
         staticMarginResultEl.style.color = '#dc3545'; // أحمر للخطر
         staticMarginResultEl.style.fontWeight = 'bold';
-        if (staticMarginParentEl) staticMarginParentEl.title = "تحذير خطير: هامش الاستقرار سالب! الطائرة غير مستقرة تمامًا وستكون غير قابلة للطيران.";
-    } else if (staticMargin < 5) {
+        if (staticMarginParentEl) staticMarginParentEl.title = "خطر: هامش الاستقرار سالب! الطائرة غير مستقرة تمامًا. (المركز الهوائي أمام مركز الجاذبية).";
+        staticMarginLine.material.color.set(0xdc3545); // Red
+    } else if (staticMargin < 5 || staticMargin > 15) {
         staticMarginResultEl.style.color = '#ff9800'; // برتقالي للتحذير
         staticMarginResultEl.style.fontWeight = 'bold';
-        if (staticMarginParentEl) staticMarginParentEl.title = "تحذير: هامش الاستقرار منخفض جدًا. قد تكون الطائرة متقلبة وصعبة التحكم (twitchy).";
-    } else if (staticMargin > 15) {
-        staticMarginResultEl.style.color = '#ff9800'; // برتقالي للتحذير
-        staticMarginResultEl.style.fontWeight = 'bold';
-        if (staticMarginParentEl) staticMarginParentEl.title = "تحذير: هامش الاستقرار مرتفع. ستكون الطائرة مستقرة جدًا ولكنها بطيئة الاستجابة للمدخلات (sluggish).";
+        if (staticMarginParentEl) {
+            if (staticMargin < 5) {
+                staticMarginParentEl.title = "تحذير: هامش الاستقرار منخفض. قد تكون الطائرة متقلبة وصعبة التحكم (twitchy).";
+            } else {
+                staticMarginParentEl.title = "تحذير: هامش الاستقرار مرتفع. ستكون الطائرة مستقرة بشكل مفرط وبطيئة الاستجابة للمدخلات (sluggish).";
+            }
+        }
+        staticMarginLine.material.color.set(0xff9800); // Orange
     } else {
         staticMarginResultEl.style.color = '#28a745'; // أخضر للنطاق الآمن
         staticMarginResultEl.style.fontWeight = 'bold';
         if (staticMarginParentEl) staticMarginParentEl.title = defaultStaticMarginTitle;
+        staticMarginLine.material.color.set(0x28a745); // Green
     }
 
     // --- إضافة تحذير مرئي لمعاملات حجم الذيل ---
@@ -4078,9 +4149,9 @@ function calculateAerodynamics() {
     const rightWing = wingGroup.children[0];
     const leftWing = wingGroup.children[1];
 
-    if (rightWing && leftWing) {
+    if (rightWing && leftWing && rightWing.geometry && leftWing.geometry) {
         const geometries = [rightWing.geometry, leftWing.geometry];
-        
+
         // Define pressure-to-color mapping
         const lowPressureColor = new THREE.Color(getStr(pressureMapLowColorInput));
         const highPressureColor = new THREE.Color(getStr(pressureMapHighColorInput));
@@ -4090,11 +4161,11 @@ function calculateAerodynamics() {
         // A reference pressure difference for maximum color intensity.
         // 1000 Pa corresponds to significant lift at medium speeds.
         const REFERENCE_PRESSURE = 1000;
-        
+
         // The top surface (suction) contributes about 2/3 of the lift.
-        const topIntensity = Math.min(1.0, (avgPressureDifference * (2/3)) / REFERENCE_PRESSURE);
+        const topIntensity = Math.min(1.0, (avgPressureDifference * (2 / 3)) / REFERENCE_PRESSURE);
         // The bottom surface (pressure) contributes about 1/3.
-        const bottomIntensity = Math.min(1.0, (avgPressureDifference * (1/3)) / REFERENCE_PRESSURE);
+        const bottomIntensity = Math.min(1.0, (avgPressureDifference * (1 / 3)) / REFERENCE_PRESSURE);
 
         geometries.forEach(geom => {
             if (!geom.attributes.color) return; // Safety check
@@ -4124,6 +4195,9 @@ function calculateAerodynamics() {
             geom.attributes.color.needsUpdate = true;
         });
     }
+
+    // FIX: Return the calculated total weight for use in other functions
+    return { totalWeightKg };
 }
 
 /**
@@ -4173,6 +4247,8 @@ function initCharts() {
     const powerChartCanvas = document.getElementById('power-chart');
     const rocChartCanvas = document.getElementById('roc-chart');
     const liftCurveChartCanvas = document.getElementById('lift-curve-chart');
+    const weightDistChartCanvas = document.getElementById('weight-dist-chart');
+    const costDistChartCanvas = document.getElementById('cost-dist-chart');
 
 
     const commonOptions = {
@@ -4325,7 +4401,7 @@ function initCharts() {
                 hoverRadius: 10,
                 pointStyle: 'star', // Use a star shape
             }
-        ]
+            ]
         },
         options: {
             ...commonOptions,
@@ -4535,14 +4611,99 @@ function initCharts() {
             plugins: {
                 legend: { display: true }
             }
-        }
+        },
     });
+
+    // New Weight Distribution Chart
+    if (weightDistChartCanvas) {
+        weightDistChart = new Chart(weightDistChartCanvas.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: [
+                    'الجناح',
+                    'الجسم والقمرة',
+                    'الذيل',
+                    'نظام الدفع', // Engine + Prop + Pylon
+                    'مصدر الطاقة', // Battery/Fuel
+                    'عجلات الهبوط',
+                    'الملحقات' // Electronics, etc.
+                ],
+                datasets: [{
+                    label: 'الوزن (جرام)',
+                    data: [0, 0, 0, 0, 0, 0, 0], // Initial data
+                    backgroundColor: [
+                        'rgba(54, 162, 235, 0.8)',  // Blue
+                        'rgba(255, 99, 132, 0.8)',   // Red
+                        'rgba(255, 206, 86, 0.8)',  // Yellow
+                        'rgba(75, 192, 192, 0.8)',   // Teal
+                        'rgba(153, 102, 255, 0.8)', // Purple
+                        'rgba(255, 159, 64, 0.8)',  // Orange
+                        'rgba(120, 120, 120, 0.8)'   // Grey
+                    ],
+                    borderColor: 'rgba(255, 255, 255, 0.7)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    }
+                }
+            }
+        });
+    }
+
+    // New Cost Distribution Chart
+    if (costDistChartCanvas) {
+        costDistChart = new Chart(costDistChartCanvas.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: [
+                    'الجسم والقمرة',
+                    'الجناح',
+                    'الذيل',
+                    'نظام الدفع',
+                    'الإلكترونيات',
+                    'عجلات الهبوط'
+                ],
+                datasets: [{
+                    label: 'التكلفة (دولار)',
+                    data: [0, 0, 0, 0, 0, 0],
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.8)',   // Red
+                        'rgba(54, 162, 235, 0.8)',  // Blue
+                        'rgba(255, 206, 86, 0.8)',  // Yellow
+                        'rgba(75, 192, 192, 0.8)',   // Teal
+                        'rgba(153, 102, 255, 0.8)', // Purple
+                        'rgba(255, 159, 64, 0.8)'  // Orange
+                    ],
+                    borderColor: 'rgba(255, 255, 255, 0.7)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    }
+                }
+            }
+        });
+    }
 }
 
+
 function updateCharts() {
+    // FIX: Read totalWeightKg from the result element directly
+    const totalWeightKg = parseFloat(totalWeightResultEl.textContent) / 1000 || 0;
     const conversionFactor = UNIT_CONVERSIONS[unitSelector.value];
     const wingSpan = getValidNumber(wingSpanInput) * conversionFactor;
-    const wingChord = getValidNumber(wingChordInput) * conversionFactor;
+    const wingChord = getValidNumber(wingChordInput) * conversionFactor; // This is root chord
     const taperRatio = getValidNumber(taperRatioInput);
     const airfoilType = airfoilTypeInput.value;
     const angleOfAttack = getValidNumber(angleOfAttackInput);
@@ -4552,9 +4713,6 @@ function updateCharts() {
     const propBladeShape = propBladeShapeInput.value;
     const propRpm = getValidNumber(propRpmInput);
 
-    const totalWeightKg = parseFloat(totalWeightResultEl.textContent) / 1000; // Get weight from results
-    const weightInNewtons = totalWeightKg * 9.81;
-
     const tipChord = wingChord * taperRatio;
     const wingArea = wingSpan * (wingChord + tipChord) / 2;
     if (wingArea <= 0) return;
@@ -4563,7 +4721,7 @@ function updateCharts() {
     let airfoilLiftFactor = 1.0;
     if (airfoilType === 'flat-bottom') airfoilLiftFactor = 1.1;
     else if (airfoilType === 'symmetrical') airfoilLiftFactor = 0.95;
-    
+
     const aspectRatio = Math.pow(wingSpan, 2) / wingArea;
     let oswaldEfficiency = 0.8; // Base value
     if (document.getElementById('has-wingtip').checked) {
@@ -4616,7 +4774,7 @@ function updateCharts() {
         const prop_drag = speed > 1 ? power_consumed_watts / speed : 0;
         const totalDrag = aeroDrag + prop_drag;
         dragPoints.push(totalDrag);
-        
+
         // Propeller Efficiency
         const prop_efficiency = (power_consumed_watts > 0) ? (thrust * speed) / power_consumed_watts : 0;
         propEfficiencyPoints.push(prop_efficiency * 100); // As percentage
@@ -4625,6 +4783,7 @@ function updateCharts() {
         powerAvailablePoints.push(thrust * speed);
         powerRequiredPoints.push(totalDrag * speed);
 
+        const weightInNewtons = totalWeightKg * 9.81;
         // Rate of Climb calculation
         let rateOfClimb = 0;
         if (weightInNewtons > 0) {
@@ -4763,9 +4922,13 @@ function updateCharts() {
     stabilityChart.update();
 
     // --- New Pitching Moment vs AoA Chart Calculation ---
+    // This calculation is complex and depends on many factors.
+    // For now, we will pass the currently calculated moment to the chart.
+    // A full sweep across AoA requires re-running the core logic.
     const aoaPointsForMoment = [];
     const momentPoints = [];
     const conversionFactorToDisplay = 1 / conversionFactor;
+
 
     // Get parameters that are constant across the AoA sweep
     const cg_x = (fuselageLength / 2) - (parseFloat(cgPositionResultEl.textContent) / conversionFactorToDisplay);
@@ -4773,7 +4936,7 @@ function updateCharts() {
     const tailLeverArm = tail_ac_x - cg_x;
     const dynamicPressure = 0.5 * airDensity * Math.pow(getValidNumber(airSpeedInput), 2);
 
-    // Get thrust moment (it's constant for this chart)
+    // Get thrust moment (it's constant for this chart sweep)
     const thrustMoment = parseFloat(pitchingMomentThrustResultEl.textContent) || 0;
 
     for (let aoa = -5; aoa <= 20; aoa++) {
@@ -4811,8 +4974,42 @@ function updateCharts() {
     pitchingMomentResultEl.style.color = currentMoment < 0 ? '#28a745' : '#dc3545'; // أخضر للسالب، أحمر للموجب
     pitchingMomentResultEl.style.fontWeight = 'bold';
 
-}
+    // --- NEW: Update Weight Distribution Chart ---
+    if (weightDistChart) {
+        const wingWeight = parseFloat(wingWeightResultEl.textContent) || 0;
+        const fuselageWeight = parseFloat(fuselageWeightResultEl.textContent) || 0;
+        const tailWeight = parseFloat(tailWeightResultEl.textContent) || 0;
+        const engineWeight = parseFloat(engineWeightResultEl.textContent) || 0;
+        const pylonWeight = parseFloat(pylonWeightResultEl.textContent) || 0;
+        const propWeight = parseFloat(propWeightResultEl.textContent) || 0;
+        const propulsionWeight = engineWeight + pylonWeight + propWeight;
+        const energyWeight = parseFloat(energySourceWeightResultEl.textContent) || 0;
+        const gearWeight = parseFloat(landingGearWeightResultEl.textContent) || 0;
+        const accessoriesWeight = parseFloat(accessoriesWeightResultEl.textContent) || 0;
 
+        weightDistChart.data.datasets[0].data = [
+            wingWeight, fuselageWeight, tailWeight, propulsionWeight, energyWeight, gearWeight, accessoriesWeight
+        ];
+        weightDistChart.update();
+    }
+
+    // --- NEW: Update Cost Distribution Chart ---
+    if (costDistChart) {
+        const fuselageCost = parseFloat(fuselageCostResultEl.textContent) || 0;
+        const wingCost = parseFloat(wingCostResultEl.textContent) || 0;
+        const tailCost = parseFloat(tailCostResultEl.textContent) || 0;
+        const propulsionCost = parseFloat(propulsionCostResultEl.textContent) || 0;
+        const electronicsCost = parseFloat(electronicsCostResultEl.textContent) || 0;
+        const landingGearCost = parseFloat(landingGearCostResultEl.textContent) || 0;
+
+        costDistChart.data.datasets[0].data = [
+            fuselageCost, wingCost, tailCost, propulsionCost, electronicsCost, landingGearCost
+        ];
+        costDistChart.update();
+    }
+
+}
+    
 /**
  * Creates a custom ShaderMaterial for realistic particle rendering.
  * This allows for per-particle size and opacity.
@@ -4878,10 +5075,10 @@ function setAirflowVisibility(isSpinning) {
 function updateAll() {
     try {
         updatePlaneModel(); // تحديث النموذج ثلاثي الأبعاد أولاً
-        calculateAerodynamics(); // ثم إجراء الحسابات بناءً على النموذج المحدث
+        const { totalWeightKg } = calculateAerodynamics(); // ثم إجراء الحسابات بناءً على النموذج المحدث
         updatePlaneParameters(); // تخزين المعلمات المؤقتة للرسوم المتحركة
-        if (liftChart && dragChart && thrustChart && propEfficiencyChart && ldRatioChart && stabilityChart) {
-            updateCharts();
+        if (liftChart && dragChart && thrustChart && propEfficiencyChart && ldRatioChart && stabilityChart && weightDistChart) {
+            updateCharts(); // تحديث جميع المخططات
         }
     } catch (error) {
         console.error("Error in updateAll:", error);
@@ -4890,9 +5087,72 @@ function updateAll() {
 }
 
 function updateUnitLabels() {
-    const selectedUnitLabel = unitSelector.options[unitSelector.selectedIndex].dataset.label;
+    const selectedUnitLabel = unitSelector.options[unitSelector.selectedIndex]?.dataset.label || 'cm';
     unitLabels.forEach(label => {
         label.textContent = selectedUnitLabel;
+    });
+}
+
+/**
+ * Initializes the theme toggle (dark/light mode) functionality for the designer page.
+ */
+function initTheme() {
+    const themeToggleBtn = document.getElementById('theme-toggle-btn');
+    if (!themeToggleBtn) return;
+
+    const setIcon = (isDark) => {
+        const icon = themeToggleBtn.querySelector('i');
+        if (isDark) {
+            icon.classList.remove('fa-moon');
+            icon.classList.add('fa-sun');
+            themeToggleBtn.title = "تفعيل الوضع الفاتح";
+        } else {
+            icon.classList.remove('fa-sun');
+            icon.classList.add('fa-moon');
+            themeToggleBtn.title = "تفعيل الوضع الليلي";
+        }
+    };
+
+    const applyTheme = (theme) => {
+        const isDark = theme === 'dark';
+        document.body.classList.toggle('dark-mode', isDark);
+        setIcon(isDark);
+
+        // Update Three.js scene background
+        scene.background.set(isDark ? 0x121212 : 0xeeeeee);
+
+        // Update chart colors
+        const chartTextColor = isDark ? 'rgba(230, 230, 230, 0.8)' : 'rgba(54, 54, 54, 1)';
+        const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+
+        [liftChart, dragChart, thrustChart, propEfficiencyChart, ldRatioChart, stabilityChart, pitchingMomentChart, powerChart, rocChart, liftCurveChart, weightDistChart, costDistChart].forEach(chart => {
+            if (chart) {
+                // FIX: Check if the chart has scales before trying to update them (e.g., doughnut charts don't)
+                if (chart.options.scales && chart.options.scales.x && chart.options.scales.y) {
+                    chart.options.scales.x.ticks.color = chartTextColor;
+                    chart.options.scales.y.ticks.color = chartTextColor;
+                    chart.options.scales.x.title.color = chartTextColor;
+                    chart.options.scales.y.title.color = chartTextColor;
+                    chart.options.scales.x.grid.color = gridColor;
+                    chart.options.scales.y.grid.color = gridColor;
+                }
+                if (chart.options.plugins.legend) {
+                    chart.options.plugins.legend.labels.color = chartTextColor;
+                }
+                chart.update();
+            }
+        });
+    };
+
+    // Load saved theme on startup
+    const currentTheme = localStorage.getItem('rc_designer_theme') || 'light';
+    applyTheme(currentTheme);
+
+    // Add click listener to the button
+    themeToggleBtn.addEventListener('click', () => {
+        const theme = document.body.classList.contains('dark-mode') ? 'light' : 'dark';
+        localStorage.setItem('rc_designer_theme', theme);
+        applyTheme(theme);
     });
 }
 
@@ -5152,6 +5412,12 @@ function animate() {
         // --- تحديث الحقول المرئية فقط، بدون إعادة الحسابات الثقيلة ---
         airSpeedInput.value = mainAirSpeed.toFixed(1);
 
+        // --- FIX: Recalculate aerodynamics if pressure map is shown to keep it updated ---
+        // We use a debounced function to avoid performance issues from recalculating on every frame.
+        if (showPressureMapInput.checked) {
+            debouncedRecalculateAero();
+        }
+
         // --- تحديث التأثيرات البصرية ---
         if (propParticleSystem) propParticleSystem.visible = true;
         if (wingAirflowParticleSystem) wingAirflowParticleSystem.visible = showAmbientWindInput.checked;
@@ -5340,12 +5606,12 @@ function animate() {
                         const isRightSide = i < propParticleCount / 2;
                         const propPos = isRightSide ? rightPropPosLocal : leftPropPosLocal;
 
-                        const age = propPos.distanceTo(new THREE.Vector3(positions[i3], positions[i3+1], positions[i3+2]));
+                        const age = propPos.distanceTo(new THREE.Vector3(positions[i3], positions[i3 + 1], positions[i3 + 2]));
 
                         if (age > travelDistance || positions[i3] === 0) {
                             positions[i3] = propPos.x;
-                            positions[i3+1] = propPos.y;
-                            positions[i3+2] = propPos.z;
+                            positions[i3 + 1] = propPos.y;
+                            positions[i3 + 2] = propPos.z;
                             spiralData[i2] = emissionRadius * Math.sqrt(Math.random());
                             spiralData[i2 + 1] = Math.random() * 2 * Math.PI;
                         }
@@ -5645,11 +5911,19 @@ function animate() {
             const scales = heatHazeParticleSystem.geometry.attributes.scale.array;
             const lifeData = heatHazeParticleSystem.geometry.attributes.life.array;
 
-            const buoyancy = 0.5; // سرعة ارتفاع الحرارة
-            const shimmerStrength = 0.4; // قوة التراقص الجانبي
+            const buoyancy = 0.2; // سرعة ارتفاع الحرارة (تم تقليلها)
+            const shimmerStrength = 0.2; // قوة التراقص الجانبي (تم تقليلها)
 
             const enginePlacement = enginePlacementInput.value;
             const emissionPoints = [];
+
+            // --- FIX: Get current IC engine dimensions for accurate emission ---
+            let engineLengthMeters = 0;
+            let engineDiameterMeters = 0;
+            if (engineType === 'ic') {
+                engineLengthMeters = getValidNumber(icEngineLengthInput) * planeParams.conversionFactor;
+                engineDiameterMeters = getValidNumber(icEngineDiameterInput) * planeParams.conversionFactor;
+            }
 
             if (enginePlacement === 'wing') {
                 // تصحيح: البحث عن المحركات في المجموعات الصحيحة الخاصة بكل جناح
@@ -5685,12 +5959,23 @@ function animate() {
                     // توزيع الجسيمات على نقاط الانبعاث
                     // تصحيح: التأكد من وجود نقاط انبعاث قبل استخدامها
                     if (emissionPoints.length === 0) continue;
-                    const emissionPoint = emissionPoints[i % emissionPoints.length] || new THREE.Vector3();
+                    const baseEmissionPoint = emissionPoints[i % emissionPoints.length] || new THREE.Vector3();
 
-
-                    positions[i3] = emissionPoint.x + (Math.random() - 0.5) * 0.1;
-                    positions[i3 + 1] = emissionPoint.y + (Math.random() - 0.5) * 0.1;
-                    positions[i3 + 2] = emissionPoint.z + (Math.random() - 0.5) * 0.1;
+                    // --- FIX: Emit from the surface of the engine cylinder ---
+                    if (engineDiameterMeters > 0 && engineLengthMeters > 0) {
+                        const radius = engineDiameterMeters / 2;
+                        const angle = Math.random() * 2 * Math.PI;
+                        const xOffset = (Math.random() - 0.5) * engineLengthMeters;
+                        const yOffset = radius * Math.cos(angle);
+                        const zOffset = radius * Math.sin(angle);
+                        positions[i3] = baseEmissionPoint.x + xOffset;
+                        positions[i3 + 1] = baseEmissionPoint.y + yOffset;
+                        positions[i3 + 2] = baseEmissionPoint.z + zOffset;
+                    } else { // Fallback for safety
+                        positions[i3] = baseEmissionPoint.x + (Math.random() - 0.5) * 0.1;
+                        positions[i3 + 1] = baseEmissionPoint.y + (Math.random() - 0.5) * 0.1;
+                        positions[i3 + 2] = baseEmissionPoint.z + (Math.random() - 0.5) * 0.1;
+                    }
                     lifeData[i2] = lifeData[i2 + 1] = 0.5 + Math.random() * 0.5; // عمر قصير جداً
                 }
 
@@ -5701,8 +5986,8 @@ function animate() {
 
                 // تحديث الخصائص البصرية
                 const lifeRatio = Math.max(0, lifeData[i2] / lifeData[i2 + 1]);
-                opacities[i] = Math.sin(lifeRatio * Math.PI) * 0.05 * densityFactor * airflowTransparency; // شفاف جداً
-                scales[i] = (1.0 - lifeRatio) * 3.0 * sizeFactor;
+                opacities[i] = Math.sin(lifeRatio * Math.PI) * 0.04 * densityFactor * airflowTransparency; // شفاف جداً (تم تقليل الشفافية)
+                scales[i] = (1.0 - lifeRatio) * 2.0 * sizeFactor; // حجم أصغر
             }
 
             heatHazeParticleSystem.geometry.attributes.position.needsUpdate = true;
@@ -5753,100 +6038,93 @@ function animate() {
         }
         // --- تحديث خطوط التدفق الانسيابي ---
         if (streamlinesGroup && streamlinesGroup.visible) {
-            const objectsToTest = [...wingGroup.children, ...fuselageGroup.children, ...tailAssembly.children];
+            // تجميع كل الأجسام القابلة للاصطدام مرة واحدة لتحسين الأداء
+            const objectsToTest = [];
+            planeGroup.traverse(child => {
+                if (child.isMesh && child.geometry && child.name !== 'cgFuselageMarker' && child.name !== 'acFuselageMarker') {
+                    objectsToTest.push(child);
+                }
+            });
             const raycaster = new THREE.Raycaster();
-            raycaster.far = 0.2; // مسافة قصيرة للاختبار
+            raycaster.far = 0.3; // مسافة قصيرة للاختبار
 
             const numStreamlines = streamlineLines.length;
             for (let i = 0; i < numStreamlines; i++) {
                 const line = streamlineLines[i];
                 if (!line) continue; // Safety check
+
+                // --- FIX: Get the life data for the current streamline and update it ---
+                const life = streamlineLifeData[i];
+                if (!life) continue; // Safety check
+                life.current -= deltaTime;
+
                 const pointsPerStreamline = line.geometry.attributes.position.count;
-                const positions = line.geometry.attributes.position.array;
-                const velocities = streamlineVelocities[i];
+                const positions = line.geometry.attributes.position.array; // The array of x,y,z,x,y,z...
 
-                // تحديث النقطة الأولى (الرائدة)
-                positions[0] -= mainAirSpeed * deltaTime;
-                velocities[0].set(-mainAirSpeed, 0, 0);
-
-                // إعادة تعيين الخط إذا خرج من المشهد
-                if (positions[0] < -planeParams.fuselageLength) {
-                    const emissionWidth = planeParams.wingSpan * 1.1 || 3;
-                    const emissionHeight = 2;
-                    const startX = 2.0;
-                    const startY = (Math.random() - 0.5) * emissionHeight;
-                    const startZ = (Math.random() - 0.5) * emissionWidth; for (let j = 0; j < pointsPerStreamline; j++) {
-                        positions[j * 3] = startX - (j * 0.15);
-                        positions[j * 3 + 1] = startY;
-                        positions[j * 3 + 2] = startZ;
-                        velocities[j].set(-mainAirSpeed, 0, 0);
-                    }
+                // --- NEW LOGIC: Shift all points back ---
+                // The last point becomes the second to last, and so on.
+                for (let j = pointsPerStreamline - 1; j > 0; j--) {
+                    positions[j * 3] = positions[(j - 1) * 3];
+                    positions[j * 3 + 1] = positions[(j - 1) * 3 + 1];
+                    positions[j * 3 + 2] = positions[(j - 1) * 3 + 2];
                 }
 
-                // تحديث بقية النقاط بناءً على النقطة التي تسبقها
-                for (let j = 1; j < pointsPerStreamline; j++) {
-                    const currentPointIndex = j * 3;
-                    const prevPointIndex = (j - 1) * 3;
+                // --- NEW LOGIC: Calculate the new head position (point 0) ---
+                const headPos = new THREE.Vector3(positions[0], positions[1], positions[2]);
+                const velocity = new THREE.Vector3(-mainAirSpeed, 0, 0); // Base velocity
+                const nextPos = headPos.clone().add(velocity.clone().multiplyScalar(deltaTime));
 
-                    // النقطة الحالية تحاول اللحاق بالنقطة التي تسبقها
-                    const targetPos = new THREE.Vector3(positions[prevPointIndex], positions[prevPointIndex + 1], positions[prevPointIndex + 2]);
-                    const currentPos = new THREE.Vector3(positions[currentPointIndex], positions[currentPointIndex + 1], positions[currentPointIndex + 2]);
+                // Check for collision between current head and next position
+                const direction = velocity.clone().normalize();
+                raycaster.set(headPos, direction);
+                raycaster.far = velocity.length() * deltaTime * 1.2; // Check slightly ahead
 
-                    // حساب متجه الحركة نحو الهدف
-                    let moveVector = targetPos.clone().sub(currentPos);
+                const intersects = raycaster.intersectObjects(objectsToTest, true);
 
-                    // --- فحص الاصطدام وتعديل المسار ---
-                    raycaster.set(currentPos, moveVector.clone().normalize());
-                    raycaster.far = moveVector.length(); // لا تبحث أبعد من المسافة إلى النقطة التالية
-                    const intersects = raycaster.intersectObjects(objectsToTest, true);
+                if (intersects.length > 0) {
+                    const normal = intersects[0].face.normal.clone(); // FIX: Check if face exists
+                    // The normal is in the local space of the intersected object. Transform it to world space.
+                    normal.transformDirection(intersects[0].object.matrixWorld);
 
-                    if (intersects.length > 0 && intersects[0].face) {
-                        const intersectedObject = intersects[0].object;
-                        const normal = intersects[0].face.normal.clone();
-                        normal.transformDirection(intersects[0].object.matrixWorld);
+                    // Project the velocity onto the plane of the surface normal to make it "slide"
+                    velocity.projectOnPlane(normal);
 
-                        // جعل متجه الحركة ينزلق على السطح بدلاً من اختراقه
-                        moveVector.projectOnPlane(normal);
+                    // Add a small push away from the surface to prevent getting stuck
+                    velocity.add(normal.multiplyScalar(0.5));
+                }
 
-                        // --- تأثير أسطح التحكم (موجود مسبقًا) ---
-                        const deflectionStrength = 2.0; // مضاعف لزيادة قوة التأثير البصري
-                        let deflection = 0;
+                // Update the head position with the (potentially modified) velocity
+                positions[0] += velocity.x * deltaTime;
+                positions[1] += velocity.y * deltaTime;
+                positions[2] += velocity.z * deltaTime;
 
-                        const aileronValue = parseFloat(aileronControlSlider.value);
-                        const elevatorValue = parseFloat(elevatorControlSlider.value);
-                        const rudderValue = parseFloat(rudderControlSlider.value);
+                // --- تحديث شفافية الخط بناءً على عمره ---
+                const lifeRatio = Math.max(0, life.current / life.max); // Now 'life' is defined
+                // جعل التلاشي أكثر حدة في النهاية
+                line.material.opacity = Math.pow(lifeRatio, 2) * 0.7;
 
-                        switch (intersectedObject.name) {
-                            case 'rightAileron':
-                                deflection = aileronValue;
-                                break;
-                            case 'leftAileron':
-                                deflection = -aileronValue; // الجنيح الأيسر يتحرك بعكس الأيمن
-                                break;
-                            case 'rightElevator':
-                            case 'leftElevator':
-                            case 'rightRuddervator': // V-Tail pitch
-                            case 'leftRuddervator':
-                                deflection = elevatorValue;
-                                break;
-                            case 'rudder':
-                                deflection = rudderValue;
-                                break;
-                        }
+                // --- إعادة تعيين الخط الانسيابي إذا انتهى عمره ---
+                if (life.current <= 0) {
+                    // إعادة تعيين العمر
+                    life.max = 3.0 + Math.random() * 2.0; // عمر جديد عشوائي بين 3 و 5 ثوانٍ
+                    life.current = life.max;
 
-                        // إضافة "دفعة" للسرعة في اتجاه الناظم، متناسبة مع مقدار الانحراف
-                        const kick = normal.clone().multiplyScalar(deflection * deflectionStrength * deltaTime * 50); // تم تعديل القوة لتكون متناسبة مع الزمن
-                        moveVector.add(kick);
+                    // إعادة تعيين الموضع
+                    const emissionWidth = (planeParams.wingSpan || 2) * 1.5; // Wider emission area
+                    const emissionHeight = (planeParams.fuselageHeight || 1) * 2.0;
+                    const startX = 2.5; // Start further in front
+                    const startY = (Math.random() - 0.5) * emissionHeight;
+                    const startZ = (Math.random() - 0.5) * emissionWidth;
+                    // Reset all points to the new starting position
+                    for (let j = 0; j < pointsPerStreamline; j++) {
+                        positions[j * 3] = startX;
+                        positions[j * 3 + 1] = startY;
+                        positions[j * 3 + 2] = startZ;
                     }
-
-                    // تحديث الموضع بناءً على متجه الحركة النهائي
-                    positions[currentPointIndex] = currentPos.x + moveVector.x;
-                    positions[currentPointIndex + 1] = currentPos.y + moveVector.y;
-                    positions[currentPointIndex + 2] = currentPos.z + moveVector.z;
                 }
 
                 line.geometry.attributes.position.needsUpdate = true;
-                line.computeLineDistances(); // تحديث حساب المسافات للخط المتقطع
+                line.computeLineDistances(); // Required for dashed lines
             }
         }
         // --- تحديث دخان محرك IC ---
@@ -6104,9 +6382,9 @@ function initHeatHazeParticles() {
     particleGeometry.setAttribute('scale', new THREE.BufferAttribute(scales, 1));
     particleGeometry.setAttribute('life', new THREE.BufferAttribute(lifeData, 2));
 
-    // A very faint, almost white material
-    const heatMaterial = createAirflowMaterial(0xff4500); // لون برتقالي-أحمر للحرارة
-    heatMaterial.blending = THREE.NormalBlending; // Normal blending is better for a distortion effect
+    // A very faint, almost white material for a shimmer effect
+    const heatMaterial = createAirflowMaterial(0xff4500); // لون أحمر-برتقالي ساطع للحرارة
+    heatMaterial.blending = THREE.AdditiveBlending; // Additive blending looks better for heat shimmer
 
     heatHazeParticleSystem = new THREE.Points(particleGeometry, heatMaterial);
     heatHazeParticleSystem.visible = false;
@@ -6159,7 +6437,8 @@ function initStreamlines() {
     streamlinesGroup = new THREE.Group();
     streamlineLines = [];
     streamlineVelocities = [];
-    
+    streamlineLifeData = []; // إعادة تعيين مصفوفة بيانات العمر
+
     const emissionWidth = 3;
     const emissionHeight = 2;
 
@@ -6188,13 +6467,17 @@ function initStreamlines() {
             positions[j * 3 + 2] = startZ;
             velocities.push(new THREE.Vector3(-20, 0, 0)); // Initial velocity
         }
-        
+
         geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
         const line = new THREE.Line(geometry, material);
         line.computeLineDistances(); // ضروري لعرض الخطوط المتقطعة
         streamlineLines.push(line);
         streamlineVelocities.push(velocities);
         streamlinesGroup.add(line);
+
+        // إضافة بيانات العمر لهذا الخط الجديد
+        const maxLife = 3.0 + Math.random() * 2.0; // عمر عشوائي بين 3 و 5 ثوانٍ
+        streamlineLifeData.push({ current: maxLife, max: maxLife });
     }
     streamlinesGroup.visible = showStreamlinesInput.checked; // Set visibility based on checkbox
     scene.add(streamlinesGroup);
@@ -6214,10 +6497,14 @@ function initCollapsibleFieldsets() {
         const sectionTitle = legend.querySelector('span').textContent.trim();
         const propAdvancedResults = document.getElementById('prop-advanced-results');
 
+        // تحديد ما إذا كانت الشاشة صغيرة (هاتف)
+        const isMobile = window.innerWidth <= 768;
+
         if (!legend || !content || !icon) return;
 
         // قائمة بالأقسام التي ستبقى مفتوحة بشكل افتراضي
-        const sectionsToKeepOpen = [
+        // على الهاتف، فقط قسم "الوحدات" يبقى مفتوحًا
+        const sectionsToKeepOpen = isMobile ? ['الوحدات'] : [
             'الوحدات',
             'تصميم الجناح'
         ];
@@ -6263,7 +6550,9 @@ function setupChartToggles() {
         { checkbox: togglePitchingMomentChart, card: document.getElementById('pitching-moment-chart-card') },
         { checkbox: togglePowerChart, card: document.getElementById('power-chart-card') },
         { checkbox: toggleRocChart, card: document.getElementById('roc-chart-card') },
-        { checkbox: toggleLiftCurveChart, card: document.getElementById('lift-curve-chart-card') }
+        { checkbox: toggleLiftCurveChart, card: document.getElementById('lift-curve-chart-card') },
+        { checkbox: toggleWeightDistChart, card: document.getElementById('weight-dist-chart-card') },
+        { checkbox: toggleCostDistChart, card: document.getElementById('cost-dist-chart-card') }
     ];
 
     chartToggles.forEach(({ checkbox, card }) => {
@@ -6437,6 +6726,61 @@ function initRpmSlider() {
     propRpmControlValueEl.textContent = initialRpm;
 }
 
+/**
+ * Initializes the model export functionality (STL/OBJ).
+ */
+function initExport() {
+    const exportStlBtn = document.getElementById('export-stl-btn');
+    const exportObjBtn = document.getElementById('export-obj-btn');
+
+    /**
+     * Triggers a file download in the browser.
+     * @param {string} text The content of the file.
+     * @param {string} filename The desired name of the file.
+     */
+    function saveString(text, filename) {
+        const blob = new Blob([text], { type: 'text/plain' });
+        const link = document.createElement('a');
+        link.style.display = 'none';
+        document.body.appendChild(link);
+
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        link.click();
+
+        URL.revokeObjectURL(link.href);
+        document.body.removeChild(link);
+    }
+
+    /**
+     * Exports the current plane model to the specified format.
+     * @param {'stl' | 'obj'} format The export format.
+     */
+    function exportModel(format) {
+        // إخفاء الكائنات المساعدة غير المرغوب فيها قبل التصدير
+        const cgAcSphereGroup = planeGroup.getObjectByName('cgAcGroup');
+        const cgMarker = fuselageGroup.getObjectByName('cgFuselageMarker');
+        const acMarker = fuselageGroup.getObjectByName('acFuselageMarker');
+
+        if (cgAcSphereGroup) cgAcSphereGroup.visible = false;
+        if (cgMarker) cgMarker.visible = false;
+        if (acMarker) acMarker.visible = false;
+
+        const exporter = format === 'stl' ? new THREE.STLExporter() : new THREE.OBJExporter();
+        const result = exporter.parse(planeGroup);
+
+        // إعادة إظهار الكائنات المساعدة بعد التصدير
+        if (cgAcSphereGroup) cgAcSphereGroup.visible = showCgCheckbox.checked || showAcCheckbox.checked;
+        if (cgMarker) cgMarker.visible = showCgCheckbox.checked;
+        if (acMarker) acMarker.visible = showAcCheckbox.checked;
+
+        saveString(result, `rc_plane_design.${format}`);
+    }
+
+    exportStlBtn.addEventListener('click', () => exportModel('stl'));
+    exportObjBtn.addEventListener('click', () => exportModel('obj'));
+}
+
 // --- التشغيل الأولي ---
 initPropAirflowParticles();
 initWingAirflowParticles();
@@ -6448,6 +6792,7 @@ initStreamlines();
 initAudio(); // Initialize the Web Audio API
 initCharts();
 initSaveLoad();
+initExport(); // تهيئة أزرار التصدير الجديدة
 setupChartToggles();
 initResetButton(); // تهيئة زر إعادة التعيين الجديد
 initRpmSlider(); // تهيئة شريط التحكم الجديد عند التحميل
@@ -6456,6 +6801,7 @@ updateUnitLabels();
 // هذه الدالة ستقوم بدورها باستدعاء updateAll() لضمان تحديث كل شيء.
 updateAirDensity(); // Calculate initial density based on default temp/pressure
 updateEngineUI();
+initTheme(); // Initialize the theme after other UI elements
 updateControlSurfacesFromSliders(); // ضبط أسطح التحكم على الوضع الأولي (0)
 initCollapsibleFieldsets(); // Initialize the new collapsible feature
 animate();

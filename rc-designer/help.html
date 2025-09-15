@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مركز المساعدة - مصمم الطائرات</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <!-- FIX: Correct path to the main stylesheet -->
+    <link rel="stylesheet" href="../style.css">
+    <style>
+        html {
+            scroll-behavior: smooth;
+        }
+        /* Custom styles for the help page */
+        .content-card h2 {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 2.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #0056b3;
+            color: #0056b3;
+        }
+        .content-card h3 {
+            margin-top: 2rem;
+            color: #333;
+        }
+        .content-card ul, .content-card ol {
+            padding-right: 20px;
+        }
+        .content-card li {
+            margin-bottom: 12px;
+            line-height: 1.7;
+        }
+        .content-card code {
+            background-color: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            color: #c7254e;
+        }
+        .navigation-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 25px;
+            background-color: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .back-button {
+            text-decoration: none;
+            color: #0056b3;
+            font-weight: bold;
+            font-size: 1.1em;
+            transition: color 0.3s ease;
+        }
+        .back-button:hover {
+            color: #007bff;
+        }
+        /* New styles for help images */
+        .help-image {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin: 1.5rem auto;
+            display: block;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border: 1px solid #ddd;
+        }
+        /* Print-specific styles */
+        @media print {
+            body {
+                font-family: 'Times New Roman', Times, serif;
+                color: #000;
+            }
+            .navigation-header,
+            footer,
+            .back-button {
+                display: none;
+            }
+            main {
+                width: 100%;
+                max-width: 100%;
+                padding: 0;
+                margin: 0;
+            }
+            .content-card {
+                box-shadow: none;
+                border: none;
+                padding: 0;
+            }
+            .help-image {
+                page-break-inside: avoid;
+            }
+        }
+        /* New styles for social sharing */
+        .share-section {
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 1px solid #eee;
+            text-align: center;
+        }
+        .share-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .share-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.7rem 1.2rem;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.2s ease, opacity 0.2s ease;
+        }
+        .share-btn:hover {
+            transform: translateY(-2px);
+            opacity: 0.9;
+        }
+        .share-btn.twitter { background-color: #1DA1F2; }
+        .share-btn.facebook { background-color: #1877F2; }
+        .share-btn.linkedin { background-color: #0A66C2; }
+        .share-btn.whatsapp { background-color: #25D366; }
+        .share-btn.copy-link { background-color: #6c757d; }
+        .copy-success {
+            margin-top: 1rem;
+            color: #28a745;
+            font-weight: bold;
+        }
+        @media print {
+            .share-section { display: none; }
+        }
+        /* Back to Top Button */
+        .back-to-top {
+            position: fixed;
+            bottom: 20px;
+            /* In RTL, right is the non-scrollbar side */
+            right: 20px; 
+            background-color: #0056b3;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 1.5rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease;
+            z-index: 999;
+        }
+        .back-to-top.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        .back-to-top:hover {
+            background-color: #007bff;
+            transform: scale(1.1);
+        }
+        /* Table of Contents */
+        .toc-container {
+            position: sticky;
+            top: 0; /* Stick to the top of the viewport when scrolling */
+            z-index: 990; /* Ensure it's above content but below other fixed elements like the 'back-to-top' button */
+            background-color: var(--card-bg-color); /* Use theme variable for background */
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2.5rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08); /* Add shadow for depth when sticky */
+        }
+        .toc-container h3 {
+            margin-top: 0;
+            margin-bottom: 1rem;
+            color: var(--text-color); /* Use theme variable */
+            text-align: center;
+        }
+        .toc-container ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 1rem;
+        }
+        .toc-container li a {
+            text-decoration: none;
+            color: var(--primary-hover); /* Use theme variable */
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            display: inline-block; /* ضروري لعمل تأثير الحركة بشكل صحيح */
+            border-radius: 5px;
+            transition: background-color 0.3s, color 0.3s, transform 0.2s ease;
+        }
+        .toc-container li a:hover {
+            background-color: var(--primary-hover); /* Use theme variable */
+            color: #fff;
+            transform: translateY(-2px); /* تأثير الحركة عند التمرير */
+        }
+    </style>
+</head>
+<body>
+
+    <div class="navigation-header">
+        <a href="rc-design.html" class="back-button">&larr; العودة إلى واجهة التصميم</a>
+        <button id="print-help-btn" class="back-button" style="background:none; border:none; cursor:pointer; padding:0;"><i class="fas fa-print"></i> طباعة الصفحة</button>
+    </div>
+
+    <main>
+        <div class="content-card">
+            <h1><i class="fas fa-question-circle"></i> مركز المساعدة لمصمم الطائرات</h1>
+            <p>مرحباً بك في مركز المساعدة! هذا الدليل مصمم لمساعدتك على فهم واستخدام جميع ميزات أداة تصميم طائرات RC لتحقيق أفضل النتائج.</p>
+            
+            <!-- Table of Contents -->
+            <nav class="toc-container">
+                <h3>جدول المحتويات</h3>
+                <ul>
+                    <li><a href="#tour">جولة سريعة في الواجهة</a></li>
+                    <li><a href="#concepts">مفاهيم التصميم الأساسية</a></li>
+                    <li><a href="#calculations">كيف تعمل الحسابات؟</a></li>
+                    <li><a href="#guide">دليل التصميم خطوة بخطوة</a></li>
+                    <li><a href="#export">حفظ، تحميل، وتصدير</a></li>
+                </ul>
+            </nav>
+
+            <h2 id="tour"><i class="fas fa-binoculars"></i> جولة سريعة في الواجهة</h2>
+            <p>تنقسم واجهة التصميم إلى ثلاثة أجزاء رئيسية:</p>
+            <!-- FIX: Replaced placeholder image with inline SVG for reliability -->
+            <svg class="help-image" width="700" height="400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="نظرة عامة على واجهة المستخدم" focusable="false">
+                <title>نظرة عامة على واجهة المستخدم</title>
+                <rect width="100%" height="100%" fill="#3498db"></rect>
+                <text x="50%" y="50%" fill="#ffffff" dy=".3em" font-family="Segoe UI, Tahoma, sans-serif" font-size="28px" text-anchor="middle" direction="rtl">واجهة المستخدم</text>
+            </svg>
+            <ul>
+                <li><strong>لوحة التحكم (على اليمين):</strong> تحتوي على جميع المدخلات والمعلمات التي يمكنك تعديلها. وهي مقسمة إلى أقسام قابلة للطي (مثل الجناح، الذيل، المحرك) لتسهيل التنقل.</li>
+                <li><strong>العارض ثلاثي الأبعاد (على اليسار):</strong> يعرض نموذج الطائرة بشكل فوري بناءً على تعديلاتك. يمكنك التفاعل معه باستخدام الفأرة (الماوس):
+                    <ul>
+                        <li><strong>للدوران (Orbit):</strong> اضغط على الزر الأيسر للفأرة واسحب.</li>
+                        <li><strong>للتحريك (Pan):</strong> اضغط على الزر الأيمن للفأرة واسحب.</li>
+                        <li><strong>للتقريب والتبعيد (Zoom):</strong> استخدم عجلة التمرير.</li>
+                    </ul>
+                </li>
+                <li><strong>قسم النتائج والمخططات (في الأسفل):</strong> يعرض الحسابات الرئيسية (مثل الوزن، هامش الاستقرار) والمخططات البيانية التي تحلل أداء تصميمك.</li>
+            </ul>
+
+            <h2 id="concepts"><i class="fas fa-drafting-compass"></i> مفاهيم التصميم الأساسية</h2>
+            <p>لفهم النتائج التي يعرضها البرنامج، من المهم معرفة بعض المفاهيم الأساسية في تصميم الطائرات:</p>
+            <h3>مركز الجاذبية (CG) والاستقرار</h3>
+            <!-- FIX: Replaced placeholder image with inline SVG for reliability -->
+            <svg class="help-image" width="700" height="350" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="موضع مركز الجاذبية والمركز الهوائي" focusable="false">
+                <title>موضع مركز الجاذبية والمركز الهوائي</title>
+                <rect width="100%" height="100%" fill="#e74c3c"></rect>
+                <text x="50%" y="50%" fill="#ffffff" dy=".3em" font-family="Segoe UI, Tahoma, sans-serif" font-size="24px" text-anchor="middle" direction="rtl">CG (أحمر) أمام AC (أزرق)</text>
+            </svg>
+            <ul>
+                <li><strong>مركز الجاذبية (CG - Center of Gravity):</strong> هو نقطة توازن الطائرة. يقوم البرنامج بحسابه بدقة بناءً على وزن وموضع كل مكون (الجناح، المحرك، البطارية، إلخ). يظهر كـ <strong>كرة حمراء</strong> في العارض.</li>
+                <li><strong>المركز الهوائي (AC - Aerodynamic Center):</strong> هو النقطة التي تتركز فيها قوى الرفع الديناميكية الهوائية. يظهر كـ <strong>كرة زرقاء</strong> في العارض.</li>
+                <li><strong>هامش الاستقرار (Static Margin):</strong> هو المسافة بين مركز الجاذبية (CG) والمركز الهوائي (AC)، معبرًا عنها كنسبة مئوية من وتر الجناح. <strong>هذه هي أهم قيمة للاستقرار!</strong>
+                    <ul>
+                        <li>لتحقيق طائرة مستقرة، يجب أن يكون <strong>مركز الجاذبية (الأحمر) أمام المركز الهوائي (الأزرق)</strong>.</li>
+                        <li><strong>النطاق المثالي:</strong> بين 5% و 15%.</li>
+                        <li><strong>قيمة سالبة:</strong> الطائرة غير مستقرة على الإطلاق وستكون شبه مستحيلة التحكم.</li>
+                        <li><strong>قيمة منخفضة (0-5%):</strong> الطائرة "عصبية" (twitchy) وصعبة التحكم، مناسبة للمحترفين فقط.</li>
+                        <li><strong>قيمة مرتفعة (> 15%):</strong> الطائرة "خاملة" (sluggish) ومستقرة بشكل مفرط، مما يجعلها بطيئة الاستجابة.</li>
+                    </ul>
+                </li>
+            </ul>
+            <h3>أجزاء الطائرة الرئيسية</h3>
+            <ul>
+                <li><strong>الجناح:</strong> هو المسؤول الرئيسي عن توليد قوة الرفع. خصائص مثل <strong>زاوية الديhedral</strong> (رفع أطراف الجناح للأعلى) تزيد من استقرار الدوران (Roll Stability).</li>
+                <li><strong>الذيل:</strong> يوفر الاستقرار والتحكم. المثبت الأفقي يتحكم في الانحدار (Pitch)، والمثبت العمودي يتحكم في الانعراج (Yaw).</li>
+                <li><strong>نظام الدفع:</strong> المحرك والمروحة يولدان قوة الدفع (Thrust) اللازمة للتغلب على السحب ودفع الطائرة إلى الأمام.</li>
+            </ul>
+
+            <h2 id="calculations"><i class="fas fa-calculator"></i> كيف تعمل الحسابات؟</h2>
+            <p>يقوم البرنامج بإجراء حسابات فيزيائية معقدة في الخلفية لتقدير أداء تصميمك:</p>
+            <!-- FIX: Replaced placeholder image with inline SVG for reliability -->
+            <svg class="help-image" width="700" height="300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="مثال على خريطة الضغط" focusable="false">
+                <title>مثال على خريطة الضغط</title>
+                <rect width="100%" height="100%" fill="#8e44ad"></rect>
+                <text x="50%" y="50%" fill="#ffffff" dy=".3em" font-family="Segoe UI, Tahoma, sans-serif" font-size="28px" text-anchor="middle" direction="rtl">خريطة الضغط على الجناح</text>
+            </svg>
+            <ul>
+                <li><strong>حساب الوزن:</strong> يتم حساب وزن كل جزء (جناح، جسم، ذيل) بناءً على أبعاده (الحجم) وكثافة المادة التي اخترتها. الوزن الإجمالي هو مجموع أوزان جميع المكونات.</li>
+                <li><strong>قوى الديناميكا الهوائية:</strong>
+                    <ul>
+                        <li><strong>الرفع (Lift):</strong> يُحسب بناءً على مساحة الجناح، سرعة الهواء، كثافته، وشكل المقطع الهوائي (Airfoil).</li>
+                        <li><strong>السحب (Drag):</strong> هو مقاومة الهواء. يتكون من سحب طفيلي (ناتج عن شكل الجسم) وسحب مستحث (ناتج عن توليد الرفع).</li>
+                        <li><strong>الدفع (Thrust):</strong> يُحسب بناءً على مواصفات المروحة (القطر والخطوة) وسرعة دورانها (RPM).</li>
+                    </ul>
+                </li>
+                <li><strong>حساب الاستقرار:</strong> يقوم البرنامج بحساب موضع المركز الهوائي (AC) بناءً على هندسة الجناح والذيل، ثم يقارنه بموضع مركز الجاذبية (CG) لحساب هامش الاستقرار.</li>
+            </ul>
+
+            <h2 id="guide"><i class="fas fa-tasks"></i> دليل التصميم خطوة بخطوة</h2>
+            <p>اتبع هذه الخطوات لإنشاء تصميم متوازن:</p>
+            <!-- FIX: Replaced placeholder image with inline SVG for reliability -->
+            <svg class="help-image" width="700" height="350" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ضبط هامش الاستقرار" focusable="false">
+                <title>ضبط هامش الاستقرار</title>
+                <rect width="100%" height="100%" fill="#2ecc71"></rect>
+                <text x="50%" y="50%" fill="#ffffff" dy=".3em" font-family="Segoe UI, Tahoma, sans-serif" font-size="24px" text-anchor="middle" direction="rtl">تحريك البطارية لضبط الاستقرار</text>
+            </svg>
+            <ol>
+                <li><strong>حدد أهدافك:</strong> هل تريد طائرة تدريب بطيئة أم طائرة رياضية سريعة؟ استخدم قسم "اقتراحات التصميم" لوضع قيم أولية لـ "نسبة الدفع/الوزن" و "تحميل الجناح".</li>
+                <li><strong>صمم الهيكل الأساسي:</strong> ابدأ بتحديد أبعاد الجناح والجسم الرئيسية.</li>
+                <li><strong>أضف المكونات الرئيسية:</strong> اختر المحرك والبطارية (أو خزان الوقود) وحدد مواضعها الأولية. هذه المكونات لها التأثير الأكبر على الوزن ومركز الجاذبية.</li>
+                <li><strong>تحقق من هامش الاستقرار:</strong> انظر إلى قيمة "هامش الاستقرار" في قسم النتائج. هذا هو أهم فحص!
+                    <ul>
+                        <li>إذا كانت القيمة منخفضة جدًا أو سالبة، قم بـ <strong>تحريك الأوزان الثقيلة (مثل البطارية) إلى الأمام</strong>، أو قم بزيادة حجم الذيل أو إطالة المسافة بين الجناح والذيل.</li>
+                        <li>إذا كانت القيمة مرتفعة جدًا، قم بـ <strong>تحريك الأوزان إلى الخلف</strong>.</li>
+                    </ul>
+                </li>
+                <li><strong>اضبط أداء الطيران:</strong>
+                    <ul>
+                        <li>إذا كانت "نسبة الدفع إلى الوزن" (TWR) منخفضة، اختر محركًا أقوى أو مروحة أكثر كفاءة.</li>
+                        <li>إذا كان "تحميل الجناح" مرتفعًا جدًا، قم بزيادة مساحة الجناح لجعل الطائرة أبطأ وأسهل في الهبوط.</li>
+                    </ul>
+                </li>
+                <li><strong>كرر العملية:</strong> التصميم هو عملية تكرارية. استمر في إجراء تعديلات صغيرة على المواضع والأبعاد حتى تصل إلى تصميم يحقق التوازن المطلوب بين الاستقرار والأداء.</li>
+            </ol>
+
+            <h2 id="export"><i class="fas fa-file-export"></i> حفظ، تحميل، وتصدير التصاميم</h2>
+            <p>يمكنك حفظ عملك والعودة إليه لاحقًا أو مشاركته مع الآخرين:</p>
+            <!-- FIX: Replaced placeholder image with inline SVG for reliability -->
+            <svg class="help-image" width="700" height="250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="خيارات الحفظ والتصدير" focusable="false">
+                <title>خيارات الحفظ والتصدير</title>
+                <rect width="100%" height="100%" fill="#f39c12"></rect>
+                <text x="50%" y="50%" fill="#ffffff" dy=".3em" font-family="Segoe UI, Tahoma, sans-serif" font-size="28px" text-anchor="middle" direction="rtl">أزرار الحفظ والتصدير</text>
+            </svg>
+            <ul>
+                <li><strong>حفظ التصميم:</strong> استخدم زر "حفظ كملف" في قسم "حفظ وتصدير". سيؤدي هذا إلى تنزيل ملف <code>.json</code> يحتوي على جميع معلمات تصميمك الحالي.</li>
+                <li><strong>تحميل تصميم:</strong> استخدم زر "تحميل ملف" لتحديد ملف <code>.json</code> قمت بحفظه مسبقًا. سيتم تطبيق جميع الإعدادات تلقائيًا على الواجهة.</li>
+                <li><strong>تصدير للطباعة ثلاثية الأبعاد (STL/OBJ):</strong> إذا كنت ترغب في طباعة نموذجك أو استخدامه في برامج تصميم أخرى، يمكنك تصديره كملف <code>.stl</code> (شائع للطباعة ثلاثية الأبعاد) أو <code>.obj</code> (شائع لبرامج النمذجة).</li>
+            </ul>
+
+            <!-- Social Share Section -->
+            <section class="share-section">
+                <h3>هل وجدت هذا الدليل مفيداً؟ شاركه!</h3>
+                <div class="share-buttons">
+                    <a href="#" class="share-btn twitter" data-network="twitter" target="_blank" rel="noopener noreferrer" aria-label="شارك على تويتر"><i class="fa-brands fa-x-twitter"></i> Twitter</a>
+                    <a href="#" class="share-btn facebook" data-network="facebook" target="_blank" rel="noopener noreferrer" aria-label="شارك على فيسبوك"><i class="fa-brands fa-facebook-f"></i> Facebook</a>
+                    <a href="#" class="share-btn linkedin" data-network="linkedin" target="_blank" rel="noopener noreferrer" aria-label="شارك على لينكد إن"><i class="fa-brands fa-linkedin-in"></i> LinkedIn</a>
+                    <a href="#" class="share-btn whatsapp" data-network="whatsapp" target="_blank" rel="noopener noreferrer" aria-label="شارك على واتساب"><i class="fa-brands fa-whatsapp"></i> WhatsApp</a>
+                    <button class="share-btn copy-link" id="copy-link-btn" aria-label="نسخ الرابط"><i class="fas fa-link"></i> نسخ الرابط</button>
+                </div>
+                <p id="copy-success-msg" class="copy-success" style="display: none;">تم نسخ الرابط بنجاح!</p>
+            </section>
+
+        </div>
+    </main>
+
+    <button class="back-to-top" id="back-to-top-btn" title="العودة إلى الأعلى" aria-label="العودة إلى الأعلى"><i class="fas fa-arrow-up" aria-hidden="true"></i></button>
+
+    <footer>
+        <div class="social-icons">
+            <a href="#" title="تابعنا على تويتر" target="_blank" rel="noopener noreferrer" aria-label="تابعنا على تويتر"><i class="fa-brands fa-x-twitter" aria-hidden="true"></i></a>
+            <a href="#" title="تابعنا على لينكد إن" target="_blank" rel="noopener noreferrer" aria-label="تابعنا على لينكد إن"><i class="fa-brands fa-linkedin-in" aria-hidden="true"></i></a>
+            <a href="https://github.com/legionr4" title="شاهد مشاريعنا على جيت هاب" target="_blank" rel="noopener noreferrer" aria-label="شاهد مشاريعنا على جيت هاب"><i class="fa-brands fa-github"></i></a>
+        </div>
+        <div class="footer-links">
+            <a href="privacy-policy.html">سياسة الخصوصية</a>
+            <a href="terms-of-use.html">شروط الاستخدام</a>
+        </div>
+        <p class="copyright">جميع الحقوق محفوظة &copy; <span id="copyright-year"></span></p>
+    </footer>
+
+    <script>
+        document.getElementById('print-help-btn').addEventListener('click', () => {
+            window.print();
+        });
+
+        /**
+         * Initializes the social share buttons and copy link functionality.
+         */
+        function initSharing() {
+            const pageUrl = window.location.href;
+            const pageTitle = document.title;
+
+            const shareLinks = {
+                twitter: `https://twitter.com/intent/tweet?url=${encodeURIComponent(pageUrl)}&text=${encodeURIComponent(pageTitle)}`,
+                facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pageUrl)}`,
+                linkedin: `https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(pageUrl)}&title=${encodeURIComponent(pageTitle)}`,
+                whatsapp: `https://api.whatsapp.com/send?text=${encodeURIComponent(pageTitle + " " + pageUrl)}`
+            };
+
+            document.querySelectorAll('.share-btn[data-network]').forEach(button => {
+                const network = button.dataset.network;
+                if (shareLinks[network]) {
+                    button.href = shareLinks[network];
+                }
+            });
+
+            const copyBtn = document.getElementById('copy-link-btn');
+            const copySuccessMsg = document.getElementById('copy-success-msg');
+
+            if (copyBtn && copySuccessMsg) {
+                copyBtn.addEventListener('click', () => {
+                    navigator.clipboard.writeText(pageUrl).then(() => {
+                        copySuccessMsg.style.display = 'block';
+                        copyBtn.innerHTML = '<i class="fas fa-check"></i> تم النسخ';
+                        copyBtn.disabled = true;
+
+                        setTimeout(() => {
+                            copySuccessMsg.style.display = 'none';
+                            copyBtn.innerHTML = '<i class="fas fa-link"></i> نسخ الرابط';
+                            copyBtn.disabled = false;
+                        }, 2500);
+                    }).catch(err => {
+                        console.error('Failed to copy link: ', err);
+                        alert('فشل نسخ الرابط، يرجى نسخه يدوياً.');
+                    });
+                });
+            }
+        }
+        initSharing();
+
+        /**
+         * Initializes the Back to Top button functionality.
+         */
+        function initBackToTop() {
+            const backToTopBtn = document.getElementById('back-to-top-btn');
+            if (!backToTopBtn) return;
+
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 300) { // Show button after scrolling 300px
+                    backToTopBtn.classList.add('show');
+                } else {
+                    backToTopBtn.classList.remove('show');
+                }
+            });
+
+            backToTopBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+        }
+        initBackToTop();
+
+        /**
+         * Updates the copyright year in the footer.
+         */
+        function updateCopyrightYear() {
+            const yearSpan = document.getElementById('copyright-year');
+            if (yearSpan) {
+                yearSpan.textContent = new Date().getFullYear();
+            }
+        }
+        updateCopyrightYear();
+    </script>
+</body>
+</html>

@@ -7,6 +7,7 @@
     --primary-hover: #0056b3;
     --primary-color-faded: rgba(0, 123, 255, 0.1);
     --success-color: #28a745;
+    --success-color-faded: rgba(40, 167, 69, 0.1);
     --success-hover: #218838;
     --danger-color: #dc3545;
     --danger-hover: #c82333;
@@ -33,6 +34,7 @@ body.dark-mode {
     /* --- Dark Theme Overrides --- */
     --body-bg: #121212; /* Near-black for a modern feel */
     --primary-color-faded: rgba(0, 123, 255, 0.2);
+    --success-color-faded: rgba(40, 167, 69, 0.2);
     --header-bg-color: #1e1e1e;
     --card-bg-color: #1e1e1e; /* Slightly lighter than body for depth */
     --footer-bg-color: #1c1c1c;
@@ -527,6 +529,10 @@ footer {
         display: block; /* Show hamburger on small screens */
     }
 
+    .login-container-mobile {
+        display: block; /* FIX: إظهار حاوية تسجيل الدخول فقط في قائمة الجوال */
+    }
+
     .header-actions {
         gap: 0.5rem; /* Reduce gap on mobile */
     }
@@ -539,6 +545,29 @@ footer {
         display: none; /* Hide desktop login on mobile */
     }
 
+    /* --- تحسينات إضافية للهواتف --- */
+    header {
+        padding: 0.8rem 1rem; /* تقليل الحشوة في الهيدر */
+    }
+
+    main {
+        padding: 1.5rem 1rem; /* تقليل الحشوة في المحتوى الرئيسي */
+    }
+
+    .site-title {
+        font-size: 1.5rem; /* تصغير حجم عنوان الموقع */
+    }
+
+    .hero-section {
+        padding: 2rem 1.5rem; /* تقليل الحشوة في القسم الرئيسي */
+    }
+
+    .section-title {
+        font-size: 1.8rem; /* تصغير حجم عناوين الأقسام */
+    }
+
+    .programs-grid { gap: 1.5rem; }
+    .featured-article-link { font-size: 1rem; padding: 1rem 1.25rem; }
 }
 
 /* ==========================================================================
