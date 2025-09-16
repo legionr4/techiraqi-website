@@ -1438,9 +1438,16 @@ function updatePlaneModel() {
         rightWingtip.rotation.x = wingtipAngle;
         rightWingtip.rotation.y = wingtipTwistAngle; // Apply twist/toe angle
 
-        const leftWingtip = rightWingtip.clone();
-        // Correctly mirror the twist angle for the left winglet.
-        // The cant angle (rotation.x) is handled correctly by the parent's negative scale.
+        // --- FINAL FIX: Create a mirrored geometry for the left wingtip and mirror its position ---
+        const leftWingtipGeom = wingtipGeometry.clone().applyMatrix4(new THREE.Matrix4().makeScale(1, 1, -1));
+        leftWingtipGeom.computeVertexNormals(); // Recompute normals for correct lighting
+        const leftWingtip = new THREE.Mesh(leftWingtipGeom, wingtipMaterial);
+        
+        // Mirror the position on the Z-axis relative to the wing's local space
+        leftWingtip.position.set(rightWingtip.position.x, rightWingtip.position.y, -rightWingtip.position.z);
+        // Apply mirrored rotations for cant and twist
+        leftWingtip.rotation.x = wingtipAngle;
+        leftWingtip.rotation.x = -wingtipAngle; // FIX: Mirror the cant angle
         leftWingtip.rotation.y = -wingtipTwistAngle;
 
         rightWing.add(rightWingtip);
