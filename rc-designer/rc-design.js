@@ -701,7 +701,7 @@ const propTipSpeedResultEl = document.getElementById('prop-tip-speed-result');
 
 const planeParams = {}; // Object to hold cached plane parameters for the animation loop
 
-let liftChart, dragChart, thrustChart, propEfficiencyChart, ldRatioChart, stabilityChart, pitchingMomentChart, powerChart, rocChart, liftCurveChart, weightDistChart, costDistChart;
+let liftChart, dragChart, thrustChart, propEfficiencyChart, ldRatioChart, stabilityChart, pitchingMomentChart, powerChart, rocChart, liftCurveChart, weightDistChart, costDistChart, dragPolarChart;
 let isPropSpinning = false; // متغير لتتبع حالة دوران المروحة
 let propParticleSystem, propParticleCount = 400; // لتدفق هواء المروحة (تم تقليل العدد)
 let wingAirflowParticleSystem, wingAirflowParticleCount = 2500; // لتدفق الهواء العام
@@ -4303,6 +4303,7 @@ function initCharts() {
     const rocChartCanvas = document.getElementById('roc-chart');
     const liftCurveChartCanvas = document.getElementById('lift-curve-chart');
     const weightDistChartCanvas = document.getElementById('weight-dist-chart');
+    const dragPolarChartCanvas = document.getElementById('drag-polar-chart');
     const costDistChartCanvas = document.getElementById('cost-dist-chart');
 
 
@@ -4706,6 +4707,48 @@ function initCharts() {
         },
     });
 
+    // New Drag Polar Chart (Cl vs Cd)
+    if (dragPolarChartCanvas) {
+        dragPolarChart = new Chart(dragPolarChartCanvas.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: [], // Cd values will be on the x-axis
+                datasets: [{
+                    label: 'معامل الرفع (Cl)',
+                    data: [], // Data will be in {x: Cd, y: Cl} format
+                    borderColor: 'rgba(142, 68, 173, 1)', // Purple
+                    backgroundColor: 'rgba(142, 68, 173, 0.1)',
+                    fill: false,
+                    tension: 0.2,
+                    showLine: true
+                }]
+            },
+            options: {
+                ...commonOptions,
+                scales: {
+                    x: {
+                        type: 'linear',
+                        position: 'bottom',
+                        title: {
+                            display: true,
+                            text: 'معامل السحب (Cd)'
+                        },
+                        beginAtZero: true
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'معامل الرفع (Cl)'
+                        }
+                        // Cl can be negative, so don't begin at zero
+                    }
+                },
+                plugins: {
+                    legend: { display: true }
+                }
+            }
+        });
+    }
     // New Weight Distribution Chart
     if (weightDistChartCanvas) {
         weightDistChart = new Chart(weightDistChartCanvas.getContext('2d'), {
@@ -4927,6 +4970,7 @@ function updateCharts() {
     const aoaPoints = [];
     const ldRatioPoints = [];
     const clPoints = []; // For the new Lift Curve chart
+    const dragPolarPoints = []; // For the new Drag Polar chart
     let maxLdRatio = -1;
     let bestAoa = 0;
 
@@ -4949,6 +4993,9 @@ function updateCharts() {
             maxLdRatio = currentLd;
             bestAoa = aoa;
         }
+
+        // Add point for Drag Polar chart
+        dragPolarPoints.push({ x: cd, y: cl });
     }
 
     ldRatioChart.data.labels = aoaPoints;
@@ -4961,6 +5008,12 @@ function updateCharts() {
     liftCurveChart.data.labels = aoaPoints;
     liftCurveChart.data.datasets[0].data = clPoints;
     liftCurveChart.update();
+
+    // Update the new Drag Polar chart
+    if (dragPolarChart) {
+        dragPolarChart.data.datasets[0].data = dragPolarPoints;
+        dragPolarChart.update();
+    }
 
     // --- New Static Margin vs CG Chart Calculation ---
     const cgPoints = [];
@@ -5224,6 +5277,7 @@ function updateUnitLabels() {
     });
 }
 
+
 /**
  * Initializes the theme toggle (dark/light mode) functionality for the designer page.
  */
@@ -5267,7 +5321,7 @@ function initTheme() {
         const chartTextColor = isDark ? 'rgba(230, 230, 230, 0.8)' : 'rgba(54, 54, 54, 1)';
         const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
 
-        [liftChart, dragChart, thrustChart, propEfficiencyChart, ldRatioChart, stabilityChart, pitchingMomentChart, powerChart, rocChart, liftCurveChart, weightDistChart, costDistChart].forEach(chart => {
+        [liftChart, dragChart, thrustChart, propEfficiencyChart, ldRatioChart, stabilityChart, pitchingMomentChart, powerChart, rocChart, liftCurveChart, dragPolarChart, weightDistChart, costDistChart].forEach(chart => {
             if (chart) {
                 // FIX: Check if the chart has scales before trying to update them (e.g., doughnut charts don't)
                 if (chart.options.scales && chart.options.scales.x && chart.options.scales.y) {
@@ -6798,6 +6852,7 @@ function setupChartToggles() {
         { checkbox: togglePitchingMomentChart, card: document.getElementById('pitching-moment-chart-card') },
         { checkbox: toggleYawMomentChart, card: document.getElementById('yaw-moment-chart-card') },
         { checkbox: togglePowerChart, card: document.getElementById('power-chart-card') },
+        { checkbox: document.getElementById('toggle-drag-polar-chart'), card: document.getElementById('drag-polar-chart-card') },
         { checkbox: toggleRocChart, card: document.getElementById('roc-chart-card') },
         { checkbox: toggleLiftCurveChart, card: document.getElementById('lift-curve-chart-card') },
         { checkbox: toggleWeightDistChart, card: document.getElementById('weight-dist-chart-card') },
@@ -6965,6 +7020,49 @@ function initSaveLoad() {
     });
 }
 
+/**
+ * Initializes the master toggle button for helper objects (axes, CG/AC spheres).
+ */
+function initHelpersToggle() {
+    const toggleHelpersBtn = document.getElementById('toggle-helpers-btn');
+    if (!toggleHelpersBtn) return;
+
+    // Get the individual checkboxes to sync with
+    const showAxesCheckbox = document.getElementById('show-axes-checkbox');
+    const showCgCheckbox = document.getElementById('show-cg');
+    const showAcCheckbox = document.getElementById('show-ac');
+
+    let helpersVisible = true; // Initial state
+
+    const setIcon = (visible) => {
+        const icon = toggleHelpersBtn.querySelector('i');
+        if (visible) {
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+            toggleHelpersBtn.title = "إخفاء العناصر المساعدة";
+        } else {
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+            toggleHelpersBtn.title = "إظهار العناصر المساعدة";
+        }
+    };
+
+    toggleHelpersBtn.addEventListener('click', () => {
+        helpersVisible = !helpersVisible; // Toggle the master state
+
+        // Update the individual checkboxes to match the master state
+        showAxesCheckbox.checked = helpersVisible;
+        showCgCheckbox.checked = helpersVisible;
+        showAcCheckbox.checked = helpersVisible;
+
+        setIcon(helpersVisible);
+
+        // Trigger a full update, which will read the checkboxes and update the 3D model
+        updateAll();
+    });
+
+    setIcon(helpersVisible); // Set initial icon state
+}
 /**
  * Initializes the simulation RPM slider based on the main RPM input.
  */

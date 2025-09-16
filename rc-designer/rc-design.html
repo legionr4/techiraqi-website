@@ -84,6 +84,29 @@
             box-shadow: var(--container-shadow);
         }
 
+        /* FIX: Style for action buttons inside the 3D viewer */
+        .viewer-action-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            z-index: 100;
+            background-color: rgba(255, 255, 255, 0.7);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            border-radius: 50%;
+            width: 15px; /* FIX: Reduce button diameter */
+            height: 15px;/*FIX: Reduce button diameter */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+            font-size: 0.9rem; /* FIX: Adjust icon size */
+        }
+        .viewer-action-btn:hover {
+            background-color: rgba(255, 255, 255, 1);
+        }
+
         #viewer-canvas {
             width: 100%;
             height: 100%;
@@ -675,9 +698,6 @@
             <button id="theme-toggle-btn" class="theme-toggle-button back-button" title="تفعيل الوضع الليلي"
                 style="background: none; border: none; cursor: pointer;">
                 <i class="fas fa-moon"></i>
-            </button>
-            <button id="toggle-helpers-btn" class="back-button" title="إخفاء العناصر المساعدة" style="background: none; border: none; cursor: pointer;">
-                <i class="fas fa-eye"></i>
             </button>
         </div>
     </div>
@@ -1978,6 +1998,10 @@
                             <input type="checkbox" id="toggle-lift-curve-chart">
                         </div>
                         <div class="input-group">
+                            <label for="toggle-drag-polar-chart">إظهار مخطط السحب القطبي (Drag Polar)</label>
+                            <input type="checkbox" id="toggle-drag-polar-chart">
+                        </div>
+                        <div class="input-group">
                             <label for="toggle-weight-dist-chart">إظهار مخطط توزيع الوزن</label>
                             <input type="checkbox" id="toggle-weight-dist-chart">
                         </div>
@@ -2323,6 +2347,9 @@
         </div>
         <div class="viewer">
             <canvas id="viewer-canvas"></canvas>
+            <button id="toggle-helpers-btn" class="viewer-action-btn" title="إخفاء العناصر المساعدة">
+                <i class="fas fa-eye"></i>
+            </button>
         </div>
     </div>
 
@@ -2541,6 +2568,13 @@
             <h3>منحنى الرفع (معامل الرفع مقابل زاوية الهجوم)</h3>
             <div class="chart-wrapper">
                 <canvas id="lift-curve-chart"></canvas>
+            </div>
+        </div>
+        <!-- New Drag Polar Chart -->
+        <div class="chart-card" id="drag-polar-chart-card" style="display: none;">
+            <h3>منحنى السحب القطبي (Drag Polar - Cl vs Cd)</h3>
+            <div class="chart-wrapper">
+                <canvas id="drag-polar-chart"></canvas>
             </div>
         </div>
         <div class="chart-card doughnut-chart" id="weight-dist-chart-card">
