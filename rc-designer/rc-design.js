@@ -2,7 +2,7 @@
 const canvas = document.getElementById('viewer-canvas');
 const viewerDiv = document.querySelector('.viewer'); // الحصول على الحاوية الرئيسية للعرض
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xeeeeee);
+scene.background = new THREE.Color(0xd1e9f9); // FIX: Change default background to sky blue
 const camera = new THREE.PerspectiveCamera(75, viewerDiv.clientWidth / viewerDiv.clientHeight, 0.1, 1000);
 const clock = new THREE.Clock(); // لتتبع الوقت بين الإطارات
 camera.position.set(1.5, 1, 2);
@@ -5228,8 +5228,11 @@ function updateUnitLabels() {
  * Initializes the theme toggle (dark/light mode) functionality for the designer page.
  */
 function initTheme() {
-    const themeToggleBtn = document.getElementById('theme-toggle-btn');
+    const themeToggleBtn = document.getElementById('theme-toggle-btn'); // This is in the header
     if (!themeToggleBtn) return;
+
+    // FIX: Get the background color input to keep it in sync with the theme
+    const backgroundColorInput = document.getElementById('background-color');
 
     const setIcon = (isDark) => {
         const icon = themeToggleBtn.querySelector('i');
@@ -5249,8 +5252,16 @@ function initTheme() {
         document.body.classList.toggle('dark-mode', isDark);
         setIcon(isDark);
 
+        // FIX: Define the correct background color for the theme
+        const themeBgColor = isDark ? '#121212' : '#d1e9f9'; // FIX: Change default background to sky blue
+
         // Update Three.js scene background
-        scene.background.set(isDark ? 0x121212 : 0xeeeeee);
+        scene.background.set(themeBgColor);
+
+        // FIX: Update the color picker's value to match the theme, preventing flashes.
+        if (backgroundColorInput) {
+            backgroundColorInput.value = themeBgColor;
+        }
 
         // Update chart colors
         const chartTextColor = isDark ? 'rgba(230, 230, 230, 0.8)' : 'rgba(54, 54, 54, 1)';
@@ -5465,15 +5476,13 @@ togglePropSpinBtn.addEventListener('click', () => {
     isPropSpinning = !isPropSpinning;
     if (isPropSpinning) {
         updatePlaneParameters(); // Cache the parameters right before starting the animation
-        togglePropSpinBtn.textContent = 'إيقاف';
-        togglePropSpinBtn.style.backgroundColor = '#ffc107'; // لون مميز للإشارة إلى التشغيل
-        togglePropSpinBtn.style.color = '#000';
+        togglePropSpinBtn.textContent = 'إيقاف'; // FIX: Remove inline style changes
+        togglePropSpinBtn.classList.add('active');
         // تشغيل الصوت باستخدام Web Audio API
         playEngineSound();
     } else {
-        togglePropSpinBtn.textContent = 'تشغيل';
-        togglePropSpinBtn.style.backgroundColor = '#e9ecef'; // اللون الافتراضي
-        togglePropSpinBtn.style.color = '#333';
+        togglePropSpinBtn.textContent = 'تشغيل'; // FIX: Remove inline style changes
+        togglePropSpinBtn.classList.remove('active');
         // إيقاف الصوت
         stopEngineSound();
     }
@@ -5484,12 +5493,12 @@ toggleSoundBtn.addEventListener('click', () => {
     isMuted = !isMuted;
     if (isMuted) {
         if (gainNode) gainNode.gain.setValueAtTime(0, audioContext.currentTime);
-        toggleSoundBtn.textContent = 'تشغيل الصوت';
-        toggleSoundBtn.style.backgroundColor = '#ffc107';
+        toggleSoundBtn.textContent = 'تشغيل الصوت'; // FIX: Remove inline style changes
+        toggleSoundBtn.classList.add('active');
     } else {
         if (gainNode) gainNode.gain.setValueAtTime(0.5, audioContext.currentTime); // إعادة الصوت إلى النصف عند إلغاء الكتم
-        toggleSoundBtn.textContent = 'كتم الصوت';
-        toggleSoundBtn.style.backgroundColor = '#e9ecef';
+        toggleSoundBtn.textContent = 'كتم الصوت'; // FIX: Remove inline style changes
+        toggleSoundBtn.classList.remove('active');
     }
 });
 // ربط الأحداث لأشرطة التحكم الجديدة
@@ -6733,6 +6742,49 @@ function initCollapsibleFieldsets() {
 }
 
 /**
+ * Initializes the master toggle button for helper objects (axes, CG/AC spheres).
+ */
+function initHelpersToggle() {
+    const toggleHelpersBtn = document.getElementById('toggle-helpers-btn');
+    if (!toggleHelpersBtn) return;
+
+    // Get the individual checkboxes to sync with
+    const showAxesCheckbox = document.getElementById('show-axes-checkbox');
+    const showCgCheckbox = document.getElementById('show-cg');
+    const showAcCheckbox = document.getElementById('show-ac');
+
+    let helpersVisible = true; // Initial state
+
+    const setIcon = (visible) => {
+        const icon = toggleHelpersBtn.querySelector('i');
+        if (visible) {
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+            toggleHelpersBtn.title = "إخفاء العناصر المساعدة";
+        } else {
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+            toggleHelpersBtn.title = "إظهار العناصر المساعدة";
+        }
+    };
+
+    toggleHelpersBtn.addEventListener('click', () => {
+        helpersVisible = !helpersVisible; // Toggle the master state
+
+        // Update the individual checkboxes to match the master state
+        showAxesCheckbox.checked = helpersVisible;
+        showCgCheckbox.checked = helpersVisible;
+        showAcCheckbox.checked = helpersVisible;
+
+        setIcon(helpersVisible);
+
+        // Trigger a full update, which will read the checkboxes and update the 3D model
+        updateAll();
+    });
+
+    setIcon(helpersVisible); // Set initial icon state
+}
+/**
  * Initializes the chart toggle checkbox functionality.
  */
 function setupChartToggles() {
@@ -6991,6 +7043,7 @@ initCharts();
 initSaveLoad();
 initExport(); // تهيئة أزرار التصدير الجديدة
 setupChartToggles();
+initHelpersToggle(); // تهيئة زر تبديل العناصر المساعدة
 initResetButton(); // تهيئة زر إعادة التعيين الجديد
 initRpmSlider(); // تهيئة شريط التحكم الجديد عند التحميل
 updateUnitLabels();

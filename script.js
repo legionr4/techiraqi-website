@@ -214,9 +214,10 @@ document.addEventListener('DOMContentLoaded', () => {
      * Initializes the live search functionality on the blog page.
      */
     const initBlogSearch = () => {
+        // FIX: Implement blog search functionality
         const searchInput = document.getElementById('blog-search-input');
         const searchForm = document.getElementById('blog-search-form');
-        const articles = document.querySelectorAll('.article-card');
+        const articles = document.querySelectorAll('.blog-grid .article-card');
         const noResultsMessage = document.getElementById('no-results-message');
 
         // Guard clause: only run if all required elements are on the page.
@@ -224,29 +225,24 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Prevent the form from submitting and reloading the page.
-        searchForm.addEventListener('submit', (e) => e.preventDefault());
-
         const filterArticles = () => {
             const searchTerm = searchInput.value.toLowerCase().trim();
             let visibleCount = 0;
 
             articles.forEach(article => {
-                const title = article.querySelector('h3 a')?.textContent.toLowerCase() || '';
-                const excerpt = article.querySelector('.article-excerpt')?.textContent.toLowerCase() || '';
+                const title = article.querySelector('h3')?.textContent.toLowerCase() || '';
+                const excerpt = article.querySelector('p')?.textContent.toLowerCase() || '';
                 
                 // Check if the search term is in the title or excerpt
                 const isVisible = title.includes(searchTerm) || excerpt.includes(searchTerm);
 
                 // Show or hide the article card based on the search result
-                article.style.display = isVisible ? '' : 'none';
+                article.style.display = isVisible ? 'flex' : 'none';
 
                 if (isVisible) {
                     visibleCount++;
                 }
             });
-
-            // Show or hide the "no results" message
             noResultsMessage.style.display = visibleCount === 0 ? 'block' : 'none';
         };
 

@@ -134,7 +134,7 @@ main {
 }
 
 #main-nav a:hover {
-    color: var(--badge-color); /* Use badge color for hover consistency */
+    color: var(--badge-color); /* FIX: Use badge color for hover consistency */
 }
 
 /* Special hover effect for the badge itself */
@@ -142,6 +142,18 @@ main {
     background-color: #fff;
     color: var(--badge-color);
     border-color: var(--badge-color);
+}
+
+/* FIX: Add styles for new navigation icons */
+.nav-icon {
+    margin-left: 8px; /* RTL: margin on the left */
+    width: 20px; /* To align text nicely */
+    text-align: center;
+    color: var(--primary-color);
+    transition: color 0.3s ease; /* FIX: Add transition for smooth color change */
+}
+#main-nav a:hover .nav-icon {
+    color: var(--badge-color); /* Match the text hover color */
 }
 
 .new-badge {
@@ -638,6 +650,42 @@ footer {
 .info-group span:last-child {
     font-weight: bold;
     color: var(--primary-color);
+}
+
+/* ==========================================================================
+   6. Blog Search
+   ========================================================================== */
+
+.search-container {
+    position: relative;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+#blog-search-input {
+    width: 100%;
+    padding: 1rem 1.5rem;
+    padding-right: 3.5rem; /* RTL: space for the icon on the right */
+    border: 1px solid var(--border-color);
+    border-radius: 50px; /* Pill shape */
+    font-size: 1.1rem;
+    background-color: var(--body-bg);
+    color: var(--text-color);
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+#blog-search-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 4px var(--primary-color-faded);
+}
+
+.search-icon {
+    position: absolute;
+    top: 50%;
+    right: 1.5rem; /* RTL: position on the right */
+    transform: translateY(-50%);
+    color: var(--text-muted);
 }
 
 /* ==========================================================================

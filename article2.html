@@ -72,6 +72,16 @@
         .share-btn.linkedin:hover { background-color: #0A66C2; }
         .share-btn.whatsapp:hover { background-color: #25D366; }
         .share-btn.copy-link:hover { background-color: #6c757d; }
+        /* FIX: Add styles for article meta info */
+        .article-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem 1.5rem; /* row-gap column-gap */
+            justify-content: center;
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+            font-size: 0.9rem;
+        }
     </style>
 </head>
 <body>
@@ -87,10 +97,14 @@
             <i class="fas fa-bars"></i>
         </button>
         <nav id="main-nav">
-            <a href="index.html">الرئيسية</a>
-            <a href="rc-designer/rc-design.html">التصميم</a>
-            <a href="blog.html" class="active">المدونة</a>
-            <a href="contact.html">اتصل بنا</a>
+            <a href="index.html"><i class="fas fa-home nav-icon" aria-hidden="true"></i> الرئيسية</a>
+            <a href="rc-designer/rc-design.html"><i class="fas fa-drafting-compass nav-icon" aria-hidden="true"></i> التصميم</a>
+            <a href="audio-translator.html">
+                <i class="fas fa-language nav-icon" aria-hidden="true"></i> مترجم الصوت
+                <span class="nav-tooltip">ترجمة وتسجيل الصوت مباشرة</span>
+            </a>
+            <a href="blog.html" class="active"><i class="fas fa-blog nav-icon" aria-hidden="true"></i> المدونة</a>
+            <a href="contact.html"><i class="fas fa-envelope nav-icon" aria-hidden="true"></i> اتصل بنا</a>
             <div class="login-container-mobile" data-netlify-identity-button></div>
         </nav>
         <div class="header-actions">
@@ -105,7 +119,11 @@
     <main>
         <article class="article-content content-card" data-aos="fade-up">
             <h1 class="article-title">مستقبل البرامج الحاسوبية مع الذكاء الاصطناعي</h1>
-            <p class="article-meta">نُشر في: 20 مايو 2024 | بواسطة: فريق Tech_Iraqi</p>
+            <div class="article-meta">
+                <span><i class="fas fa-calendar-alt"></i> نُشر في: 20 مايو 2025</span>
+                <span><i class="fas fa-user"></i> بواسطة: فريق Tech_Iraqi</span>
+                <span><i class="fas fa-eye"></i> 1,482 مشاهدة</span>
+            </div>
 
             <!-- Featured Image -->
             <img src="https://placehold.co/800x400/2c3e50/white?text=AI+Future" alt="صورة توضيحية للذكاء الاصطناعي والبرمجة" class="article-featured-image" loading="lazy">
@@ -182,7 +200,7 @@
             <a href="privacy-policy.html">سياسة الخصوصية</a>
             <a href="terms-of-use.html">شروط الاستخدام</a>
         </div>
-        <p class="copyright">جميع الحقوق محفوظة &copy; <span id="copyright-year">2024</span></p>
+        <p class="copyright">جميع الحقوق محفوظة &copy; <span id="copyright-year">2025</span></p>
     </footer>
 
     <script type="text/javascript" src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>

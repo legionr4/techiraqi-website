@@ -55,13 +55,22 @@
             background: linear-gradient(to top, rgba(44, 62, 80, 0.9) 20%, rgba(44, 62, 80, 0.3) 95%); /* Dark Blue */
         }
         .article-card:nth-of-type(2)::before {
-            background: linear-gradient(to top, rgba(206, 48, 30, 0.9) 20%, rgba(192, 57, 43, 0.3) 95%); /* Dark Red */
+            background: linear-gradient(to top, rgba(192, 57, 43, 0.9) 20%, rgba(192, 57, 43, 0.3) 95%); /* Dark Red */
         }
         .article-card:nth-of-type(3)::before {
             background: linear-gradient(to top, rgba(39, 174, 96, 0.9) 20%, rgba(39, 174, 96, 0.3) 95%); /* Dark Green */
         }
         .article-card:nth-of-type(4)::before {
             background: linear-gradient(to top, rgba(142, 68, 173, 0.9) 20%, rgba(142, 68, 173, 0.3) 95%); /* Dark Purple */
+        }
+        .article-card:nth-of-type(5)::before {
+            background: linear-gradient(to top, rgba(22, 160, 133, 0.9) 20%, rgba(22, 160, 133, 0.3) 95%); /* Teal */
+        }
+        .article-card:nth-of-type(6)::before {
+            background: linear-gradient(to top, rgba(211, 84, 0, 0.9) 20%, rgba(211, 84, 0, 0.3) 95%); /* Dark Orange */
+        }
+        .article-card:nth-of-type(7)::before {
+            background: linear-gradient(to top, rgba(52, 73, 94, 0.9) 20%, rgba(52, 73, 94, 0.3) 95%); /* Dark Gray */
         }
         .article-card-content {
             padding: 1.5rem;
@@ -75,6 +84,20 @@
             margin-top: 0;
             margin-bottom: 0.5rem;
             color: #fff; /* Title color is white */
+        }
+        /* FIX: Add meta information for date and views */
+        .article-card-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.75);
+            margin-bottom: 0.75rem;
+        }
+        .article-card-meta .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
         }
         .article-card-content p {
             font-size: 0.95rem;
@@ -113,16 +136,14 @@
             <span class="fas fa-bars" aria-hidden="true"></span>
         </button>
         <nav id="main-nav">
-            <a href="index.html">الرئيسية</a>
-            <a href="rc-designer/rc-design.html">التصميم</a>
-            <a href="blog.html" class="active">المدونة</a>
+            <a href="index.html"><i class="fas fa-home nav-icon" aria-hidden="true"></i> الرئيسية</a>
+            <a href="rc-designer/rc-design.html"><i class="fas fa-drafting-compass nav-icon" aria-hidden="true"></i> التصميم</a>
+            <a href="blog.html" class="active"><i class="fas fa-blog nav-icon" aria-hidden="true"></i> المدونة</a>
             <a href="audio-translator.html">
-                <span class="fas fa-waveform-lines" aria-hidden="true"></span> 
-                <span>مترجم الصوت</span>
-                <span class="new-badge">جديد</span>
+                <i class="fas fa-language nav-icon" aria-hidden="true"></i> مترجم الصوت
                 <span class="nav-tooltip">ترجمة وتسجيل الصوت مباشرة</span>
             </a>
-            <a href="contact.html">اتصل بنا</a>
+            <a href="contact.html"><i class="fas fa-envelope nav-icon" aria-hidden="true"></i> اتصل بنا</a>
             <div class="login-container-mobile" data-netlify-identity-button></div>
         </nav>
         <div class="header-actions">
@@ -140,11 +161,28 @@
             <p>مقالات، شروحات، وآخر الأخبار في عالم التكنولوجيا والبرمجة.</p>
         </div>
 
+        <!-- FIX: Add search form for blog articles -->
+        <div class="content-card" data-aos="fade-up" data-aos-delay="50">
+            <form id="blog-search-form" role="search" onsubmit="return false;">
+                <label for="blog-search-input" class="sr-only">ابحث في المدونة</label>
+                <div class="search-container">
+                    <input type="search" id="blog-search-input" placeholder="ابحث عن مقال...">
+                    <i class="fas fa-search search-icon"></i>
+                </div>
+            </form>
+        </div>
+
+        <div id="no-results-message" class="content-card" style="display: none; text-align: center;" data-aos="fade-up"><p>لم يتم العثور على مقالات تطابق بحثك.</p></div>
+
         <div class="blog-grid" data-aos="fade-up" data-aos-delay="100">
             <!-- Article Card 1 -->
             <div class="article-card" style="background-image: url('https://placehold.co/600x400/2c3e50/white?text=AI+Future');">
                 <div class="article-card-content">
                     <h3>مستقبل البرامج الحاسوبية مع الذكاء الاصطناعي</h3>
+                    <div class="article-card-meta">
+                        <span class="meta-item"><i class="fas fa-calendar-alt"></i> 20 مايو 2025</span>
+                        <span class="meta-item"><i class="fas fa-eye"></i> 1,482 مشاهدة</span>
+                    </div>
                     <p>استكشف كيف يغير الذكاء الاصطناعي (AI) مستقبل تطوير البرامج الحاسوبية، من كتابة الكود إلى تجربة المستخدم.</p>
                     <a href="article2.html" class="button read-more-btn">اقرأ المزيد <i class="fas fa-arrow-left"></i></a>
                 </div>
@@ -154,6 +192,10 @@
             <div class="article-card" style="background-image: url('https://placehold.co/600x400/e74c3c/white?text=Security');">
                 <div class="article-card-content">
                     <h3>أهمية أمن المعلومات في العصر الرقمي</h3>
+                    <div class="article-card-meta">
+                        <span class="meta-item"><i class="fas fa-calendar-alt"></i> 18 مايو 2025</span>
+                        <span class="meta-item"><i class="fas fa-eye"></i> 976 مشاهدة</span>
+                    </div>
                     <p>تعرف على أساسيات أمن المعلومات وأفضل الممارسات لحماية بياناتك الشخصية والمهنية في عالم متصل بالإنترنت.</p>
                     <a href="article3.html" class="button read-more-btn">اقرأ المزيد <i class="fas fa-arrow-left"></i></a>
                 </div>
@@ -163,6 +205,10 @@
             <div class="article-card" style="background-image: url('https://placehold.co/600x400/3498db/white?text=Safety');">
                 <div class="article-card-content">
                     <h3>هل البرامج المعروضة على الموقع مجانية وآمنة؟</h3>
+                    <div class="article-card-meta">
+                        <span class="meta-item"><i class="fas fa-calendar-alt"></i> 15 مايو 2025</span>
+                        <span class="meta-item"><i class="fas fa-eye"></i> 2,150 مشاهدة</span>
+                    </div>
                     <p>شرح حول سياسة البرامج المجانية على موقع Tech_Iraqi وكيف نضمن أمانها للمستخدمين.</p>
                     <a href="article-program-safety.html" class="button read-more-btn">اقرأ المزيد <i class="fas fa-arrow-left"></i></a>
                 </div>
@@ -172,10 +218,41 @@
             <div class="article-card" style="background-image: url('https://placehold.co/600x400/f1c40f/black?text=Virus');">
                 <div class="article-card-content">
                     <h3>كيف تحمي نفسك من الفيروسات عند التحميل؟</h3>
+                    <div class="article-card-meta">
+                        <span class="meta-item"><i class="fas fa-calendar-alt"></i> 12 مايو 2025</span>
+                        <span class="meta-item"><i class="fas fa-eye"></i> 1,833 مشاهدة</span>
+                    </div>
                     <p>نصائح وإرشادات عملية لحماية جهازك من الفيروسات والبرمجيات الخبيثة عند تحميل الملفات من الإنترنت.</p>
                     <a href="article-virus-protection.html" class="button read-more-btn">اقرأ المزيد <i class="fas fa-arrow-left"></i></a>
                 </div>
             </div>
+
+            <!-- Article Card 5 -->
+            <div class="article-card" style="background-image: url('https://placehold.co/600x400/007BFF/white?text=PC+Speed');">
+                <div class="article-card-content">
+                    <h3>5 نصائح لتسريع حاسوبك</h3>
+                    <div class="article-card-meta">
+                        <span class="meta-item"><i class="fas fa-calendar-alt"></i> 22 مايو 2025</span>
+                        <span class="meta-item"><i class="fas fa-eye"></i> 2,541 مشاهدة</span>
+                    </div>
+                    <p>تعلم خمس خطوات بسيطة وفعالة لتسريع أداء حاسوبك الشخصي والتخلص من البطء.</p>
+                    <a href="article1.html" class="button read-more-btn">اقرأ المزيد <i class="fas fa-arrow-left"></i></a>
+                </div>
+            </div>
+
+            <!-- Article Card 6 -->
+            <div class="article-card" style="background-image: url('https://placehold.co/600x400/1abc9c/white?text=Cloud');">
+                <div class="article-card-content">
+                    <h3>ما هي الحوسبة السحابية؟ مقدمة للمبتدئين</h3>
+                    <div class="article-card-meta">
+                        <span class="meta-item"><i class="fas fa-calendar-alt"></i> 16 مايو 2025</span>
+                        <span class="meta-item"><i class="fas fa-eye"></i> 1,621 مشاهدة</span>
+                    </div>
+                    <p>اكتشف مفهوم الحوسبة السحابية (Cloud Computing)، وأنواعها المختلفة، وأبرز فوائدها التي غيرت عالم التكنولوجيا.</p>
+                    <a href="article4.html" class="button read-more-btn">اقرأ المزيد <i class="fas fa-arrow-left"></i></a>
+                </div>
+            </div>
+
         </div>
     </main>
 

@@ -13,14 +13,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const observer = new MutationObserver((mutationsList, obs) => {
             // Check for the buttons on every mutation within the container
-            const loginButton = container.querySelector('a[href="#login"]:not([data-modified])');
+            const loginButton = container.querySelector('button:not([data-modified])');
             if (loginButton) {
                 // Add icon and text, then mark as modified
                 loginButton.innerHTML = '<i class="fas fa-sign-in-alt" style="margin-left: 5px;"></i> Sign In';
                 loginButton.setAttribute('data-modified', 'true');
             }
 
-            const signupButton = container.querySelector('a[href="#signup"]:not([data-modified])');
+            const signupButton = container.querySelector('button:not([data-modified]) + button');
             if (signupButton) {
                 // Add icon and text, then mark as modified
                 signupButton.innerHTML = '<i class="fas fa-user-plus" style="margin-left: 5px;"></i> Register';
