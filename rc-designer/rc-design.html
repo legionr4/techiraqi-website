@@ -83,6 +83,7 @@
             border: 1px solid var(--border-color);
             box-shadow: var(--container-shadow);
         }
+
         /* FIX: Container for viewer action buttons */
         .viewer-actions-container {
             position: absolute;
@@ -90,7 +91,8 @@
             right: 15px;
             z-index: 100;
             display: flex;
-            flex-direction: row; /* Arrange buttons side-by-side */
+            flex-direction: row;
+            /* Arrange buttons side-by-side */
             gap: 10px;
         }
 
@@ -107,8 +109,10 @@
             justify-content: center;
             cursor: pointer;
             transition: background-color 0.3s, transform 0.2s;
-            font-size: 0.9rem; /* FIX: Adjust icon size */
+            font-size: 0.9rem;
+            /* FIX: Adjust icon size */
         }
+
         .viewer-action-btn:hover {
             background-color: rgba(255, 255, 255, 1);
         }
@@ -179,23 +183,56 @@
         .results {
             margin-top: 20px;
             padding: 15px;
-            background-color: var(--primary-color-faded);
-            border: 1px solid var(--primary-hover);
-            border-radius: 5px;
+            background-color: var(--card-bg-color);
+            border: 2px solid #000;
+            /* Add a bold black outer border */
+            border-radius: 8px;
         }
 
-        /* New styles for a classic grid/table layout */
-        .results-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            /* Create 3 equal columns */
+        /* Mobile-first styles for the results container */
+        .results-columns-container {
+            display: flex; /* Use flexbox for stacking on mobile */
+            flex-direction: column; /* Stack columns vertically by default */
+            gap: 1rem; /* Space between columns when stacked on mobile */
             margin-top: 15px;
-            /* The grid container itself doesn't need a border, cells will have them */
+        }
+
+        .results-column {
+            display: flex;
+            flex-direction: column;
+            gap: 0; /* No gap inside columns, borders will handle separation */
+            border: 1px solid var(--border-color); /* Border for mobile view */
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        /* On larger screens (desktop), switch to a grid layout */
+        @media (min-width: 768px) {
+            .results-columns-container {
+                display: grid; /* Use grid for the classic table look */
+                grid-template-columns: repeat(3, 1fr); /* Three columns for the table */
+                gap: 0;
+                border: 2px solid #000; /* Inner table border */
+                border-radius: 5px;
+                overflow: hidden;
+                /* To clip the inner borders at the edges */
+            }
+
+            .results-column {
+                border: none;
+                border-radius: 0;
+            }
+
+            /* إضافة خط فاصل على يمين العمود الأول والثاني فقط */
+            .results-column:nth-child(1) {
+                border-left: 3px solid #000; /* FIX: Use border-left for RTL grid context */
+            }
+            .results-column:nth-child(2) {
+                border-left: 3px solid #000; /* FIX: Use border-left for RTL grid context */
+            }
         }
 
         .grid-header {
-            grid-column: span 1;
-            /* Each header spans one column */
             padding: 8px;
             /* Reduced padding */
             font-weight: bold;
@@ -204,45 +241,24 @@
             color: var(--primary-hover);
             text-align: center;
             border-bottom: 2px solid var(--primary-hover);
-            /* Add borders for grid effect */
-            border-top: 1px solid #bbb;
-            border-left: 1px solid #bbb;
+            /* Header underline */
         }
 
         .result-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            /* Vertically align items */
-            font-size: 1em;
-            /* Reduced font size */
-            padding: 6px 10px;
-            /* Reduced padding */
-            grid-column: span 1;
-            /* Each item spans one column */
-            /* Add borders to all sides except the top and right, which are handled by the container/adjacent cell */
-            border-bottom: 1px solid #bbb;
-            border-left: 1px solid #bbb;
+            padding: 8px 12px;
+            border-top: 1px solid var(--border-color); /* Use theme color for separator */
         }
 
         .result-item p {
             margin: 0;
-            /* Remove default paragraph margin */
-            flex-grow: 1;
-            /* Allow the label to take up available space */
         }
 
         .result-item span {
-            min-width: 70px;
-            /* Give the value a fixed width */
-            text-align: center;
-            /* Center the value text */
-        }
-
-        /* Add right border to the last column's header and items */
-        .grid-header:nth-child(3n),
-        .result-item:nth-child(3n) {
-            border-right: 1px solid #bbb;
+            font-weight: bold;
+            color: var(--primary-hover);
         }
 
         /* New style for suggestions box */
@@ -296,16 +312,6 @@
             color: var(--text-color);
         }
 
-        /* New style for doughnut charts to appear side-by-side */
-        .chart-card.doughnut-chart {
-            flex-basis: 350px;
-            /* Smaller base size */
-            min-width: 350px;
-            /* Smaller min-width to encourage side-by-side layout */
-            flex-grow: 1;
-        }
-
-        /* Ensure results box is full width on mobile */
         .results {
             width: 100%;
         }
@@ -313,17 +319,6 @@
         @media (max-width: 992px) {
             .results-grid {
                 grid-template-columns: 1fr;
-                /* Stack everything into one column on mobile */
-                border-right: 1px solid #bbb;
-                /* Add right border for container on mobile */
-            }
-
-            .grid-header,
-            .result-item {
-                /* On mobile, remove the left border and rely on the container's border */
-                border-left: none;
-                border-right: none;
-                /* Individual items don't need a right border */
             }
         }
 
@@ -440,11 +435,13 @@
             justify-content: space-between;
             align-items: center;
             padding: 10px 15px;
-            background-color: var(--primary-color-faded); /* FIX: Change legend background to light blue */
+            background-color: var(--primary-color-faded);
+            /* FIX: Change legend background to light blue */
             border-radius: 5px;
             margin-top: 10px;
             /* Add margin-top to space it from the fieldset border */
-            color: var(--primary-hover); /* FIX: Change text color to match blue theme */
+            color: var(--primary-hover);
+            /* FIX: Change text color to match blue theme */
             font-weight: 700;
             transition: background-color 0.3s ease;
             width: 100%;
@@ -567,41 +564,52 @@
             text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
             /* Add subtle depth */
         }
-        
+
         /* FIX: Responsive styles for the header on mobile devices */
         @media (max-width: 768px) {
             .navigation-header {
-                flex-direction: column; /* Stack items vertically */
-                min-height: auto; /* Let content define height */
+                flex-direction: column;
+                /* Stack items vertically */
+                min-height: auto;
+                /* Let content define height */
                 padding: 15px;
-                gap: 15px; /* Add space between stacked items */
+                gap: 15px;
+                /* Add space between stacked items */
             }
 
             .header-title-group {
-                position: static; /* Remove absolute positioning on mobile */
+                position: static;
+                /* Remove absolute positioning on mobile */
                 transform: none;
-                order: -1; /* Make title and logo appear first */
-                flex-direction: column; /* Stack title and logo */
+                order: -1;
+                /* Make title and logo appear first */
+                flex-direction: column;
+                /* Stack title and logo */
                 gap: 0.5rem;
-                pointer-events: auto; /* Re-enable pointer events */
+                pointer-events: auto;
+                /* Re-enable pointer events */
             }
 
             .header-title-group span {
-                font-size: 1.2rem; /* Smaller font for mobile */
+                font-size: 1.2rem;
+                /* Smaller font for mobile */
             }
 
             .header-logo {
-                height: 50px; /* Smaller logo for mobile */
+                height: 50px;
+                /* Smaller logo for mobile */
             }
 
             /* Arrange buttons in a row below the title */
-            .navigation-header > div {
+            .navigation-header>div {
                 width: 100%;
-                justify-content: space-between !important; /* Override inline styles to spread buttons */
+                justify-content: space-between !important;
+                /* Override inline styles to spread buttons */
             }
-            
+
             .back-button span {
-                display: none; /* Hide text on buttons, show only icons */
+                display: none;
+                /* Hide text on buttons, show only icons */
             }
         }
 
@@ -619,8 +627,10 @@
         }
 
         body.dark-mode .collapsible-legend {
-            background-color: #2c3e50; /* FIX: Use a dark blue-gray for dark mode */
-            color: #a7c7e7; /* FIX: Use a light blue text color for dark mode */
+            background-color: #2c3e50;
+            /* FIX: Use a dark blue-gray for dark mode */
+            color: #a7c7e7;
+            /* FIX: Use a light blue text color for dark mode */
         }
 
         body.dark-mode .input-group button {
@@ -728,7 +738,8 @@
     <!-- FIX: Merged header bar -->
     <div class="navigation-header" id="main-designer-header">
         <!-- Right-side buttons (start in RTL) -->
-        <div style="display: flex; align-items: center; gap: 20px; justify-content: flex-start;" class="header-button-group">
+        <div style="display: flex; align-items: center; gap: 20px; justify-content: flex-start;"
+            class="header-button-group">
             <a href="../index.html" class="back-button"><i class="fas fa-arrow-left"></i> <span>الرئيسية</span></a>
         </div>
 
@@ -738,8 +749,10 @@
             <img src="../assets/RcPlaneLogo.webp" alt="شعار مصمم الطائرات" class="header-logo">
         </div>
         <!-- Left-side buttons (end in RTL) -->
-        <div style="display: flex; align-items: center; gap: 20px; justify-content: flex-end;" class="header-button-group">
-            <a href="help.html" class="back-button"><span>مركز المساعدة</span> <i class="fas fa-question-circle"></i></a>
+        <div style="display: flex; align-items: center; gap: 20px; justify-content: flex-end;"
+            class="header-button-group">
+            <a href="help.html" class="back-button"><span>مركز المساعدة</span> <i
+                    class="fas fa-question-circle"></i></a>
             <button id="theme-toggle-btn" class="theme-toggle-button back-button" title="تفعيل الوضع الليلي"
                 style="background: none; border: none; cursor: pointer;">
                 <i class="fas fa-moon"></i>
@@ -2401,149 +2414,142 @@
     <div class="results">
         <h2><i class="fas fa-poll"></i><span>النتائج</span></h2>
         <p style="font-size: 0.8em; text-align: center; color: #555;">(قيم تقريبية لأغراض توضيحية)</p>
-        <div class="results-grid">
-            <!-- Column Headers -->
-            <div class="grid-header">الأداء العام</div>
-            <div class="grid-header">أداء الطيران</div>
-            <div class="grid-header">الاستقرار ومركز الجاذبية</div>
-
-            <!-- Row 1 -->
-            <div class="result-item" title="قوة الرفع الكلية التي يولدها الجناح عند زاوية الهجوم وسرعة الهواء الحاليتين.">
-                <p>قوة الرفع (نيوتن):</p>
-                <span id="lift-result">0.00</span>
-            </div>
-            <div class="result-item"
-                title="السرعة العمودية للطائرة (متر/ثانية). تعتمد على فائض الدفع عند سرعة الهواء الحالية. القيمة الموجبة تعني تسلق، والسالبة هبوط.">
-                <p><strong>معدل التسلق (م/ث):</strong></p>
-                <span id="roc-result">0.00</span>
-            </div>
-            <div class="result-item" title="المسافة من مقدمة الطائرة إلى مركز الجاذبية (نقطة التوازن).">
-                <p>موضع مركز الجاذبية (CG) (سم):</p>
-                <span id="cg-position-result">0.0</span>
-            </div>
-
-            <!-- Row 2 -->
-            <div class="result-item" title="إجمالي قوة السحب (سحب الجسم والجناح + سحب المروحة)">
-                <p>قوة السحب (نيوتن):</p>
-                <span id="drag-result">0.00</span>
-            </div>
-            <div class="result-item" title="أقصى سرعة عمودية يمكن للطائرة تحقيقها في الظروف الحالية.">
-                <p><strong>أقصى معدل تسلق (م/ث):</strong></p>
-                <span id="max-roc-result">0.00</span>
-            </div>
-            <div class="result-item" id="ac-position-result-item"
-                title="موضع المركز الهوائي الكلي للطائرة (النقطة المحايدة). يجب أن يكون خلف مركز الجاذبية لتحقيق الاستقرار.">
-                <p>موضع المركز الهوائي (AC) (سم):</p>
-                <span id="ac-position-result">0.0</span>
-            </div>
-
-            <!-- Row 3 -->
-            <div class="result-item" title="قوة الدفع التي تولدها المروحة عند سرعة الدوران وسرعة الهواء الحاليتين.">
-                <p>قوة الدفع (نيوتن):</p>
-                <span id="thrust-result">0.00</span>
-            </div>
-            <div class="result-item" title="السرعة الجوية التي تحقق أقصى معدل تسلق (Vy).">
-                <p><strong>سرعة أقصى تسلق (Vy) (م/ث):</strong></p>
-                <span id="vy-speed-result">0.00</span>
-            </div>
-            <div class="result-item" title="الموضع العمودي لمركز الجاذبية (موجب للأعلى)">
-                <p>موضع CG العمودي (Y) (سم):</p>
-                <span id="cg-position-y-result">0.0</span>
+        <!-- FIX: Container for the responsive results columns/grid -->
+        <div class="results-columns-container">
+            <!-- Column 1: General Performance -->
+            <div class="results-column">
+                <div class="grid-header">الأداء العام</div>
+                <div class="result-item"
+                    title="قوة الرفع الكلية التي يولدها الجناح عند زاوية الهجوم وسرعة الهواء الحاليتين.">
+                    <p>قوة الرفع (نيوتن):</p>
+                    <span id="lift-result">0.00</span>
+                </div>
+                <div class="result-item" title="إجمالي قوة السحب (سحب الجسم والجناح + سحب المروحة)">
+                    <p>قوة السحب (نيوتن):</p>
+                    <span id="drag-result">0.00</span>
+                </div>
+                <div class="result-item" title="قوة الدفع التي تولدها المروحة عند سرعة الدوران وسرعة الهواء الحاليتين.">
+                    <p>قوة الدفع (نيوتن):</p>
+                    <span id="thrust-result">0.00</span>
+                </div>
+                <div class="result-item" title="الوزن الإجمالي لجميع مكونات الطائرة. يؤثر بشكل مباشر على أداء الطيران.">
+                    <p>الوزن الكلي التقديري (جرام):</p>
+                    <span id="total-weight-result">0</span>
+                </div>
+                <div class="result-item"
+                    title="نسبة قوة الدفع إلى وزن الطائرة. قيمة أكبر من 1.0 تعني القدرة على التسلق العمودي.">
+                    <p>نسبة الدفع إلى الوزن:</p>
+                    <span id="twr-result">0.00</span>
+                </div>
+                <div class="result-item"
+                    title="نسبة قوة الرفع إلى قوة السحب. مقياس للكفاءة الديناميكية الهوائية للطائرة.">
+                    <p>نسبة الرفع إلى السحب (L/D):</p>
+                    <span id="ld-ratio-result">0.00</span>
+                </div>
+                <div class="result-item"
+                    title="الوزن مقسوماً على مساحة الجناح. يؤثر على سرعة الانهيار والقدرة على المناورة.">
+                    <p>تحميل الجناح (جرام/ديسيمتر²):</p>
+                    <span id="wing-loading-result">0.00</span>
+                </div>
+                <div class="result-item"
+                    title="نسبة طول الجناح إلى عرضه. القيم الأعلى تعني سحبًا مستحثًا أقل وكفاءة طيران أعلى.">
+                    <p>نسبة العرض إلى الارتفاع (AR):</p>
+                    <span id="aspect-ratio-result">0.00</span>
+                </div>
             </div>
 
-            <!-- Row 4 -->
-            <div class="result-item" title="الوزن الإجمالي لجميع مكونات الطائرة. يؤثر بشكل مباشر على أداء الطيران.">
-                <p>الوزن الكلي التقديري (جرام):</p>
-                <span id="total-weight-result">0</span>
-            </div>
-            <div class="result-item" title="أقل سرعة يمكن للطائرة الطيران بها في وضع أفقي قبل أن تفقد الرفع.">
-                <p><strong>سرعة الانهيار (م/ث):</strong></p>
-                <span id="stall-speed-result">0.00</span>
-            </div>
-            <div class="result-item" title="الموضع الجانبي لمركز الجاذبية (موجب لليمين)">
-                <p>موضع CG الجانبي (Z) (سم):</p>
-                <span id="cg-position-z-result">0.0</span>
-            </div>
-
-            <!-- Row 5 -->
-            <div class="result-item" title="نسبة قوة الدفع إلى وزن الطائرة. قيمة أكبر من 1.0 تعني القدرة على التسلق العمودي.">
-                <p>نسبة الدفع إلى الوزن:</p>
-                <span id="twr-result">0.00</span>
-            </div>
-            <div class="result-item"
-                title="أصغر زاوية هبوط يمكن للطائرة تحقيقها (أفضل انزلاق). تحدث عند زاوية الهجوم التي تعطي أقصى نسبة رفع إلى سحب.">
-                <p><strong>زاوية الانزلاق الأفضل (°):</strong></p>
-                <span id="best-glide-angle-result">0.00</span>
-            </div>
-            <div class="result-item"
-                title="معامل حجم الذيل الأفقي. يحدد مدى استقرار الطائرة الطولي. القيم النموذجية بين 0.3 و 0.6.">
-                <p>معامل حجم الذيل الأفقي (Vh):</p>
-                <span id="h-tail-volume-result">0.000</span>
-            </div>
-
-            <!-- Row 6 -->
-            <div class="result-item" title="نسبة قوة الرفع إلى قوة السحب. مقياس للكفاءة الديناميكية الهوائية للطائرة.">
-                <p>نسبة الرفع إلى السحب (L/D):</p>
-                <span id="ld-ratio-result">0.00</span>
-            </div>
-            <div class="result-item" id="top-pressure-result-item"
-                title="الضغط على السطح العلوي للجناح. القيمة الأقل من الضغط الجوي تسبب قوة شفط للأعلى.">
-                <p>الضغط العلوي (باسكال):</p>
-                <span id="top-pressure-result">0</span>
-            </div>
-            <div class="result-item"
-                title="معامل حجم الذيل العمودي. يحدد مدى استقرار الطائرة الاتجاهي. القيم النموذجية بين 0.02 و 0.05.">
-                <p>معامل حجم الذيل العمودي (Vv):</p>
-                <span id="v-tail-volume-result">0.000</span>
+            <!-- Column 2: Flight Performance -->
+            <div class="results-column">
+                <div class="grid-header">أداء الطيران</div>
+                <div class="result-item"
+                    title="السرعة العمودية للطائرة (متر/ثانية). تعتمد على فائض الدفع عند سرعة الهواء الحالية. القيمة الموجبة تعني تسلق، والسالبة هبوط.">
+                    <p><strong>معدل التسلق (م/ث):</strong></p>
+                    <span id="roc-result">0.00</span>
+                </div>
+                <div class="result-item" title="أقصى سرعة عمودية يمكن للطائرة تحقيقها في الظروف الحالية.">
+                    <p><strong>أقصى معدل تسلق (م/ث):</strong></p>
+                    <span id="max-roc-result">0.00</span>
+                </div>
+                <div class="result-item" title="السرعة الجوية التي تحقق أقصى معدل تسلق (Vy).">
+                    <p><strong>سرعة أقصى تسلق (Vy) (م/ث):</strong></p>
+                    <span id="vy-speed-result">0.00</span>
+                </div>
+                <div class="result-item" title="أقل سرعة يمكن للطائرة الطيران بها في وضع أفقي قبل أن تفقد الرفع.">
+                    <p><strong>سرعة الانهيار (م/ث):</strong></p>
+                    <span id="stall-speed-result">0.00</span>
+                </div>
+                <div class="result-item"
+                    title="أصغر زاوية هبوط يمكن للطائرة تحقيقها (أفضل انزلاق). تحدث عند زاوية الهجوم التي تعطي أقصى نسبة رفع إلى سحب.">
+                    <p><strong>زاوية الانزلاق الأفضل (°):</strong></p>
+                    <span id="best-glide-angle-result">0.00</span>
+                </div>
+                <div class="result-item" id="top-pressure-result-item"
+                    title="الضغط على السطح العلوي للجناح. القيمة الأقل من الضغط الجوي تسبب قوة شفط للأعلى.">
+                    <p>الضغط العلوي (باسكال):</p>
+                    <span id="top-pressure-result">0</span>
+                </div>
+                <div class="result-item" id="bottom-pressure-result-item"
+                    title="الضغط على السطح السفلي للجناح. القيمة الأعلى من الضغط الجوي تسبب قوة دفع للأعلى.">
+                    <p>الضغط السفلي (باسكال):</p>
+                    <span id="bottom-pressure-result">0</span>
+                </div>
             </div>
 
-            <!-- Row 7 -->
-            <div class="result-item"
-                title="الوزن مقسوماً على مساحة الجناح. يؤثر على سرعة الانهيار والقدرة على المناورة.">
-                <p>تحميل الجناح (جرام/ديسيمتر²):</p>
-                <span id="wing-loading-result">0.00</span>
+            <!-- Column 3: Stability & CG -->
+            <div class="results-column">
+                <div class="grid-header">الاستقرار ومركز الجاذبية</div>
+                <div class="result-item" title="المسافة من مقدمة الطائرة إلى مركز الجاذبية (نقطة التوازن).">
+                    <p>موضع مركز الجاذبية (CG) (سم):</p>
+                    <span id="cg-position-result">0.0</span>
+                </div>
+                <div class="result-item" id="ac-position-result-item"
+                    title="موضع المركز الهوائي الكلي للطائرة (النقطة المحايدة). يجب أن يكون خلف مركز الجاذبية لتحقيق الاستقرار.">
+                    <p>موضع المركز الهوائي (AC) (سم):</p>
+                    <span id="ac-position-result">0.0</span>
+                </div>
+                <div class="result-item" title="الموضع العمودي لمركز الجاذبية (موجب للأعلى)">
+                    <p>موضع CG العمودي (Y) (سم):</p>
+                    <span id="cg-position-y-result">0.0</span>
+                </div>
+                <div class="result-item" title="الموضع الجانبي لمركز الجاذبية (موجب لليمين)">
+                    <p>موضع CG الجانبي (Z) (سم):</p>
+                    <span id="cg-position-z-result">0.0</span>
+                </div>
+                <div class="result-item"
+                    title="معامل حجم الذيل الأفقي. يحدد مدى استقرار الطائرة الطولي. القيم النموذجية بين 0.3 و 0.6.">
+                    <p>معامل حجم الذيل الأفقي (Vh):</p>
+                    <span id="h-tail-volume-result">0.000</span>
+                </div>
+                <div class="result-item"
+                    title="معامل حجم الذيل العمودي. يحدد مدى استقرار الطائرة الاتجاهي. القيم النموذجية بين 0.02 و 0.05.">
+                    <p>معامل حجم الذيل العمودي (Vv):</p>
+                    <span id="v-tail-volume-result">0.000</span>
+                </div>
+                <div class="result-item" id="pitching-moment-thrust-result-item"
+                    title="العزم الدوراني حول المحور الجانبي (Pitch) الناتج عن قوة الدفع. القيمة السالبة تعني ميلان للأسفل (مستقر)، والموجبة للأعلى (غير مستقر)."
+                    style="display: none;">
+                    <p>عزم الانحدار من الدفع (N.m):</p>
+                    <span id="pitching-moment-thrust-result">0.00</span>
+                </div>
+                <div class="result-item" id="yawing-moment-thrust-result-item"
+                    title="العزم الدوراني حول المحور العمودي (Yaw) الناتج عن قوة الدفع. يستخدم الميلان الجانبي للمحرك لمعادلة هذا العزم."
+                    style="display: none;">
+                    <p>عزم الانعراج من الدفع (N.m):</p>
+                    <span id="yawing-moment-thrust-result">0.00</span>
+                </div>
+                <div class="result-item" id="torque-roll-result-item"
+                    title="رد فعل عزم دوران المحرك الذي يسبب ميلان الطائرة للدوران. القيمة السالبة تعني ميلان لليسار (عكس عقارب الساعة)."
+                    style="display: none;">
+                    <p>عزم الدوران (Roll) من المحرك (N.m):</p>
+                    <span id="torque-roll-result">0.000</span>
+                </div>
+                <div class="result-item" id="p-factor-yaw-result-item"
+                    title="عزم الانعراج الناتج عن الدفع غير المتماثل للمروحة عند زوايا الهجوم العالية. القيمة السالبة تعني انعراج لليسار."
+                    style="display: none;">
+                    <p>عزم الانعراج (P-Factor) (N.m):</p>
+                    <span id="p-factor-yaw-result">0.000</span>
+                </div>
             </div>
-            <div class="result-item" id="bottom-pressure-result-item"
-                title="الضغط على السطح السفلي للجناح. القيمة الأعلى من الضغط الجوي تسبب قوة دفع للأعلى.">
-                <p>الضغط السفلي (باسكال):</p>
-                <span id="bottom-pressure-result">0</span>
-            </div>
-            <div class="result-item" id="pitching-moment-thrust-result-item"
-                title="العزم الدوراني حول المحور الجانبي (Pitch) الناتج عن قوة الدفع. القيمة السالبة تعني ميلان للأسفل (مستقر)، والموجبة للأعلى (غير مستقر)."
-                style="display: none;">
-                <p>عزم الانحدار من الدفع (N.m):</p>
-                <span id="pitching-moment-thrust-result">0.00</span>
-            </div>
-
-            <!-- Row 8 -->
-            <div class="result-item"
-                title="نسبة طول الجناح إلى عرضه. القيم الأعلى تعني سحبًا مستحثًا أقل وكفاءة طيران أعلى.">
-                <p>نسبة العرض إلى الارتفاع (AR):</p>
-                <span id="aspect-ratio-result">0.00</span>
-            </div>
-            <div class="result-item" id="yawing-moment-thrust-result-item"
-                title="العزم الدوراني حول المحور العمودي (Yaw) الناتج عن قوة الدفع. يستخدم الميلان الجانبي للمحرك لمعادلة هذا العزم."
-                style="display: none;">
-                <p>عزم الانعراج من الدفع (N.m):</p>
-                <span id="yawing-moment-thrust-result">0.00</span>
-            </div>
-            <div class="result-item" id="torque-roll-result-item"
-                title="رد فعل عزم دوران المحرك الذي يسبب ميلان الطائرة للدوران. القيمة السالبة تعني ميلان لليسار (عكس عقارب الساعة)."
-                style="display: none;">
-                <p>عزم الدوران (Roll) من المحرك (N.m):</p>
-                <span id="torque-roll-result">0.000</span>
-            </div>
-
-            <!-- Row 9 (will only have 2 items) -->
-            <div class="result-item" style="grid-column: 1 / 2;"></div> <!-- Empty cell -->
-            <div class="result-item" id="p-factor-yaw-result-item"
-                title="عزم الانعراج الناتج عن الدفع غير المتماثل للمروحة عند زوايا الهجوم العالية. القيمة السالبة تعني انعراج لليسار."
-                style="display: none;">
-                <p>عزم الانعراج (P-Factor) (N.m):</p>
-                <span id="p-factor-yaw-result">0.000</span>
-            </div>
-            <div class="result-item" style="grid-column: 3 / 4;"></div> <!-- Empty cell -->
-
         </div>
     </div>
     </div>
