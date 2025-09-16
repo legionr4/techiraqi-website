@@ -83,19 +83,25 @@
             border: 1px solid var(--border-color);
             box-shadow: var(--container-shadow);
         }
-
-        /* FIX: Style for action buttons inside the 3D viewer */
-        .viewer-action-btn {
+        /* FIX: Container for viewer action buttons */
+        .viewer-actions-container {
             position: absolute;
             top: 15px;
             right: 15px;
             z-index: 100;
+            display: flex;
+            flex-direction: row; /* Arrange buttons side-by-side */
+            gap: 10px;
+        }
+
+        /* FIX: Style for action buttons inside the 3D viewer */
+        .viewer-action-btn {
             background-color: rgba(255, 255, 255, 0.7);
             border: 1px solid var(--border-color);
             color: var(--text-color);
             border-radius: 50%;
-            width: 15px; /* FIX: Reduce button diameter */
-            height: 15px;/*FIX: Reduce button diameter */
+            width: 20px;
+            height: 20px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -117,6 +123,7 @@
             border-radius: 5px;
             margin-bottom: 15px;
             padding: 10px;
+            box-shadow: var(--container-shadow);
             padding-top: 0;
             /* Remove top padding to allow legend to sit nicely */
         }
@@ -560,6 +567,43 @@
             text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
             /* Add subtle depth */
         }
+        
+        /* FIX: Responsive styles for the header on mobile devices */
+        @media (max-width: 768px) {
+            .navigation-header {
+                flex-direction: column; /* Stack items vertically */
+                min-height: auto; /* Let content define height */
+                padding: 15px;
+                gap: 15px; /* Add space between stacked items */
+            }
+
+            .header-title-group {
+                position: static; /* Remove absolute positioning on mobile */
+                transform: none;
+                order: -1; /* Make title and logo appear first */
+                flex-direction: column; /* Stack title and logo */
+                gap: 0.5rem;
+                pointer-events: auto; /* Re-enable pointer events */
+            }
+
+            .header-title-group span {
+                font-size: 1.2rem; /* Smaller font for mobile */
+            }
+
+            .header-logo {
+                height: 50px; /* Smaller logo for mobile */
+            }
+
+            /* Arrange buttons in a row below the title */
+            .navigation-header > div {
+                width: 100%;
+                justify-content: space-between !important; /* Override inline styles to spread buttons */
+            }
+            
+            .back-button span {
+                display: none; /* Hide text on buttons, show only icons */
+            }
+        }
 
         /* Dark Mode Specific Styles */
         body.dark-mode .suggestions-box {
@@ -684,17 +728,18 @@
     <!-- FIX: Merged header bar -->
     <div class="navigation-header" id="main-designer-header">
         <!-- Right-side buttons (start in RTL) -->
-        <div style="display: flex; align-items: center; gap: 20px; justify-content: flex-start;">
-            <a href="../index.html" class="back-button"><i class="fas fa-arrow-left"></i> الرئيسية</a>
+        <div style="display: flex; align-items: center; gap: 20px; justify-content: flex-start;" class="header-button-group">
+            <a href="../index.html" class="back-button"><i class="fas fa-arrow-left"></i> <span>الرئيسية</span></a>
         </div>
+
         <!-- Center title -->
         <div class="header-title-group">
             <span>تصميم وحسابات طائرة RC</span>
             <img src="../assets/RcPlaneLogo.webp" alt="شعار مصمم الطائرات" class="header-logo">
         </div>
         <!-- Left-side buttons (end in RTL) -->
-        <div style="display: flex; align-items: center; gap: 20px; justify-content: flex-end;">
-            <a href="help.html" class="back-button">مركز المساعدة <i class="fas fa-question-circle"></i></a>
+        <div style="display: flex; align-items: center; gap: 20px; justify-content: flex-end;" class="header-button-group">
+            <a href="help.html" class="back-button"><span>مركز المساعدة</span> <i class="fas fa-question-circle"></i></a>
             <button id="theme-toggle-btn" class="theme-toggle-button back-button" title="تفعيل الوضع الليلي"
                 style="background: none; border: none; cursor: pointer;">
                 <i class="fas fa-moon"></i>
@@ -723,11 +768,6 @@
                                 <option value="mm" data-label="مم">مليمتر (mm)</option>
                                 <option value="in" data-label="بوصة">بوصة (in)</option>
                             </select>
-                        </div>
-                        <div class="input-group">
-                            <label for="show-axes-checkbox">إظهار المحاور (XYZ)</label>
-                            <input type="checkbox" id="show-axes-checkbox" checked
-                                style="flex-basis: auto; margin-left: auto;">
                         </div>
                     </div>
                 </fieldset>
@@ -2347,9 +2387,14 @@
         </div>
         <div class="viewer">
             <canvas id="viewer-canvas"></canvas>
-            <button id="toggle-helpers-btn" class="viewer-action-btn" title="إخفاء العناصر المساعدة">
-                <i class="fas fa-eye"></i>
-            </button>
+            <div class="viewer-actions-container">
+                <button id="reset-camera-btn" class="viewer-action-btn" title="إعادة تعيين الكاميرا">
+                    <i class="fas fa-camera-rotate"></i>
+                </button>
+                <button id="toggle-helpers-btn" class="viewer-action-btn" title="إخفاء العناصر المساعدة">
+                    <i class="fas fa-eye"></i>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -2363,7 +2408,7 @@
             <div class="grid-header">الاستقرار ومركز الجاذبية</div>
 
             <!-- Row 1 -->
-            <div class="result-item">
+            <div class="result-item" title="قوة الرفع الكلية التي يولدها الجناح عند زاوية الهجوم وسرعة الهواء الحاليتين.">
                 <p>قوة الرفع (نيوتن):</p>
                 <span id="lift-result">0.00</span>
             </div>
@@ -2372,7 +2417,7 @@
                 <p><strong>معدل التسلق (م/ث):</strong></p>
                 <span id="roc-result">0.00</span>
             </div>
-            <div class="result-item" title="موضع مركز الجاذبية من مقدمة الطائرة">
+            <div class="result-item" title="المسافة من مقدمة الطائرة إلى مركز الجاذبية (نقطة التوازن).">
                 <p>موضع مركز الجاذبية (CG) (سم):</p>
                 <span id="cg-position-result">0.0</span>
             </div>
@@ -2393,7 +2438,7 @@
             </div>
 
             <!-- Row 3 -->
-            <div class="result-item">
+            <div class="result-item" title="قوة الدفع التي تولدها المروحة عند سرعة الدوران وسرعة الهواء الحاليتين.">
                 <p>قوة الدفع (نيوتن):</p>
                 <span id="thrust-result">0.00</span>
             </div>
@@ -2407,7 +2452,7 @@
             </div>
 
             <!-- Row 4 -->
-            <div class="result-item">
+            <div class="result-item" title="الوزن الإجمالي لجميع مكونات الطائرة. يؤثر بشكل مباشر على أداء الطيران.">
                 <p>الوزن الكلي التقديري (جرام):</p>
                 <span id="total-weight-result">0</span>
             </div>
@@ -2421,7 +2466,7 @@
             </div>
 
             <!-- Row 5 -->
-            <div class="result-item">
+            <div class="result-item" title="نسبة قوة الدفع إلى وزن الطائرة. قيمة أكبر من 1.0 تعني القدرة على التسلق العمودي.">
                 <p>نسبة الدفع إلى الوزن:</p>
                 <span id="twr-result">0.00</span>
             </div>

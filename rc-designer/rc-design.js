@@ -44,7 +44,7 @@ function createAxisLabel(text, color, position) {
     const texture = new THREE.CanvasTexture(canvas);
     const spriteMaterial = new THREE.SpriteMaterial({ map: texture, depthTest: false });
     const sprite = new THREE.Sprite(spriteMaterial);
-    sprite.scale.set(0.06, 0.06, 0.06);
+    sprite.scale.set(0.04, 0.04, 0.04);
     sprite.position.copy(position);
     return sprite;
 }
@@ -331,7 +331,6 @@ const ENGINE_SPECS = {
 };
 // تخزين عناصر الإدخال والنتائج لتحسين الأداء
 const unitSelector = document.getElementById('unit-selector');
-const showAxesCheckbox = document.getElementById('show-axes-checkbox');
 const wingSpanInput = document.getElementById('wing-span');
 const wingChordInput = document.getElementById('wing-chord');
 const tailSpanInput = document.getElementById('tail-span');
@@ -1043,14 +1042,6 @@ function updatePlaneModel() {
     // --- FIX: Define all necessary variables at the top of the function scope ---
     const conversionFactor = UNIT_CONVERSIONS[unitSelector.value];
     const engineType = engineTypeInput.value;
-
-    // --- FIX: Handle AxesHelper and Labels visibility ---
-    const showAxes = showAxesCheckbox.checked;
-    axesHelper.visible = showAxes;
-    xAxisLabel.visible = showAxes;
-    yAxisLabel.visible = showAxes;
-    zAxisLabel.visible = showAxes;
-
 
     // قراءة قيم الجناح
     const wingSpan = getValidNumber(wingSpanInput) * conversionFactor;
@@ -6803,7 +6794,7 @@ function initHelpersToggle() {
     if (!toggleHelpersBtn) return;
 
     // Get the individual checkboxes to sync with
-    const showAxesCheckbox = document.getElementById('show-axes-checkbox');
+    // const showAxesCheckbox = document.getElementById('show-axes-checkbox'); // REMOVED
     const showCgCheckbox = document.getElementById('show-cg');
     const showAcCheckbox = document.getElementById('show-ac');
 
@@ -6826,7 +6817,12 @@ function initHelpersToggle() {
         helpersVisible = !helpersVisible; // Toggle the master state
 
         // Update the individual checkboxes to match the master state
-        showAxesCheckbox.checked = helpersVisible;
+        // FIX: Control axes visibility directly instead of through a non-existent checkbox
+        axesHelper.visible = helpersVisible;
+        xAxisLabel.visible = helpersVisible;
+        yAxisLabel.visible = helpersVisible;
+        zAxisLabel.visible = helpersVisible;
+
         showCgCheckbox.checked = helpersVisible;
         showAcCheckbox.checked = helpersVisible;
 
@@ -6837,6 +6833,18 @@ function initHelpersToggle() {
     });
 
     setIcon(helpersVisible); // Set initial icon state
+}
+
+/**
+ * Initializes the camera reset button.
+ */
+function initCameraReset() {
+    const resetCameraBtn = document.getElementById('reset-camera-btn');
+    if (!resetCameraBtn) return;
+
+    resetCameraBtn.addEventListener('click', () => {
+        controls.reset(); // OrbitControls method to reset the camera
+    });
 }
 /**
  * Initializes the chart toggle checkbox functionality.
@@ -7028,7 +7036,6 @@ function initHelpersToggle() {
     if (!toggleHelpersBtn) return;
 
     // Get the individual checkboxes to sync with
-    const showAxesCheckbox = document.getElementById('show-axes-checkbox');
     const showCgCheckbox = document.getElementById('show-cg');
     const showAcCheckbox = document.getElementById('show-ac');
 
@@ -7051,7 +7058,13 @@ function initHelpersToggle() {
         helpersVisible = !helpersVisible; // Toggle the master state
 
         // Update the individual checkboxes to match the master state
-        showAxesCheckbox.checked = helpersVisible;
+        // FIX: Control axes visibility directly instead of through a non-existent checkbox
+        axesHelper.visible = helpersVisible;
+        xAxisLabel.visible = helpersVisible;
+        yAxisLabel.visible = helpersVisible;
+        zAxisLabel.visible = helpersVisible;
+
+
         showCgCheckbox.checked = helpersVisible;
         showAcCheckbox.checked = helpersVisible;
 
@@ -7142,6 +7155,7 @@ initSaveLoad();
 initExport(); // تهيئة أزرار التصدير الجديدة
 setupChartToggles();
 initHelpersToggle(); // تهيئة زر تبديل العناصر المساعدة
+initCameraReset(); // تهيئة زر إعادة تعيين الكاميرا
 initResetButton(); // تهيئة زر إعادة التعيين الجديد
 initRpmSlider(); // تهيئة شريط التحكم الجديد عند التحميل
 updateUnitLabels();
