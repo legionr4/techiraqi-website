@@ -53,13 +53,6 @@ const yAxisLabel = createAxisLabel('Y', '#00ff00', new THREE.Vector3(0, 2.2, 0))
 const zAxisLabel = createAxisLabel('Z', '#0000ff', new THREE.Vector3(0, 0, 2.2)); // Blue
 scene.add(xAxisLabel, yAxisLabel, zAxisLabel);
 
-// --- FIX: منع خطوط التدفق من الاصطدام بالمحاور وتسمياتها ---
-// جعل هذه الكائنات غير مرئية لـ Raycaster
-axesHelper.raycast = () => {};
-xAxisLabel.raycast = () => {};
-yAxisLabel.raycast = () => {};
-zAxisLabel.raycast = () => {};
-
 // --- Web Audio API for Gapless Loop ---
 let audioContext;
 let engineAudioBuffer;
@@ -616,7 +609,6 @@ const toggleLdRatioChart = document.getElementById('toggle-ld-ratio-chart');
 const toggleStabilityChart = document.getElementById('toggle-stability-chart');
 const togglePitchingMomentChart = document.getElementById('toggle-pitching-moment-chart');
 const togglePowerChart = document.getElementById('toggle-power-chart');
-const toggleYawMomentChart = document.getElementById('toggle-yaw-moment-chart');
 const toggleRocChart = document.getElementById('toggle-roc-chart');
 const toggleLiftCurveChart = document.getElementById('toggle-lift-curve-chart');
 const toggleWeightDistChart = document.getElementById('toggle-weight-dist-chart');
@@ -1476,9 +1468,6 @@ function updatePlaneModel() {
         const aileronGeom = createSurface(aileronLength, aileronWidth, aileronTaperRatio, 0, aileronThickness, aileronAirfoilType, true, true);
         aileronGeom.translate(-aileronWidth / 2, 0, 0); // إزاحة المحور ليكون عند الحافة الأمامية للجنيح
         aileronGeom.rotateX(Math.PI / 2); // تدوير ليتوافق مع امتداد الجناح
-        // FIX: Store original positions for flutter effect on the geometry before it's used by the mesh.
-        aileronGeom.userData.originalPositions = aileronGeom.attributes.position.array.slice();
-
 
         // Create the aileron meshes
         const rightAileron = new THREE.Mesh(aileronGeom, aileronMaterial);
@@ -1490,12 +1479,11 @@ function updatePlaneModel() {
 
         // --- FIX: Create a mirrored geometry for the left aileron ---
         const leftAileronGeom = aileronGeom.clone().applyMatrix4(new THREE.Matrix4().makeScale(1, 1, -1));
-        // FIX: Recompute normals after mirroring to fix lighting issues
+        // --- FIX: Recompute normals to fix lighting ---
         leftAileronGeom.computeVertexNormals();
         const leftAileron = new THREE.Mesh(leftAileronGeom, aileronMaterial);
         leftAileron.name = 'leftAileron';
         const leftAileronPivot = new THREE.Group();
-        leftAileronPivot.name = 'leftAileronPivot'; // Name the pivot for consistency
         leftAileronPivot.add(leftAileron);
 
         // --- حساب موضع ودوران محور الجنيح ---
@@ -1570,28 +1558,17 @@ function updatePlaneModel() {
         hStabGeom.translate(0, 0, currentFuselageWidth / 2);
         const rightHStab = new THREE.Mesh(hStabGeom, tailMaterial); // Define rightHStab
         rightHStab.position.x = -hStabChordEffective / 2; // Position relative to tailAssembly
-        rightHStab.userData.isVertical = false;
         rightHStab.rotation.x = tailDihedralRad;
-        // FIX: Store original positions for flutter effect
-        rightHStab.geometry.userData.originalPositions = rightHStab.geometry.attributes.position.array.slice();
-
-
         // Clone and mirror for the left half
         const leftHStabGeom = rightHStab.geometry.clone().applyMatrix4(new THREE.Matrix4().makeScale(1, 1, -1));
         leftHStabGeom.computeVertexNormals(); // FIX: Recompute normals
         const leftHStab = new THREE.Mesh(leftHStabGeom, rightHStab.material);
         leftHStab.position.copy(rightHStab.position);
         leftHStab.rotation.copy(rightHStab.rotation);
-        leftHStab.userData.isVertical = false;
-        leftHStab.geometry.userData.originalPositions = leftHStab.geometry.attributes.position.array.slice();
 
         const vStabGeom = createSurface(vStabHeight, vStabChordEffective, tailTaperRatio, vStabSweepAngle, tailThickness, tailAirfoilType, true);
         const vStab = new THREE.Mesh(vStabGeom, tailMaterial);
         vStab.position.x = -vStabChordEffective / 2; // Position relative to tailAssembly
-        vStab.userData.isVertical = true;
-        // FIX: Store original positions for flutter effect
-        vStab.geometry.userData.originalPositions = vStab.geometry.attributes.position.array.slice();
-
         vStab.position.y = currentFuselageHeight / 2;
 
         tailAssembly.add(rightHStab, leftHStab, vStab);
@@ -1604,9 +1581,6 @@ function updatePlaneModel() {
         const rightHStab = new THREE.Mesh(hStabGeom, tailMaterial);
         // رفع المثبت الأفقي ليجلس فوق المثبت العمودي
         rightHStab.position.set(-hStabChordEffective / 2, vStabHeight + currentFuselageHeight / 2, 0);
-        rightHStab.userData.isVertical = false;
-        // FIX: Store original positions for flutter effect
-        rightHStab.geometry.userData.originalPositions = rightHStab.geometry.attributes.position.array.slice();
         rightHStab.rotation.x = tailDihedralRad;
 
         // Clone and mirror for the left half
@@ -1615,15 +1589,10 @@ function updatePlaneModel() {
         const leftHStab = new THREE.Mesh(leftHStabGeom, rightHStab.material);
         leftHStab.position.copy(rightHStab.position);
         leftHStab.rotation.copy(rightHStab.rotation);
-        leftHStab.userData.isVertical = false;
-        leftHStab.geometry.userData.originalPositions = leftHStab.geometry.attributes.position.array.slice();
 
         const vStabGeom = createSurface(vStabHeight, vStabChordEffective, tailTaperRatio, vStabSweepAngle, tailThickness, tailAirfoilType, true);
         const vStab = new THREE.Mesh(vStabGeom, tailMaterial);
         vStab.position.x = -vStabChordEffective / 2;
-        vStab.userData.isVertical = true;
-        // FIX: Store original positions for flutter effect
-        vStab.geometry.userData.originalPositions = vStab.geometry.attributes.position.array.slice();
         // رفع المثبت العمودي ليجلس فوق جسم الطائرة
         vStab.position.y = currentFuselageHeight / 2;
         tailAssembly.add(rightHStab, leftHStab, vStab);
@@ -1635,17 +1604,12 @@ function updatePlaneModel() {
         const rightVPanel = new THREE.Mesh(vTailPanelGeom, tailMaterial);
         // إزاحة اللوحة اليمنى إلى جانب جسم الطائرة
         rightVPanel.position.z = currentFuselageWidth / 2;
-        rightVPanel.userData.isVertical = true; // Treat as vertical for flutter
-        rightVPanel.geometry.userData.originalPositions = rightVPanel.geometry.attributes.position.array.slice();
         rightVPanel.rotation.x = -angleRad; // تدوير حول المحور X للحصول على شكل V
 
         const leftVPanel = rightVPanel.clone();
-        // FIX: Store original positions for flutter effect on cloned part
-        leftVPanel.geometry.userData.originalPositions = leftVPanel.geometry.attributes.position.array.slice();
         // إزاحة اللوحة اليسرى إلى الجانب الآخر
         leftVPanel.position.z = -currentFuselageWidth / 2;
         leftVPanel.rotation.x = angleRad; // تدوير معاكس للجهة الأخرى
-        leftVPanel.userData.isVertical = true; // Treat as vertical for flutter
 
         const vTailAssembly = new THREE.Group();
         vTailAssembly.add(rightVPanel, leftVPanel);
@@ -1667,19 +1631,16 @@ function updatePlaneModel() {
         // الرافع الأيمن
         const rightElevator = new THREE.Mesh(elevatorHalfGeom, aileronMaterial);
         rightElevator.name = 'rightElevator';
-        rightElevator.userData.isVertical = false;
         const rightElevatorPivot = new THREE.Group();
         rightElevatorPivot.add(rightElevator);
 
         // الرافع الأيسر (استنساخ وعكس)
-        // FIX: Mirror the geometry instead of scaling the pivot to fix lighting issues
-        const leftElevatorGeom = elevatorHalfGeom.clone().applyMatrix4(new THREE.Matrix4().makeScale(1, 1, -1));
-        leftElevatorGeom.computeVertexNormals(); // Recompute normals after mirroring
-        const leftElevator = new THREE.Mesh(leftElevatorGeom, aileronMaterial);
-        leftElevator.name = 'leftElevator';
-        leftElevator.userData.isVertical = false;
+        const leftElevatorGeom = rightElevator.geometry.clone().applyMatrix4(new THREE.Matrix4().makeScale(1, 1, -1));
+        leftElevatorGeom.computeVertexNormals(); // FIX: Recompute normals
+        const leftElevator = new THREE.Mesh(leftElevatorGeom, rightElevator.material);
         const leftElevatorPivot = new THREE.Group();
         leftElevatorPivot.add(leftElevator);
+        leftElevator.name = 'leftElevator'; // FIX: Name the mesh directly
 
         // نضع المحور عند الحافة الخلفية للجزء الثابت من الذيل
         const hStabRootChordEffective = tailChord - elevatorWidth;
@@ -1700,9 +1661,6 @@ function updatePlaneModel() {
 
         const rudder = new THREE.Mesh(rudderGeom, aileronMaterial);
         rudder.name = 'rudder';
-        rudder.userData.isVertical = true;
-        // FIX: Store original positions for flutter effect
-        rudder.geometry.userData.originalPositions = rudder.geometry.attributes.position.array.slice();
         const rudderPivot = new THREE.Group();
         rudderPivot.add(rudder);
         // تصحيح: نضع المحور عند الحافة الخلفية للجزء الثابت من الذيل العمودي
@@ -1721,19 +1679,13 @@ function updatePlaneModel() {
 
         const rightRuddervator = new THREE.Mesh(ruddervatorGeom, aileronMaterial);
         rightRuddervator.name = 'rightRuddervator';
-        rightRuddervator.userData.isVertical = true;
-        // FIX: Store original positions for flutter effect
-        rightRuddervator.geometry.userData.originalPositions = rightRuddervator.geometry.attributes.position.array.slice();
         const rightRuddervatorPivot = new THREE.Group();
         rightRuddervatorPivot.add(rightRuddervator);
 
         // --- FIX: Create a mirrored geometry for the left ruddervator ---
         const leftRuddervatorGeom = ruddervatorGeom.clone().applyMatrix4(new THREE.Matrix4().makeScale(1, 1, -1));
         const leftRuddervator = new THREE.Mesh(leftRuddervatorGeom, aileronMaterial);
-        leftRuddervator.userData.isVertical = true;
         leftRuddervator.name = 'leftRuddervator';
-        // FIX: Store original positions for flutter effect on cloned part
-        leftRuddervator.geometry.userData.originalPositions = leftRuddervator.geometry.attributes.position.array.slice();
         const leftRuddervatorPivot = new THREE.Group();
         leftRuddervatorPivot.add(leftRuddervator);
 
@@ -2715,7 +2667,7 @@ function calculateAerodynamics() {
     if (thrust > 0 && alphaRad > 0) { // العامل P له تأثير فقط عند زوايا الهجوم الموجبة
         pFactorYawMoment = -0.5 * (propDiameterMeters / 2) * thrust * Math.sin(alphaRad);
     }
-
+ 
     // تطبيق شدة التأثير التي يحددها المستخدم
     pFactorYawMoment *= pFactorIntensity;
 
@@ -3729,7 +3681,7 @@ function calculateAerodynamics() {
         yawingMomentFromThrust = momentVector.y;
         // عزم الانحدار (Pitch) حول المحور Z
         pitchingMomentFromThrust = -momentVector.z; // FIX: في three.js، الدوران الموجب حول Z هو عكس عقارب الساعة، بينما في الطيران، عزم الانحدار الموجب (nose-up) هو مع عقارب الساعة.
-
+        
         // إضافة عزم الانحدار من الدفع إلى العزم الكلي
         totalPitchingMoment += pitchingMomentFromThrust;
 
@@ -4298,7 +4250,6 @@ function initCharts() {
     const ldRatioChartCanvas = document.getElementById('ld-ratio-chart');
     const stabilityChartCanvas = document.getElementById('stability-chart');
     const pitchingMomentChartCanvas = document.getElementById('pitching-moment-chart');
-    const yawMomentChartCanvas = document.getElementById('yaw-moment-chart');
     const powerChartCanvas = document.getElementById('power-chart');
     const rocChartCanvas = document.getElementById('roc-chart');
     const liftCurveChartCanvas = document.getElementById('lift-curve-chart');
@@ -4564,43 +4515,6 @@ function initCharts() {
         }
     });
 
-    // New Yaw Moment vs AoA Chart
-    if (yawMomentChartCanvas) {
-        yawMomentChart = new Chart(yawMomentChartCanvas.getContext('2d'), {
-            type: 'line',
-            data: {
-                labels: [], // AoA values
-                datasets: [{
-                    label: 'عزم الانعراج (N.m)',
-                    data: [],
-                    borderColor: 'rgba(201, 10, 10, 1)', // Dark Red
-                    backgroundColor: 'rgba(201, 10, 10, 0.1)',
-                    fill: true,
-                    tension: 0.1
-                }]
-            },
-            options: {
-                ...commonOptions,
-                scales: {
-                    x: {
-                        title: {
-                            display: true,
-                            text: 'زاوية الهجوم (°)'
-                        }
-                    },
-                    y: {
-                        title: {
-                            display: true,
-                            text: 'عزم الانعراج (N.m)'
-                        },
-                        // Yaw moment can be positive or negative
-                    }
-                },
-                plugins: { legend: { display: true } }
-            }
-        });
-    }
-
     // New Power Chart
     powerChart = new Chart(powerChartCanvas.getContext('2d'), {
         type: 'line',
@@ -4799,7 +4713,6 @@ function updateCharts() {
     const taperRatio = getValidNumber(taperRatioInput);
     const airfoilType = airfoilTypeInput.value;
     const angleOfAttack = getValidNumber(angleOfAttackInput);
-    const airSpeed = getValidNumber(airSpeedInput); // FIX: Define airSpeed
     const airDensity = getValidNumber(airDensityInput);
     const propDiameterMeters = getValidNumber(propDiameterInput) * 0.0254;
     const propPitchMeters = getValidNumber(propPitchInput) * 0.0254;
@@ -5062,44 +4975,6 @@ function updateCharts() {
     pitchingMomentChart.data.datasets[0].data = momentPoints;
     pitchingMomentChart.update();
 
-    // --- NEW: Yaw Moment vs AoA Chart Calculation ---
-    if (yawMomentChart) {
-        const yawMomentPoints = [];
-        const pFactorIntensity = getValidNumber(pFactorIntensityInput);
-
-        // Get parameters that are constant across the AoA sweep
-        const n_rps = propRpm / 60;
-        const advance_ratio_J = (propDiameterMeters > 0 && n_rps > 0) ? airSpeed / (n_rps * propDiameterMeters) : 0;
-        const prop_ct = Math.max(0, ct_static * (1 - (advance_ratio_J / (pitch_diameter_ratio * 1.1))));
-        const thrust = prop_ct * airDensity * Math.pow(n_rps, 2) * Math.pow(propDiameterMeters, 4);
-
-        // Get yaw moment from side thrust (constant across AoA sweep)
-        const yawingMomentFromThrust = parseFloat(yawingMomentThrustResultEl.textContent) || 0;
-
-        for (let aoa = -5; aoa <= 20; aoa++) {
-            const alphaRad = aoa * (Math.PI / 180);
-            let pFactorYawMoment = 0;
-
-            // P-Factor is only significant at positive AoA with thrust
-            if (thrust > 0 && alphaRad > 0) {
-                // Yaw Moment = -K * Thrust * sin(AoA) * prop_radius
-                pFactorYawMoment = -0.5 * (propDiameterMeters / 2) * thrust * Math.sin(alphaRad);
-            }
-
-            // Apply user-defined intensity
-            pFactorYawMoment *= pFactorIntensity;
-
-            // Total yaw moment for the chart is the sum of moments
-            const totalYawMoment = yawingMomentFromThrust + pFactorYawMoment;
-            yawMomentPoints.push(totalYawMoment);
-        }
-
-        // Use the same AoA points as the pitching moment chart
-        yawMomentChart.data.labels = aoaPointsForMoment;
-        yawMomentChart.data.datasets[0].data = yawMomentPoints;
-        yawMomentChart.update();
-    }
-
     // --- تحديث لون نتيجة عزم الانحدار الرئيسي ---
     const currentMoment = parseFloat(pitchingMomentResultEl.textContent);
     pitchingMomentResultEl.style.color = currentMoment < 0 ? '#28a745' : '#dc3545'; // أخضر للسالب، أحمر للموجب
@@ -5140,7 +5015,7 @@ function updateCharts() {
     }
 
 }
-
+    
 /**
  * Creates a custom ShaderMaterial for realistic particle rendering.
  * This allows for per-particle size and opacity.
@@ -5697,66 +5572,43 @@ function animate() {
 
         // 3. تخزين اهتزاز الدوران الحالي لإزالته في الإطار التالي
         lastVibrationRotation.copy(currentVibration);
-        // --- NEW: Wing & Tail Flutter Effect (Reviewed for Accuracy) ---
-        // The 'flutterIntensity' variable is already declared earlier in this function.
+
+        // --- NEW: Wing Flutter Effect ---
         if (flutterIntensity > 0) {
             const time = clock.getElapsedTime();
             const flutterSpeed = 50; // How fast the flutter is
             const flutterAmplitude = 0.05 * flutterIntensity; // Max displacement
 
-            // Apply flutter to Wing Group (wings, ailerons, wingtips)
-            wingGroup.traverse(child => {
-                if (child.isMesh && child.geometry.userData.originalPositions) {
-                    const positions = child.geometry.attributes.position.array;
-                    const originalPos = child.geometry.userData.originalPositions;
-                    for (let i = 0; i < positions.length; i += 3) {
-                        const originalY = originalPos[i + 1];
-                        const z = originalPos[i + 2]; // Position along the span
-                        // Use the main wing's half-span for consistent ratio calculation across all wing parts
-                        const spanRatio = planeParams.wingSpan > 0 ? Math.abs(z) / (planeParams.wingSpan / 2) : 0;
+            wingGroup.children.forEach(wing => {
+                if (wing.isMesh && wing.geometry.userData.originalPositions) {
+                    const positions = wing.geometry.attributes.position.array;
+                    const originalPos = wing.geometry.userData.originalPositions;
+                    const numVertices = positions.length / 3;
+
+                    for (let i = 0; i < numVertices; i++) {
+                        const i3 = i * 3;
+                        const originalY = originalPos[i3 + 1];
+                        const z = originalPos[i3 + 2]; // Position along the span
+
+                        // Flutter effect is a sine wave along the span, increasing towards the tip
+                        const spanRatio = Math.abs(z) / (planeParams.wingSpan / 2);
                         const flutterOffset = flutterAmplitude * spanRatio * Math.sin(time * flutterSpeed - z * 5);
-                        positions[i + 1] = originalY + flutterOffset; // Flutter on Y-axis
+
+                        positions[i3 + 1] = originalY + flutterOffset;
                     }
-                    child.geometry.attributes.position.needsUpdate = true;
-                    child.geometry.computeVertexNormals();
+                    wing.geometry.attributes.position.needsUpdate = true;
+                    wing.geometry.computeVertexNormals(); // Recompute normals for correct lighting on deformed surface
                 }
             });
-
-            // Apply flutter to Tail Group (stabilizers and control surfaces)
-            tailAssembly.traverse(child => {
-                if (child.isMesh && child.geometry.userData.originalPositions) {
-                    const positions = child.geometry.attributes.position.array;
-                    const originalPos = child.geometry.userData.originalPositions;
-                    for (let i = 0; i < positions.length; i += 3) {
-                        // Determine the axis of flutter based on surface orientation
-                        const isVertical = child.userData.isVertical;
-                        const spanCoord = isVertical ? originalPos[i + 1] : originalPos[i + 2]; // Y for vertical, Z for horizontal
-                        // FIX: Use the correct span length for each surface type for accurate ratio
-                        const spanLength = isVertical ? planeParams.vStabHeight : planeParams.tailSpan / 2;
-                        const spanRatio = spanLength > 0 ? Math.abs(spanCoord) / spanLength : 0;
-                        const flutterOffset = flutterAmplitude * spanRatio * Math.sin(time * flutterSpeed - spanCoord * 5);
-
-                        const flutterAxisIndex = isVertical ? (i + 2) : (i + 1); // Flutter on Z for vertical, Y for horizontal
-                        positions[flutterAxisIndex] = originalPos[flutterAxisIndex] + flutterOffset;
-                    }
-                    child.geometry.attributes.position.needsUpdate = true;
-                    child.geometry.computeVertexNormals();
+        } else if (wingGroup.children[0]?.geometry.attributes.position.array[1] !== wingGroup.children[0]?.geometry.userData.originalPositions[1]) {
+            // If flutter is zero, ensure wings are reset to their original shape only once
+            wingGroup.children.forEach(wing => {
+                if (wing.isMesh && wing.geometry.userData.originalPositions) {
+                    wing.geometry.attributes.position.copyArray(wing.geometry.userData.originalPositions);
+                    wing.geometry.attributes.position.needsUpdate = true;
+                    wing.geometry.computeVertexNormals();
                 }
             });
-
-        } else {
-            // Reset both Wing and Tail if they have been deformed (optimized to run only once)
-            const resetFlutter = (group) => {
-                group.traverse(child => {
-                    if (child.isMesh && child.geometry.userData.originalPositions && child.geometry.attributes.position.array[1] !== child.geometry.userData.originalPositions[1]) {
-                        child.geometry.attributes.position.copyArray(child.geometry.userData.originalPositions);
-                        child.geometry.attributes.position.needsUpdate = true;
-                        child.geometry.computeVertexNormals();
-                    }
-                });
-            };
-            resetFlutter(wingGroup);
-            resetFlutter(tailAssembly);
         }
 
         // --- كل تحديثات الجزيئات تحدث فقط عند تشغيل المروحة ---
@@ -6744,7 +6596,6 @@ function setupChartToggles() {
         { checkbox: toggleLdRatioChart, card: document.getElementById('ld-ratio-chart-card') },
         { checkbox: toggleStabilityChart, card: document.getElementById('stability-chart-card') },
         { checkbox: togglePitchingMomentChart, card: document.getElementById('pitching-moment-chart-card') },
-        { checkbox: toggleYawMomentChart, card: document.getElementById('yaw-moment-chart-card') },
         { checkbox: togglePowerChart, card: document.getElementById('power-chart-card') },
         { checkbox: toggleRocChart, card: document.getElementById('roc-chart-card') },
         { checkbox: toggleLiftCurveChart, card: document.getElementById('lift-curve-chart-card') },

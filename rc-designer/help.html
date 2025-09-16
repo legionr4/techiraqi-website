@@ -177,13 +177,13 @@
             background-color: var(--card-bg-color); /* Use theme variable for background */
             border: 1px solid var(--border-color);
             border-radius: 8px;
-            padding: 1.5rem;
+            padding: 1rem; /* FIX: Reduce padding to make it more compact */
             margin-bottom: 2.5rem;
             box-shadow: 0 4px 12px rgba(0,0,0,0.08); /* Add shadow for depth when sticky */
         }
         .toc-container h3 {
             margin-top: 0;
-            margin-bottom: 1rem;
+            margin-bottom: 0.75rem; /* FIX: Reduce margin */
             color: var(--text-color); /* Use theme variable */
             text-align: center;
         }
@@ -194,13 +194,13 @@
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
-            gap: 1rem;
+            gap: 0.5rem; /* FIX: Reduce gap between items */
         }
         .toc-container li a {
             text-decoration: none;
             color: var(--primary-hover); /* Use theme variable */
             font-weight: 500;
-            padding: 0.5rem 1rem;
+            padding: 0.4rem 0.8rem; /* FIX: Reduce padding on links */
             display: inline-block; /* ضروري لعمل تأثير الحركة بشكل صحيح */
             border-radius: 5px;
             transition: background-color 0.3s, color 0.3s, transform 0.2s ease;
@@ -209,6 +209,18 @@
             background-color: var(--primary-hover); /* Use theme variable */
             color: #fff;
             transform: translateY(-2px); /* تأثير الحركة عند التمرير */
+        }
+        /* Mobile view for Table of Contents */
+        @media (max-width: 768px) {
+            .toc-container {
+                padding: 1rem; /* Reduce padding on mobile */
+            }
+            .toc-container ul {
+                flex-wrap: nowrap; /* Prevent items from wrapping to the next line */
+                overflow-x: auto;  /* Enable horizontal scrolling */
+                justify-content: flex-start; /* Align items to the start for better scrolling experience */
+                padding-bottom: 10px; /* Add some space for the scrollbar */
+            }
         }
     </style>
 </head>

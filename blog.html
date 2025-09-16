@@ -4,18 +4,104 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>المدونة - Tech_Iraqi</title>
-    <meta name="description" content="مقالات وأخبار حصرية في عالم التكنولوجيا والبرمجة من Tech_Iraqi.">
-
-    <!-- هذا هو السطر الخاص بأيقونة الموقع (Favicon) -->
+    <meta name="description" content="مقالات ونصائح حول أحدث التقنيات، البرمجة، وأمن المعلومات من فريق Tech_Iraqi.">
+    
+    <!-- Common Head Elements -->
     <link rel="icon" type="image/png" href="assets/favicon.png">
-    <!-- إضافة مكتبة أيقونات Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-    <!-- إضافة مكتبة AOS للتحريك عند التمرير -->
     <link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
     <link rel="stylesheet" href="style.css">
-</head>
-<body data-page="blog">
+    
+    <!-- Specific styles for the blog page -->
+    <style>
+        .blog-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        /* FIX: Change card design to use background images with an overlay */
+        .article-card {
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: var(--container-shadow);
+            display: flex;
+            flex-direction: column-reverse; /* Place content on top of the background */
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            min-height: 350px; /* Ensure cards have a consistent height */
+            background-size: cover;
+            background-position: center;
+            position: relative;
+            color: #fff; /* Set default text color to white for contrast */
+        }
+        /* Add a pseudo-element for the dark overlay */
+        .article-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 1;
+            /* FIX: The background is now set per-card below with different colors */
+            transition: background 0.3s ease;
+        }
+        .article-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 20px rgba(0,0,0,0.12);
+        }
+        /* FIX: Add different colored overlays for each card instead of black */
+        .article-card:nth-of-type(1)::before {
+            background: linear-gradient(to top, rgba(44, 62, 80, 0.9) 20%, rgba(44, 62, 80, 0.3) 95%); /* Dark Blue */
+        }
+        .article-card:nth-of-type(2)::before {
+            background: linear-gradient(to top, rgba(206, 48, 30, 0.9) 20%, rgba(192, 57, 43, 0.3) 95%); /* Dark Red */
+        }
+        .article-card:nth-of-type(3)::before {
+            background: linear-gradient(to top, rgba(39, 174, 96, 0.9) 20%, rgba(39, 174, 96, 0.3) 95%); /* Dark Green */
+        }
+        .article-card:nth-of-type(4)::before {
+            background: linear-gradient(to top, rgba(142, 68, 173, 0.9) 20%, rgba(142, 68, 173, 0.3) 95%); /* Dark Purple */
+        }
+        .article-card-content {
+            padding: 1.5rem;
+            z-index: 2; /* Ensure content is above the overlay */
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end; /* Push content to the bottom */
+            flex-grow: 1; /* Allow content to fill the card */
+        }
+        .article-card-content h3 {
+            margin-top: 0;
+            margin-bottom: 0.5rem;
+            color: #fff; /* Title color is white */
+        }
+        .article-card-content p {
+            font-size: 0.95rem;
+            /* FIX: Use a light color for the text to be readable on the dark overlay */
+            color: rgba(255, 255, 255, 0.85);
+            margin-bottom: 1.5rem;
+        }
+        .article-card-content .read-more-btn {
+            margin-top: auto; /* Aligns button to the bottom */
+        }
 
+        /* Mobile-specific improvements */
+        @media (max-width: 768px) {
+            /* Reduce padding on the main title card */
+            main > .content-card {
+                padding: 1.5rem;
+            }
+            .blog-grid {
+                gap: 1.5rem; /* Reduce gap between cards */
+            }
+            .article-card-content {
+                padding: 1.2rem; /* Reduce padding inside cards */
+            }
+        }
+    </style>
+</head>
+<body>
     <!-- Preloader -->
     <div id="preloader">
         <div class="spinner"></div>
@@ -24,18 +110,24 @@
     <header>
         <div class="site-title"><a href="index.html">Tech_Iraqi</a></div>
         <button class="hamburger-menu" id="hamburger-button" aria-label="فتح أو إغلاق القائمة" aria-expanded="false">
-            <i class="fas fa-bars"></i>
+            <span class="fas fa-bars" aria-hidden="true"></span>
         </button>
         <nav id="main-nav">
             <a href="index.html">الرئيسية</a>
             <a href="rc-designer/rc-design.html">التصميم</a>
             <a href="blog.html" class="active">المدونة</a>
+            <a href="audio-translator.html">
+                <span class="fas fa-waveform-lines" aria-hidden="true"></span> 
+                <span>مترجم الصوت</span>
+                <span class="new-badge">جديد</span>
+                <span class="nav-tooltip">ترجمة وتسجيل الصوت مباشرة</span>
+            </a>
             <a href="contact.html">اتصل بنا</a>
             <div class="login-container-mobile" data-netlify-identity-button></div>
         </nav>
         <div class="header-actions">
             <button class="theme-toggle-button desktop-theme-toggle" title="تفعيل الوضع الليلي">
-                <i class="fas fa-moon"></i>
+                <i class="fas fa-moon" aria-hidden="true"></i>
             </button>
             <img src="assets/iraqFlog.gif" alt="علم العراق" class="header-flag">
             <div class="login-container-desktop" data-netlify-identity-button></div>
@@ -43,93 +135,67 @@
     </header>
 
     <main>
-        <div class="page-header" data-aos="fade-in">
-            <h1>المدونة</h1>
-            <p>أحدث المقالات والأخبار في عالم التقنية</p>
+        <div class="content-card" data-aos="fade-up">
+            <h1>مدونة Tech_Iraqi</h1>
+            <p>مقالات، شروحات، وآخر الأخبار في عالم التكنولوجيا والبرمجة.</p>
         </div>
 
-        <div class="search-container" data-aos="fade-up" data-aos-delay="50">
-            <form id="blog-search-form" class="search-form" role="search">
-                <input type="search" id="blog-search-input" class="search-input" placeholder="ابحث في المقالات..." aria-label="ابحث في المقالات">
-                <button type="submit" class="search-button" aria-label="بحث"><i class="fas fa-search"></i></button>
-            </form>
-        </div>
-
-        <div class="blog-container">
+        <div class="blog-grid" data-aos="fade-up" data-aos-delay="100">
             <!-- Article Card 1 -->
-            <article class="article-card" data-aos="fade-up">
-                <a href="article1.html" aria-label="قراءة مقال 5 نصائح لتسريع حاسوبك">
-                    <img src="https://placehold.co/800x400/007BFF/white?text=PC+Speed" alt="صورة مصغرة لمقال 5 نصائح لتسريع حاسوبك" class="article-card-image" loading="lazy">
-                </a>
+            <div class="article-card" style="background-image: url('https://placehold.co/600x400/2c3e50/white?text=AI+Future');">
                 <div class="article-card-content">
-                    <h3><a href="article1.html">5 نصائح لتسريع حاسوبك</a></h3>
-                    <p class="article-meta">نُشر في: 22 مايو 2024</p>
-                    <p class="article-excerpt">هل يعاني حاسوبك من البطء؟ في هذا المقال، نستعرض خمس نصائح بسيطة وفعالة يمكنك تطبيقها اليوم لتعزيز أداء جهازك...</p>
-                    <a href="article1.html" class="read-more-btn">اقرأ المزيد</a>
+                    <h3>مستقبل البرامج الحاسوبية مع الذكاء الاصطناعي</h3>
+                    <p>استكشف كيف يغير الذكاء الاصطناعي (AI) مستقبل تطوير البرامج الحاسوبية، من كتابة الكود إلى تجربة المستخدم.</p>
+                    <a href="article2.html" class="button read-more-btn">اقرأ المزيد <i class="fas fa-arrow-left"></i></a>
                 </div>
-            </article>
+            </div>
 
-            <!-- Article Card 2 (Placeholder) -->
-            <article class="article-card" data-aos="fade-up" data-aos-delay="100">
-                <a href="article2.html" aria-label="قراءة مقال مستقبل البرامج الحاسوبية مع الذكاء الاصطناعي">
-                    <img src="https://placehold.co/800x400/2c3e50/white?text=AI+Future" alt="صورة مصغرة لمقال مستقبل البرامج الحاسوبية مع الذكاء الاصطناعي" class="article-card-image" loading="lazy">
-                </a>
+            <!-- Article Card 2 -->
+            <div class="article-card" style="background-image: url('https://placehold.co/600x400/e74c3c/white?text=Security');">
                 <div class="article-card-content">
-                    <h3><a href="article2.html">مستقبل البرامج الحاسوبية مع الذكاء الاصطناعي</a></h3>
-                    <p class="article-meta">نُشر في: 20 مايو 2024</p>
-                    <p class="article-excerpt">لم يعد الذكاء الاصطناعي مجرد مفهوم نظري، بل أصبح أداة قوية تعيد تشكيل كيفية بناء البرامج واختبارها وتفاعلها مع المستخدمين...</p>
-                    <a href="article2.html" class="read-more-btn">اقرأ المزيد</a>
+                    <h3>أهمية أمن المعلومات في العصر الرقمي</h3>
+                    <p>تعرف على أساسيات أمن المعلومات وأفضل الممارسات لحماية بياناتك الشخصية والمهنية في عالم متصل بالإنترنت.</p>
+                    <a href="article3.html" class="button read-more-btn">اقرأ المزيد <i class="fas fa-arrow-left"></i></a>
                 </div>
-            </article>
+            </div>
 
-            <!-- Article Card 3 (Placeholder) -->
-            <article class="article-card" data-aos="fade-up" data-aos-delay="200">
-                <a href="article3.html" aria-label="قراءة مقال أهمية أمن المعلومات في العصر الرقمي">
-                    <img src="https://placehold.co/800x400/e74c3c/white?text=Security" alt="صورة مصغرة لمقال أهمية أمن المعلومات" class="article-card-image" loading="lazy">
-                </a>
+            <!-- Article Card 3 -->
+            <div class="article-card" style="background-image: url('https://placehold.co/600x400/3498db/white?text=Safety');">
                 <div class="article-card-content">
-                    <h3><a href="article3.html">أهمية أمن المعلومات في العصر الرقمي</a></h3>
-                    <p class="article-meta">نُشر في: 18 مايو 2024</p>
-                    <p class="article-excerpt">في عالم أصبحت فيه البيانات هي "النفط الجديد"، لم يعد أمن المعلومات رفاهية، بل ضرورة قصوى للأفراد والشركات على حد سواء...</p>
-                    <a href="article3.html" class="read-more-btn">اقرأ المزيد</a>
+                    <h3>هل البرامج المعروضة على الموقع مجانية وآمنة؟</h3>
+                    <p>شرح حول سياسة البرامج المجانية على موقع Tech_Iraqi وكيف نضمن أمانها للمستخدمين.</p>
+                    <a href="article-program-safety.html" class="button read-more-btn">اقرأ المزيد <i class="fas fa-arrow-left"></i></a>
                 </div>
-            </article>
+            </div>
 
-            <!-- Article Card 4 (Placeholder) -->
-            <article class="article-card" data-aos="fade-up" data-aos-delay="300">
-                <a href="article4.html" aria-label="قراءة مقال ما هي الحوسبة السحابية؟">
-                    <img src="https://placehold.co/800x400/1abc9c/white?text=Cloud" alt="صورة مصغرة لمقال الحوسبة السحابية" class="article-card-image" loading="lazy">
-                </a>
+            <!-- Article Card 4 -->
+            <div class="article-card" style="background-image: url('https://placehold.co/600x400/f1c40f/black?text=Virus');">
                 <div class="article-card-content">
-                    <h3><a href="article4.html">ما هي الحوسبة السحابية؟ مقدمة للمبتدئين</a></h3>
-                    <p class="article-meta">نُشر في: 16 مايو 2024</p>
-                    <p class="article-excerpt">اكتشف مفهوم الحوسبة السحابية (Cloud Computing)، وكيف غيرت عالم التكنولوجيا عبر توفير خدمات مثل التخزين والبرامج عبر الإنترنت...</p>
-                    <a href="article4.html" class="read-more-btn">اقرأ المزيد</a>
+                    <h3>كيف تحمي نفسك من الفيروسات عند التحميل؟</h3>
+                    <p>نصائح وإرشادات عملية لحماية جهازك من الفيروسات والبرمجيات الخبيثة عند تحميل الملفات من الإنترنت.</p>
+                    <a href="article-virus-protection.html" class="button read-more-btn">اقرأ المزيد <i class="fas fa-arrow-left"></i></a>
                 </div>
-            </article>
-
-            <!-- Message for no results -->
-            <p id="no-results-message" class="no-results" style="display: none;">لا توجد مقالات تطابق بحثك.</p>
+            </div>
         </div>
     </main>
 
-    <button class="back-to-top" title="العودة إلى الأعلى" aria-label="العودة إلى الأعلى"><i class="fas fa-arrow-up"></i></button>
+    <button class="back-to-top" title="العودة إلى الأعلى" aria-label="العودة إلى الأعلى"><i class="fas fa-arrow-up" aria-hidden="true"></i></button>
 
     <footer>
         <div class="social-icons">
-            <a href="#" title="تابعنا على تويتر" target="_blank" rel="noopener noreferrer" aria-label="تابعنا على تويتر"><i class="fa-brands fa-x-twitter"></i></a>
-            <a href="#" title="تابعنا على لينكد إن" target="_blank" rel="noopener noreferrer" aria-label="تابعنا على لينكد إن"><i class="fa-brands fa-linkedin-in"></i></a>
-            <a href="https://github.com/legionr4" title="شاهد مشاريعنا على جيت هاب" target="_blank" rel="noopener noreferrer" aria-label="شاهد مشاريعنا على جيت هاب"><i class="fa-brands fa-github"></i></a>
+            <a href="#" title="تابعنا على تويتر" target="_blank" rel="noopener noreferrer" aria-label="تابعنا على تويتر"><i class="fa-brands fa-x-twitter" aria-hidden="true"></i></a>
+            <a href="#" title="تابعنا على لينكد إن" target="_blank" rel="noopener noreferrer" aria-label="تابعنا على لينكد إن"><i class="fa-brands fa-linkedin-in" aria-hidden="true"></i></a>
+            <a href="https://github.com/legionr4" title="شاهد مشاريعنا على جيت هاب" target="_blank" rel="noopener noreferrer" aria-label="شاهد مشاريعنا على جيت هاب"><i class="fa-brands fa-github" aria-hidden="true"></i></a>
         </div>
         <div class="footer-links">
             <a href="privacy-policy.html">سياسة الخصوصية</a>
             <a href="terms-of-use.html">شروط الاستخدام</a>
         </div>
-        <p class="copyright">جميع الحقوق محفوظة &copy; <span id="copyright-year">2024</span></p>
+        <p class="copyright">جميع الحقوق محفوظة &copy; <span id="copyright-year"></span></p>
     </footer>
 
+    <!-- Scripts -->
     <script type="text/javascript" src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-    <script src="auth.js" defer></script>
     <script src="https://unpkg.com/aos@next/dist/aos.js" defer></script>
     <script src="script.js" defer></script>
 </body>

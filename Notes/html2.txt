@@ -4,25 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>تصميم طائرة RC</title>
-    <!-- FIX: إضافة أيقونة الموقع (Favicon) -->
-    <link rel="icon" type="image/png" href="../assets/favicon.png">
-    <!-- FIX: Link to main stylesheet for theme variables -->
-    <link rel="stylesheet" href="../style.css">
     <!-- إضافة مكتبة أيقونات Font Awesome (للأسهم القابلة للطي) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-    <!-- FIX: إضافة مكتبات التصدير -->
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/STLExporter.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/OBJExporter.js"></script>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
             padding: 0;
-            background-color: var(--body-bg);
-            color: var(--text-color);
+            background-color: #f4f4f9;
+            color: #333;
         }
         h1, h2 {
             display: flex;
@@ -30,7 +23,7 @@
             align-items: center;
             gap: 15px;
             text-align: center;
-            color: var(--text-color);
+            color: #4a4a4a;
         }
         .header-logo {
             height: 90px; /* حجم الشعار */
@@ -47,34 +40,34 @@
             flex: 1;
             min-width: 320px;
             padding: 20px;
-            background-color: var(--card-bg-color);
+            background-color: #fff;
             border-radius: 8px;
-            box-shadow: var(--container-shadow);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             margin-left: 20px;
             /* إضافة شريط تمرير مستقل عند الحاجة */
-            max-height: 80vh; /* FIX: Set max-height to enable independent scrolling */
-            overflow-y: auto; /* FIX: Add a scrollbar when content overflows */
+            max-height: 85vh;
+            overflow-y: auto;
         }
         .viewer {
             flex: 2;
             min-width: 400px;
             height: 80vh;
-            background-color: var(--light-bg);
+            background-color: #e0e0e0;
             border-radius: 8px;
             overflow: hidden;
-            /* FIX: Make the viewer sticky on desktop */
+            /* تثبيت الواجهة في مكانها عند التمرير */
             position: sticky;
             top: 20px;
             /* تعديل الإطار ليصبح أفتح وأكثر نعومة */
-            border: 1px solid var(--border-color);
-            box-shadow: var(--container-shadow);
+            border: 1px solid #ccc;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08); /* ظل خفيف لإبراز الواجهة */
         }
         #viewer-canvas {
             width: 100%;
             height: 100%;
         }
         fieldset {
-            border: 1px solid var(--border-color);
+            border: 1px solid #ccc;
             border-radius: 5px;
             margin-bottom: 15px;
             padding: 10px;
@@ -83,7 +76,7 @@
         legend {
             padding: 0 8px; /* Add horizontal padding to the default legend */
             font-weight: bold;
-            color: var(--primary-hover);
+            color: #0056b3;
         }
         .input-group {
             display: flex;
@@ -97,16 +90,14 @@
         .input-group input {
             flex-basis: 45%;
             padding: 5px;
-            border: 1px solid var(--border-color);
+            border: 1px solid #ccc;
             border-radius: 4px;
-            background-color: var(--body-bg);
-            color: var(--text-color);
         }
         .input-group input[type="color"] {
             flex-basis: 45%;
             padding: 2px;
             height: 30px;
-            border: 1px solid var(--border-color);
+            border: 1px solid #ccc;
             border-radius: 4px;
             cursor: pointer;
         }
@@ -114,73 +105,34 @@
             padding: 0; /* Fix for range input padding */
             flex-basis: 45%;
         }
-        .input-group select {
-            background-color: var(--body-bg);
-            color: var(--text-color);
-            border: 1px solid var(--border-color);
-        }
         .results {
             margin-top: 20px;
             padding: 15px;
-            background-color: var(--primary-color-faded);
-            border: 1px solid var(--primary-hover);
+            background-color: #e3f2fd;
+            border: 1px solid #90caf9;
             border-radius: 5px;
-        }
-        /* New styles for a classic grid/table layout */
-        .results-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr); /* Create 3 equal columns */
-            margin-top: 15px;
-            /* The grid container itself doesn't need a border, cells will have them */
-        }
-        .grid-header {
-            grid-column: span 1; /* Each header spans one column */
-            padding: 8px; /* Reduced padding */
-            font-weight: bold;
-            font-size: 1em; /* Reduced font size */
-            color: var(--primary-hover);
-            text-align: center;
-            border-bottom: 2px solid var(--primary-hover);
-            /* Add borders for grid effect */
-            border-top: 1px solid #bbb;
-            border-left: 1px solid #bbb;
         }
         .result-item {
             display: flex;
             justify-content: space-between;
-            align-items: center; /* Vertically align items */
-            font-size: 1em; /* Reduced font size */
-            padding: 6px 10px; /* Reduced padding */
-            grid-column: span 1; /* Each item spans one column */
-            /* Add borders to all sides except the top and right, which are handled by the container/adjacent cell */
-            border-bottom: 1px solid #bbb;
-            border-left: 1px solid #bbb;
-        }
-        .result-item p {
-            margin: 0; /* Remove default paragraph margin */
-            flex-grow: 1; /* Allow the label to take up available space */
+            font-size: 1.1em;
         }
         .result-item span {
-            min-width: 70px; /* Give the value a fixed width */
-            text-align: center; /* Center the value text */
-        }
-        /* Add right border to the last column's header and items */
-        .grid-header:nth-child(3n),
-        .result-item:nth-child(3n) {
-            border-right: 1px solid #bbb;
+            font-weight: bold;
+            color: #1976d2;
         }
         /* New style for suggestions box */
         .suggestions-box {
             margin-top: 20px;
             padding: 15px;
-            background-color: var(--success-color-faded, #e8f5e9);
-            border: 1px solid var(--success-color);
+            background-color: #e8f5e9; /* Light green */
+            border: 1px solid #a5d6a7; /* Green border */
             border-radius: 5px;
         }
         .suggestions-box h2 {
             margin-top: 0;
             font-size: 1.2em;
-            color: var(--success-hover);
+            color: #2e7d32; /* Darker green */
             /* Make it a flex container to align icon and text */
             display: flex;
             justify-content: center;
@@ -199,99 +151,20 @@
         .chart-card {
             flex: 1 1 45%; /* Allow charts to grow and shrink, with a base of 45% to fit two per row */
             min-width: 400px; /* Prevent charts from becoming too small */
-            background-color: var(--card-bg-color);
+            background-color: #fff;
             padding: 20px;
             border-radius: 8px;
-            box-shadow: var(--container-shadow);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
         .chart-card h3 {
             text-align: center;
             margin-top: 0;
             margin-bottom: 15px;
-            color: var(--text-color);
-        }
-        /* New style for doughnut charts to appear side-by-side */
-        .chart-card.doughnut-chart {
-            flex-basis: 350px; /* Smaller base size */
-            min-width: 350px; /* Smaller min-width to encourage side-by-side layout */
-            flex-grow: 1;
-        }
-        /* Ensure results box is full width on mobile */
-        .results {
-            width: 100%;
-        }
-        @media (max-width: 992px) {
-            .results-grid {
-                grid-template-columns: 1fr; /* Stack everything into one column on mobile */
-                border-right: 1px solid #bbb; /* Add right border for container on mobile */
-            }
-            .grid-header, .result-item {
-                /* On mobile, remove the left border and rely on the container's border */
-                border-left: none;
-                border-right: none; /* Individual items don't need a right border */
-            }
+            color: #4a4a4a;
         }
         @media (max-width: 992px) {
             .charts-container {
                 flex-direction: column; /* Stack charts vertically on smaller screens */
-            }
-            .container {
-                flex-direction: column; /* تكديس لوحة التحكم والعارض */
-                padding: 10px;
-            }
-            .controls {
-                order: 2; /* وضع لوحة التحكم بعد العارض */
-                margin-left: 0;
-                margin-bottom: 20px;
-                padding: 15px; /* تقليل الحشوة على الهاتف */
-                min-width: 100%;
-                /* FIX: Explicitly set mobile-only styles to override desktop sticky behavior */
-                position: static; /* Prevent controls from being sticky on mobile */
-                top: auto;
-                max-height: 85vh;
-                overflow-y: auto; /* إضافة شريط تمرير مستقل عند الحاجة على الهاتف */
-            }
-            .viewer {
-                order: 1; /* وضع العارض أولاً */
-                /* FIX: Explicitly set mobile-only styles to override desktop sticky behavior */
-                position: sticky; /* تثبيت الواجهة في مكانها عند التمرير على الهاتف */
-                top: 10px; /* مسافة من الأعلى للتثبيت */
-                /* FIX: Explicitly set height for mobile to override desktop's 80vh */
-                height: 60vh;
-                z-index: 10; /* ضمان بقاء الواجهة في الأعلى */
-                min-width: 100%;
-            }
-            .results {
-                order: 3; /* وضع النتائج بعد العارض ولوحة التحكم */
-                margin-top: 0;
-            }
-            h1 {
-                font-size: 1.6rem;
-                gap: 10px;
-            }
-            .header-logo {
-                height: 60px;
-            }
-            .input-group {
-                flex-direction: column; /* تكديس العنوان والمدخل */
-                align-items: flex-start;
-                gap: 8px;
-            }
-            .input-group label,
-            .input-group input,
-            .input-group select,
-            .input-group button {
-                width: 100%;
-                flex-basis: auto;
-            }
-            .input-group input[type="checkbox"] {
-                width: auto;
-                margin-right: auto; /* RTL */
-                margin-left: 0;
-            }
-            .chart-card {
-                min-width: 100%;
-                flex-basis: 100%;
             }
         }
         .chart-wrapper {
@@ -316,10 +189,10 @@
             justify-content: space-between;
             align-items: center;
             padding: 10px 15px;
-            background-color: var(--primary-color-faded);
+            background-color: #eaf2ff; /* Faint blue background */
             border-radius: 5px;
             margin-top: 10px; /* Add margin-top to space it from the fieldset border */
-            color: var(--primary-hover);
+            color: #004a99; /* Darker blue text for contrast */
             transition: background-color 0.3s ease;
             width: 100%;
             user-select: none; /* Prevent text selection on click */
@@ -340,6 +213,10 @@
             overflow: hidden;
             transition: max-height 0.5s ease-in-out, padding 0.5s ease-in-out, margin 0.5s ease-in-out;
         }
+        body.dark-mode .collapsible-legend {
+            background-color: #2c3e50; /* Dark blue-gray for dark mode */
+            color: #a7c7e7; /* Lighter blue text for dark mode */
+        }
         .collapsible-content {
             padding-top: 15px; /* Add padding to space content from legend */
         }
@@ -359,103 +236,10 @@
         .input-group input[type="checkbox"] {
             flex-basis: auto; margin-left: auto;
         }
-        /* New styles for back button */
-        .navigation-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 25px;
-            background-color: var(--light-bg);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1); /* This shadow is fine for both modes */
-            margin-bottom: 20px;
-        }
-        .back-button {
-            text-decoration: none;
-            color: var(--primary-hover);
-            font-weight: bold;
-            font-size: 1.1em;
-            transition: color 0.3s ease;
-        }
-        .back-button:hover {
-            color: var(--primary-color);
-        }
-        /* Dark Mode Specific Styles */
-        body.dark-mode .suggestions-box {
-            background-color: rgba(40, 167, 69, 0.2);
-        }
-        body.dark-mode .suggestions-box h2 {
-            color: #81c784;
-        }
-        body.dark-mode .result-item span {
-            color: #90caf9;
-        }
-        body.dark-mode .collapsible-legend {
-            background-color: #2c3e50;
-            color: #a7c7e7;
-        }
-        body.dark-mode .input-group button {
-            background-color: var(--secondary-color);
-            color: var(--text-color);
-            border-color: var(--border-color);
-        }
-        /* New styles for Save/Export section */
-        .action-group {
-            margin-bottom: 1rem;
-        }
-        .action-group h4 {
-            margin-top: 0;
-            margin-bottom: 0.5rem;
-            color: var(--text-color);
-            font-size: 1.1em;
-        }
-        .action-group p {
-            font-size: 0.9em;
-            color: var(--text-muted);
-            margin-top: 0;
-            margin-bottom: 1rem;
-        }
-        .button-row {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-        .action-button {
-            flex: 1;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 1em;
-            color: white;
-            transition: background-color 0.3s, transform 0.2s;
-        }
-        .action-button:hover {
-            transform: translateY(-2px);
-        }
-        .action-button.save { background-color: #28a745; }
-        .action-button.save:hover { background-color: #218838; }
-        .action-button.load { background-color: #007bff; }
-        .action-button.load:hover { background-color: #0056b3; }
-        .action-button.export { background-color: #17a2b8; }
-        .action-button.export:hover { background-color: #117a8b; }
     </style>
 </head>
 <body>
 
-    <div class="navigation-header">
-        <div style="display: flex; align-items: center; gap: 20px;">
-            <a href="../index.html" class="back-button">&larr; العودة إلى الرئيسية</a>
-            <a href="help.html" class="back-button">مركز المساعدة <i class="fas fa-question-circle"></i></a>
-        </div>
-        <button id="theme-toggle-btn" class="theme-toggle-button back-button" title="تفعيل الوضع الليلي" style="background: none; border: none; cursor: pointer;">
-            <i class="fas fa-moon"></i>
-        </button>
-    </div>
     <h1>
         <span>تصميم وحسابات طائرة RC</span>
         <img src="../assets/RcPlaneLogo.webp" alt="شعار مصمم الطائرات" class="header-logo">
@@ -667,7 +451,7 @@
                 <fieldset class="collapsible-fieldset">
                     <legend class="collapsible-legend">
                         <div>
-                            <i class="fas fa-plane legend-icon"></i>
+                            <i class="fas fa-plane-body legend-icon"></i>
                             <span>جسم الطائرة</span>
                         </div>
                         <i class="fas fa-chevron-down toggle-icon"></i>
@@ -894,9 +678,7 @@
                         <input type="range" id="tail-sweep-angle" min="-20" max="30" value="0" step="1">
                     </div>
                     <div class="input-group">
-                        <label for="vstab-sweep-angle">
-                            <span id="vstab-sweep-label-text">ميلان الذيل العمودي (Sweep):</span> <span id="vstab-sweep-value">0</span>°
-                        </label>
+                        <label for="vstab-sweep-angle">ميلان الذيل العمودي (Sweep): <span id="vstab-sweep-value">0</span>°</label>
                         <input type="range" id="vstab-sweep-angle" min="-20" max="45" value="0" step="1">
                     </div>
                     <div class="input-group">
@@ -1411,8 +1193,6 @@
                             <p>وزن المروحة التقديري (جرام):</p>
                             <span id="prop-weight-result">0</span>
                         </div>
-                    <!-- حاوية جديدة للنتائج المتقدمة القابلة للطي -->
-                    <div id="prop-advanced-results">
                         <div class="result-item" title="الطاقة التي تسحبها المروحة من المحرك لتدور بالسرعة المحددة.">
                             <p>الطاقة المستهلكة (واط):</p>
                             <span id="prop-power-result">0</span>
@@ -1436,7 +1216,6 @@
                         <div class="result-item" title="كفاءة المروحة: النسبة المئوية للقدرة التي يتم تحويلها إلى دفع مفيد.">
                             <p><strong>كفاءة المروحة (%):</strong></p>
                             <span id="prop-efficiency-result">0.0</span>
-                        </div>
                         </div>
                         <div class="result-item" title="سرعة طرف شفرة المروحة. إذا اقتربت من سرعة الصوت (حوالي 343 م/ث)، تقل كفاءة المروحة بشكل كبير.">
                             <p>سرعة طرف المروحة (م/ث):</p>
@@ -1491,11 +1270,6 @@
                         <label for="toggle-prop-spin">تشغيل المحاكاة (الدوران والهواء)</label>
                         <button type="button" id="toggle-prop-spin" style="flex-basis: 45%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; background-color: #e9ecef;">تشغيل</button>
                     </div>
-                    <!-- شريط التحكم الجديد لسرعة المروحة -->
-                    <div class="input-group">
-                        <label for="prop-rpm-control">سرعة المروحة (RPM): <span id="prop-rpm-control-value">8000</span></label>
-                        <input type="range" id="prop-rpm-control" min="0" max="8000" value="8000" step="50">
-                    </div>
                     <div class="input-group">
                         <label for="toggle-sound-btn">صوت المحرك</label>
                         <button type="button" id="toggle-sound-btn" style="flex-basis: 45%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; background-color: #e9ecef;">كتم الصوت</button>
@@ -1524,7 +1298,7 @@
                     </div>
                     <div class="input-group">
                         <label for="show-vortices">إظهار الدوامات الهوائية (من الأسطح)</label>
-                        <input type="checkbox" id="show-vortices" style="flex-basis: auto; margin-left: auto;">
+                        <input type="checkbox" id="show-vortices" checked style="flex-basis: auto; margin-left: auto;">
                     </div>
                     <div class="input-group">
                         <label for="show-smoke">إظهار الدخان (للمحرك الميكانيكي)</label>
@@ -1535,12 +1309,12 @@
                         <input type="checkbox" id="show-heat-haze" checked style="flex-basis: auto; margin-left: auto;">
                     </div>
                     <div class="input-group">
-                        <label for="particle-density">كثافة جسيمات الهواء: <span id="particle-density-value">30</span>%</label>
-                        <input type="range" id="particle-density" min="0" max="1" value="0.3" step="0.05">
+                        <label for="particle-density">كثافة جسيمات الهواء: <span id="particle-density-value">50</span>%</label>
+                        <input type="range" id="particle-density" min="0" max="1" value="0.5" step="0.05">
                     </div>
                     <div class="input-group">
-                        <label for="particle-size">حجم جسيمات الهواء: <span id="particle-size-value">15</span>%</label>
-                        <input type="range" id="particle-size" min="0" max="1" value="0.15" step="0.05">
+                        <label for="particle-size">حجم جسيمات الهواء: <span id="particle-size-value">50</span>%</label>
+                        <input type="range" id="particle-size" min="0" max="1" value="0.5" step="0.05">
                     </div>
                     <div class="input-group">
                         <label for="airflow-transparency">شفافية تدفق الهواء: <span id="airflow-transparency-value">100</span>%</label>
@@ -1550,14 +1324,6 @@
                         <label for="vibration-intensity">شدة اهتزاز المحرك: <span id="vibration-value">100</span>%</label>
                         <input type="range" id="vibration-intensity" min="0" max="1" value="1" step="0.1">
                     </div>
-                    <div class="input-group">
-                        <label for="p-factor-intensity" title="يتحكم في شدة عزم الانعراج (Yaw) الناتج عن الدفع غير المتماثل للمروحة عند زوايا الهجوم العالية.">شدة تأثير العامل P: <span id="p-factor-value">100</span>%</label>
-                        <input type="range" id="p-factor-intensity" min="0" max="2" value="1" step="0.1">
-                    </div>
-                    <div class="input-group">
-                        <label for="flutter-intensity">شدة اهتزاز الجناح: <span id="flutter-value">0</span>%</label>
-                        <input type="range" id="flutter-intensity" min="0" max="1" value="0" step="0.1">
-                    </div>
                     <!-- تم نقله هنا - يظهر فقط عند اختيار محركات الجناح -->
                     <div class="input-group" id="wing-prop-rotation-group" style="display: none;">
                         <label for="wing-prop-rotation">اتجاه دوران المراوح (للجناح)</label>
@@ -1565,25 +1331,6 @@
                             <option value="counter" selected>متعاكس (Counter-rotating)</option>
                             <option value="same">نفس الاتجاه (Same Direction)</option>
                         </select>
-                    </div>
-                    <!-- New Streamline Controls Section -->
-                    <div style="border-top: 1px dashed #ccc; margin-top: 15px; padding-top: 15px;">
-                        <div class="input-group">
-                            <label for="show-streamlines">إظهار خطوط التدفق الانسيابي</label>
-                            <input type="checkbox" id="show-streamlines" style="flex-basis: auto; margin-left: auto;">
-                        </div>
-                        <div class="input-group">
-                            <label for="streamline-density">كثافة خطوط التدفق: <span id="streamline-density-value">50</span></label>
-                            <input type="range" id="streamline-density" min="10" max="200" value="50" step="5">
-                        </div>
-                        <div class="input-group">
-                            <label for="streamline-points">طول/دقة خطوط التدفق: <span id="streamline-points-value">40</span></label>
-                            <input type="range" id="streamline-points" min="20" max="100" value="40" step="2">
-                        </div>
-                        <div class="input-group">
-                            <label for="show-pressure-map">إظهار خريطة الضغط على الجناح</label>
-                            <input type="checkbox" id="show-pressure-map" checked style="flex-basis: auto; margin-left: auto;">
-                        </div>
                     </div>
                     </div>
                 </fieldset>
@@ -1598,11 +1345,8 @@
                     </legend>
                     <div class="collapsible-content">
                         <div class="input-group">
-                            <label>التحكم بجميع المخططات</label>
-                            <div style="flex-basis: 45%; display: flex; gap: 10px;">
-                                <button type="button" id="show-all-charts-btn" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; background-color: #e9ecef;">إظهار الكل</button>
-                                <button type="button" id="hide-all-charts-btn" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; background-color: #f8f9fa;">إخفاء الكل</button>
-                            </div>
+                            <label for="show-all-charts-btn">إظهار جميع المخططات</label>
+                            <button type="button" id="show-all-charts-btn" style="flex-basis: 45%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; background-color: #e9ecef;">إظهار الكل</button>
                         </div>
                         <div class="input-group">
                             <label for="toggle-lift-chart">إظهار مخطط الرفع</label>
@@ -1627,34 +1371,6 @@
                         <div class="input-group">
                             <label for="toggle-stability-chart">إظهار مخطط هامش الاستقرار</label>
                             <input type="checkbox" id="toggle-stability-chart">
-                        </div>
-                        <div class="input-group">
-                            <label for="toggle-pitching-moment-chart">إظهار مخطط عزم الانحدار</label>
-                            <input type="checkbox" id="toggle-pitching-moment-chart">
-                        </div>
-                        <div class="input-group">
-                            <label for="toggle-yaw-moment-chart">إظهار مخطط عزم الانعراج</label>
-                            <input type="checkbox" id="toggle-yaw-moment-chart">
-                        </div>
-                        <div class="input-group">
-                            <label for="toggle-power-chart">إظهار مخطط القدرة</label>
-                            <input type="checkbox" id="toggle-power-chart">
-                        </div>
-                        <div class="input-group">
-                            <label for="toggle-roc-chart">إظهار مخطط معدل التسلق</label>
-                            <input type="checkbox" id="toggle-roc-chart">
-                        </div>
-                        <div class="input-group">
-                            <label for="toggle-lift-curve-chart">إظهار منحنى الرفع (Cl vs AoA)</label>
-                            <input type="checkbox" id="toggle-lift-curve-chart">
-                        </div>
-                        <div class="input-group">
-                            <label for="toggle-weight-dist-chart">إظهار مخطط توزيع الوزن</label>
-                            <input type="checkbox" id="toggle-weight-dist-chart">
-                        </div>
-                        <div class="input-group">
-                            <label for="toggle-cost-dist-chart">إظهار مخطط توزيع التكلفة</label>
-                            <input type="checkbox" id="toggle-cost-dist-chart">
                         </div>
                     </div>
                 </fieldset>
@@ -1739,21 +1455,9 @@
                         <label for="show-cg">إظهار مركز الجاذبية (CG)</label>
                         <input type="checkbox" id="show-cg" checked style="flex-basis: auto; margin-left: auto;">
                     </div>
-                    <div class="input-group">
-                        <label for="show-ac">إظهار المركز الهوائي (AC)</label>
-                        <input type="checkbox" id="show-ac" checked style="flex-basis: auto; margin-left: auto;">
-                    </div>
                     </div>
                     <!-- Pitching Moment Result -->
                     <div class="fieldset-results">
-                        <div class="result-item" title="موضع مركز الجاذبية (CG) من مقدمة الطائرة.">
-                            <p>موضع CG (<span class="unit-label">سم</span>):</p>
-                            <span id="cg-position-result-fieldset">0.0</span>
-                        </div>
-                        <div class="result-item" title="موضع المركز الهوائي (AC) من مقدمة الطائرة.">
-                            <p>موضع AC (<span class="unit-label">سم</span>):</p>
-                            <span id="ac-position-result-fieldset">0.0</span>
-                        </div>
                         <div class="result-item" title="العزم الكلي حول مركز الجاذبية. القيمة السالبة تعني ميلان للأسفل (مستقر)، والموجبة للأعلى (غير مستقر).">
                             <p><strong>عزم الانحدار (N.m):</strong></p>
                             <span id="pitching-moment-result">0.00</span>
@@ -1780,7 +1484,7 @@
                     </div>
                     <div class="input-group">
                         <label for="wing-color">لون الجناح</label>
-                        <input type="color" id="wing-color" value="#ffffff">
+                        <input type="color" id="wing-color" value="#cccccc">
                     </div>
                     <div class="input-group">
                         <label for="tail-color">لون الذيل</label>
@@ -1811,24 +1515,8 @@
                         <input type="color" id="vortex-color" value="#ffffff">
                     </div>
                     <div class="input-group">
-                        <label for="streamline-color">لون خطوط التدفق</label>
-                        <input type="color" id="streamline-color" value="#00ff00">
-                    </div>
-                    <div class="input-group">
-                        <label for="pressure-map-low-color">لون الضغط المنخفض (شفط)</label>
-                        <input type="color" id="pressure-map-low-color" value="#8800ff">
-                    </div>
-                    <div class="input-group">
-                        <label for="pressure-map-high-color">لون الضغط المرتفع</label>
-                        <input type="color" id="pressure-map-high-color" value="#ff4500">
-                    </div>
-                    <div class="input-group">
                         <label for="smoke-color">لون الدخان (للمحرك الميكانيكي)</label>
                         <input type="color" id="smoke-color" value="#CCCCCC">
-                    </div>
-                    <div class="input-group">
-                        <label for="sonic-boom-color">لون تأثير كسر حاجز الصوت</label>
-                        <input type="color" id="sonic-boom-color" value="#ffffff">
                     </div>
                     <div class="input-group">
                         <label for="cockpit-color">لون قمرة القيادة</label>
@@ -1855,52 +1543,20 @@
                 <fieldset class="collapsible-fieldset">
                     <legend class="collapsible-legend">
                         <div>
-                            <i class="fas fa-undo-alt legend-icon"></i>
-                            <span>اعادة ضبط الافتراضي</span>
+                            <i class="fas fa-save legend-icon"></i>
+                            <span>حفظ وتحميل التصميم</span>
                         </div>
                         <i class="fas fa-chevron-down toggle-icon"></i>
                     </legend>
                     <div class="collapsible-content">
                         <div class="input-group">
-                            <label for="reset-all-btn">إعادة تعيين جميع المدخلات للقيم الافتراضية</label>
-                            <button type="button" id="reset-all-btn" style="flex-basis: 45%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; background-color: #dc3545; color: white;">إعادة تعيين</button>
+                            <label for="save-design-btn">حفظ التصميم الحالي</label>
+                            <button type="button" id="save-design-btn" style="flex-basis: 45%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; background-color: #4CAF50; color: white;">حفظ كملف</button>
                         </div>
-                    </div>
-                </fieldset>
-                <fieldset class="collapsible-fieldset">
-                    <legend class="collapsible-legend">
-                        <div>
-                            <i class="fas fa-file-export legend-icon"></i>
-                            <span>حفظ وتصدير (Save & Export)</span>
-                        </div>
-                        <i class="fas fa-chevron-down toggle-icon"></i>
-                    </legend>
-                    <div class="collapsible-content">
-                        <div class="action-group">
-                            <h4>حفظ وتحميل التصميم</h4>
-                            <p>حفظ تصميمك الحالي كملف للعودة إليه لاحقًا، أو تحميل تصميم محفوظ مسبقًا.</p>
-                            <div class="button-row">
-                                <button type="button" id="save-design-btn" class="action-button save">
-                                    <i class="fas fa-save"></i> حفظ التصميم
-                                </button>
-                                <button type="button" id="load-design-btn" class="action-button load">
-                                    <i class="fas fa-folder-open"></i> تحميل تصميم
-                                </button>
-                            </div>
+                        <div class="input-group">
+                            <label for="load-design-btn">تحميل تصميم من ملف</label>
                             <input type="file" id="load-design-input" accept=".json" style="display: none;">
-                        </div>
-                        <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 20px 0;">
-                        <div class="action-group">
-                            <h4>تصدير النموذج ثلاثي الأبعاد</h4>
-                            <p>تصدير النموذج الحالي بصيغ مختلفة لاستخدامه في برامج الطباعة ثلاثية الأبعاد أو برامج التصميم الأخرى.</p>
-                            <div class="button-row">
-                                <button type="button" id="export-stl-btn" class="action-button export">
-                                    <i class="fas fa-cube"></i> تصدير STL
-                                </button>
-                                <button type="button" id="export-obj-btn" class="action-button export">
-                                    <i class="fas fa-object-group"></i> تصدير OBJ
-                                </button>
-                            </div>
+                            <button type="button" id="load-design-btn" style="flex-basis: 45%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; background-color: #008CBA; color: white;">تحميل ملف</button>
                         </div>
                     </div>
                 </fieldset>
@@ -1979,145 +1635,81 @@
                     </div>
                 </div>
             </form>
+
+            <div class="results">
+                <h2><i class="fas fa-poll"></i><span>النتائج</span></h2>
+                <p style="font-size: 0.8em; text-align: center; color: #555;">(قيم تقريبية لأغراض توضيحية)</p>
+                <div class="result-item">
+                    <p>قوة الرفع (نيوتن):</p>
+                    <span id="lift-result">0.00</span>
+                </div>
+                <div class="result-item" title="إجمالي قوة السحب (سحب الجسم والجناح + سحب المروحة)">
+                    <p>قوة السحب (نيوتن):</p>
+                    <span id="drag-result">0.00</span>
+                </div>
+                <div class="result-item">
+                    <p>قوة الدفع (نيوتن):</p>
+                    <span id="thrust-result">0.00</span>
+                </div>
+                <div class="result-item">
+                    <p>الوزن الكلي التقديري (جرام):</p>
+                    <span id="total-weight-result">0</span>
+                </div>
+                <div class="result-item">
+                    <p>نسبة الدفع إلى الوزن:</p>
+                    <span id="twr-result">0.00</span>
+                </div>
+                <div class="result-item" title="أقل سرعة يمكن للطائرة الطيران بها في وضع أفقي قبل أن تفقد الرفع.">
+                    <p><strong>سرعة الانهيار (م/ث):</strong></p>
+                    <span id="stall-speed-result">0.00</span>
+                </div>
+                <div class="result-item" title="الوزن مقسوماً على مساحة الجناح. يؤثر على سرعة الانهيار والقدرة على المناورة.">
+                    <p>تحميل الجناح (جرام/ديسيمتر²):</p>
+                    <span id="wing-loading-result">0.00</span>
+                </div>
+                <div class="result-item" title="نسبة طول الجناح إلى عرضه. القيم الأعلى تعني سحبًا مستحثًا أقل وكفاءة طيران أعلى.">
+                    <p>نسبة العرض إلى الارتفاع (AR):</p>
+                    <span id="aspect-ratio-result">0.00</span>
+                </div>
+                <div class="result-item" title="نسبة قوة الرفع إلى قوة السحب. مقياس للكفاءة الديناميكية الهوائية للطائرة.">
+                    <p>نسبة الرفع إلى السحب (L/D):</p>
+                    <span id="ld-ratio-result">0.00</span>
+                </div>
+                <div class="result-item" title="معامل حجم الذيل الأفقي. يحدد مدى استقرار الطائرة الطولي. القيم النموذجية بين 0.3 و 0.6.">
+                    <p>معامل حجم الذيل الأفقي (Vh):</p>
+                    <span id="h-tail-volume-result">0.000</span>
+                </div>
+                <div class="result-item" title="معامل حجم الذيل العمودي. يحدد مدى استقرار الطائرة الاتجاهي. القيم النموذجية بين 0.02 و 0.05.">
+                    <p>معامل حجم الذيل العمودي (Vv):</p>
+                    <span id="v-tail-volume-result">0.000</span>
+                </div>
+                <div class="result-item" style="border-top: 2px solid #90caf9; padding-top: 10px; margin-top: 10px;" title="موضع مركز الجاذبية من مقدمة الطائرة">
+                    <p>موضع مركز الجاذبية (CG) (سم):</p>
+                    <span id="cg-position-result">0.0</span>
+                </div>
+                <div class="result-item" title="الموضع العمودي لمركز الجاذبية (موجب للأعلى)">
+                    <p>موضع CG العمودي (Y) (سم):</p>
+                    <span id="cg-position-y-result">0.0</span>
+                </div>
+                <div class="result-item" title="الموضع الجانبي لمركز الجاذبية (موجب لليمين)">
+                    <p>موضع CG الجانبي (Z) (سم):</p>
+                    <span id="cg-position-z-result">0.0</span>
+                </div>
+                <div class="result-item" id="pitching-moment-result-item" title="العزم الذي يولده المحرك حول مركز الجاذبية. القيمة السالبة تعني ميلان للأسفل (nose-down)، والموجبة للأعلى (nose-up)." style="display: none;">
+                    <p><strong>عزم الانحدار من الدفع (N.m):</strong></p>
+                    <span id="pitching-moment-result">0.00</span>
+                </div>
+                <div class="result-item" id="yawing-moment-result-item" title="العزم الذي يولده المحرك حول المحور العمودي. القيمة الموجبة تعني انعراج لليمين (nose-right)." style="display: none;">
+                    <p><strong>عزم الانعراج من الدفع (N.m):</strong></p>
+                    <span id="yawing-moment-result">0.00</span>
+                </div>
+            </div>
         </div>
         <div class="viewer">
             <canvas id="viewer-canvas"></canvas>
         </div>
     </div>
     
-    <div class="results">
-        <h2><i class="fas fa-poll"></i><span>النتائج</span></h2>
-        <p style="font-size: 0.8em; text-align: center; color: #555;">(قيم تقريبية لأغراض توضيحية)</p>
-        <div class="results-grid">
-            <!-- Column Headers -->
-            <div class="grid-header">الأداء العام</div>
-            <div class="grid-header">أداء الطيران</div>
-            <div class="grid-header">الاستقرار ومركز الجاذبية</div>
-
-            <!-- Row 1 -->
-            <div class="result-item">
-                <p>قوة الرفع (نيوتن):</p>
-                <span id="lift-result">0.00</span>
-            </div>
-            <div class="result-item" title="السرعة العمودية للطائرة (متر/ثانية). تعتمد على فائض الدفع عند سرعة الهواء الحالية. القيمة الموجبة تعني تسلق، والسالبة هبوط.">
-                <p><strong>معدل التسلق (م/ث):</strong></p>
-                <span id="roc-result">0.00</span>
-            </div>
-            <div class="result-item" title="موضع مركز الجاذبية من مقدمة الطائرة">
-                <p>موضع مركز الجاذبية (CG) (سم):</p>
-                <span id="cg-position-result">0.0</span>
-            </div>
-
-            <!-- Row 2 -->
-            <div class="result-item" title="إجمالي قوة السحب (سحب الجسم والجناح + سحب المروحة)">
-                <p>قوة السحب (نيوتن):</p>
-                <span id="drag-result">0.00</span>
-            </div>
-            <div class="result-item" title="أقصى سرعة عمودية يمكن للطائرة تحقيقها في الظروف الحالية.">
-                <p><strong>أقصى معدل تسلق (م/ث):</strong></p>
-                <span id="max-roc-result">0.00</span>
-            </div>
-            <div class="result-item" id="ac-position-result-item" title="موضع المركز الهوائي الكلي للطائرة (النقطة المحايدة). يجب أن يكون خلف مركز الجاذبية لتحقيق الاستقرار.">
-                <p>موضع المركز الهوائي (AC) (سم):</p>
-                <span id="ac-position-result">0.0</span>
-            </div>
-
-            <!-- Row 3 -->
-            <div class="result-item">
-                <p>قوة الدفع (نيوتن):</p>
-                <span id="thrust-result">0.00</span>
-            </div>
-            <div class="result-item" title="السرعة الجوية التي تحقق أقصى معدل تسلق (Vy).">
-                <p><strong>سرعة أقصى تسلق (Vy) (م/ث):</strong></p>
-                <span id="vy-speed-result">0.00</span>
-            </div>
-            <div class="result-item" title="الموضع العمودي لمركز الجاذبية (موجب للأعلى)">
-                <p>موضع CG العمودي (Y) (سم):</p>
-                <span id="cg-position-y-result">0.0</span>
-            </div>
-
-            <!-- Row 4 -->
-            <div class="result-item">
-                <p>الوزن الكلي التقديري (جرام):</p>
-                <span id="total-weight-result">0</span>
-            </div>
-            <div class="result-item" title="أقل سرعة يمكن للطائرة الطيران بها في وضع أفقي قبل أن تفقد الرفع.">
-                <p><strong>سرعة الانهيار (م/ث):</strong></p>
-                <span id="stall-speed-result">0.00</span>
-            </div>
-            <div class="result-item" title="الموضع الجانبي لمركز الجاذبية (موجب لليمين)">
-                <p>موضع CG الجانبي (Z) (سم):</p>
-                <span id="cg-position-z-result">0.0</span>
-            </div>
-
-            <!-- Row 5 -->
-            <div class="result-item">
-                <p>نسبة الدفع إلى الوزن:</p>
-                <span id="twr-result">0.00</span>
-            </div>
-            <div class="result-item" title="أصغر زاوية هبوط يمكن للطائرة تحقيقها (أفضل انزلاق). تحدث عند زاوية الهجوم التي تعطي أقصى نسبة رفع إلى سحب.">
-                <p><strong>زاوية الانزلاق الأفضل (°):</strong></p>
-                <span id="best-glide-angle-result">0.00</span>
-            </div>
-            <div class="result-item" title="معامل حجم الذيل الأفقي. يحدد مدى استقرار الطائرة الطولي. القيم النموذجية بين 0.3 و 0.6.">
-                <p>معامل حجم الذيل الأفقي (Vh):</p>
-                <span id="h-tail-volume-result">0.000</span>
-            </div>
-
-            <!-- Row 6 -->
-            <div class="result-item" title="نسبة قوة الرفع إلى قوة السحب. مقياس للكفاءة الديناميكية الهوائية للطائرة.">
-                <p>نسبة الرفع إلى السحب (L/D):</p>
-                <span id="ld-ratio-result">0.00</span>
-            </div>
-            <div class="result-item" id="top-pressure-result-item" title="الضغط على السطح العلوي للجناح. القيمة الأقل من الضغط الجوي تسبب قوة شفط للأعلى.">
-                <p>الضغط العلوي (باسكال):</p>
-                <span id="top-pressure-result">0</span>
-            </div>
-            <div class="result-item" title="معامل حجم الذيل العمودي. يحدد مدى استقرار الطائرة الاتجاهي. القيم النموذجية بين 0.02 و 0.05.">
-                <p>معامل حجم الذيل العمودي (Vv):</p>
-                <span id="v-tail-volume-result">0.000</span>
-            </div>
-
-            <!-- Row 7 -->
-            <div class="result-item" title="الوزن مقسوماً على مساحة الجناح. يؤثر على سرعة الانهيار والقدرة على المناورة.">
-                <p>تحميل الجناح (جرام/ديسيمتر²):</p>
-                <span id="wing-loading-result">0.00</span>
-            </div>
-            <div class="result-item" id="bottom-pressure-result-item" title="الضغط على السطح السفلي للجناح. القيمة الأعلى من الضغط الجوي تسبب قوة دفع للأعلى.">
-                <p>الضغط السفلي (باسكال):</p>
-                <span id="bottom-pressure-result">0</span>
-            </div>
-            <div class="result-item" id="pitching-moment-thrust-result-item" title="العزم الدوراني حول المحور الجانبي (Pitch) الناتج عن قوة الدفع. القيمة السالبة تعني ميلان للأسفل (مستقر)، والموجبة للأعلى (غير مستقر)." style="display: none;">
-                <p>عزم الانحدار من الدفع (N.m):</p>
-                <span id="pitching-moment-thrust-result">0.00</span>
-            </div>
-
-            <!-- Row 8 -->
-            <div class="result-item" title="نسبة طول الجناح إلى عرضه. القيم الأعلى تعني سحبًا مستحثًا أقل وكفاءة طيران أعلى.">
-                <p>نسبة العرض إلى الارتفاع (AR):</p>
-                <span id="aspect-ratio-result">0.00</span>
-            </div>
-            <div class="result-item" id="yawing-moment-thrust-result-item" title="العزم الدوراني حول المحور العمودي (Yaw) الناتج عن قوة الدفع. يستخدم الميلان الجانبي للمحرك لمعادلة هذا العزم." style="display: none;">
-                <p>عزم الانعراج من الدفع (N.m):</p>
-                <span id="yawing-moment-thrust-result">0.00</span>
-            </div>
-            <div class="result-item" id="torque-roll-result-item" title="رد فعل عزم دوران المحرك الذي يسبب ميلان الطائرة للدوران. القيمة السالبة تعني ميلان لليسار (عكس عقارب الساعة)." style="display: none;">
-                <p>عزم الدوران (Roll) من المحرك (N.m):</p>
-                <span id="torque-roll-result">0.000</span>
-            </div>
-
-            <!-- Row 9 (will only have 2 items) -->
-            <div class="result-item" style="grid-column: 1 / 2;"></div> <!-- Empty cell -->
-            <div class="result-item" id="p-factor-yaw-result-item" title="عزم الانعراج الناتج عن الدفع غير المتماثل للمروحة عند زوايا الهجوم العالية. القيمة السالبة تعني انعراج لليسار." style="display: none;">
-                <p>عزم الانعراج (P-Factor) (N.m):</p>
-                <span id="p-factor-yaw-result">0.000</span>
-            </div>
-            <div class="result-item" style="grid-column: 3 / 4;"></div> <!-- Empty cell -->
-
-            </div>
-        </div>
-    </div>
-
     <div class="charts-container" id="charts-container">
         <div class="chart-card" id="lift-chart-card">
             <h3>الرفع مقابل سرعة الهواء</h3>
@@ -2144,7 +1736,7 @@
             </div>
         </div>
         <div class="chart-card" id="ld-ratio-chart-card">
-            <h3>كفاءة الانزلاق (L/D) مقابل زاوية الهجوم</h3>
+            <h3>نسبة الرفع إلى السحب (L/D) مقابل زاوية الهجوم</h3>
             <div class="chart-wrapper">
                 <canvas id="ld-ratio-chart"></canvas>
             </div>
@@ -2155,86 +1747,9 @@
                 <canvas id="stability-chart"></canvas>
             </div>
         </div>
-        <div class="chart-card" id="pitching-moment-chart-card">
-            <h3>عزم الانحدار مقابل زاوية الهجوم (الاستقرار الطولي)</h3>
-            <div class="chart-wrapper">
-                <canvas id="pitching-moment-chart"></canvas>
-            </div>
-        </div>
-        <div class="chart-card" id="yaw-moment-chart-card">
-            <h3>عزم الانعراج مقابل زاوية الهجوم (استقرار اتجاهي)</h3>
-            <div class="chart-wrapper">
-                <canvas id="yaw-moment-chart"></canvas>
-            </div>
-        </div>
-        <div class="chart-card" id="power-chart-card">
-            <h3>القدرة المتاحة مقابل القدرة المطلوبة (واط)</h3>
-            <div class="chart-wrapper">
-                <canvas id="power-chart"></canvas>
-            </div>
-        </div>
-        <div class="chart-card" id="roc-chart-card">
-            <h3>معدل التسلق مقابل سرعة الهواء</h3>
-            <div class="chart-wrapper">
-                <canvas id="roc-chart"></canvas>
-            </div>
-        </div>
-        <div class="chart-card" id="lift-curve-chart-card">
-            <h3>منحنى الرفع (معامل الرفع مقابل زاوية الهجوم)</h3>
-            <div class="chart-wrapper">
-                <canvas id="lift-curve-chart"></canvas>
-            </div>
-        </div>
-        <div class="chart-card doughnut-chart" id="weight-dist-chart-card">
-            <h3>توزيع الوزن</h3>
-            <div class="chart-wrapper">
-                <canvas id="weight-dist-chart"></canvas>
-            </div>
-        </div>
-        <div class="chart-card doughnut-chart" id="cost-dist-chart-card">
-            <h3>توزيع التكلفة</h3>
-            <div class="chart-wrapper">
-                <canvas id="cost-dist-chart"></canvas>
-            </div>
-        </div>
     </div>
-
-<button class="back-to-top" id="back-to-top-btn" title="العودة إلى الأعلى" aria-label="العودة إلى الأعلى"><i class="fas fa-arrow-up" aria-hidden="true"></i></button>
-
-<footer>
-    <div class="social-icons">
-        <a href="#" title="تابعنا على تويتر" target="_blank" rel="noopener noreferrer" aria-label="تابعنا على تويتر"><i class="fa-brands fa-x-twitter" aria-hidden="true"></i></a>
-        <a href="#" title="تابعنا على لينكد إن" target="_blank" rel="noopener noreferrer" aria-label="تابعنا على لينكد إن"><i class="fa-brands fa-linkedin-in" aria-hidden="true"></i></a>
-        <a href="https://github.com/legionr4" title="شاهد مشاريعنا على جيت هاب" target="_blank" rel="noopener noreferrer" aria-label="شاهد مشاريعنا على جيت هاب"><i class="fa-brands fa-github" aria-hidden="true"></i></a>
-    </div>
-    <div class="footer-links">
-        <a href="../privacy-policy.html">سياسة الخصوصية</a>
-        <a href="../terms-of-use.html">شروط الاستخدام</a>
-    </div>
-    <p class="copyright">جميع الحقوق محفوظة &copy; <span id="copyright-year"></span></p>
-</footer>
 
 <script src="rc-design.js" defer></script>
-
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        // Back to top button functionality
-        const backToTopBtn = document.getElementById('back-to-top-btn');
-        if (backToTopBtn) {
-            window.addEventListener('scroll', () => {
-                if (window.scrollY > 400) {
-                    backToTopBtn.classList.add('show');
-                } else {
-                    backToTopBtn.classList.remove('show');
-                }
-            });
-            backToTopBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
-        }
-        // Update copyright year
-        const yearSpan = document.getElementById('copyright-year');
-        if(yearSpan) yearSpan.textContent = new Date().getFullYear();
-    });
-</script>
 
 <!-- Audio Element for Engine Sound -->
 <audio id="engine-sound" loop preload="auto">
