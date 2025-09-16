@@ -761,10 +761,12 @@ function generateAirfoil(chord, thickness, airfoilType, numPoints = 15) {
     }
     // Add simpler shapes for control surfaces
     else if (airfoilType === 'wedge') {
-        // A wedge is a triangle. The points must be in order to form a loop.
+        // A wedge is a triangle. The points must be in order to form a closed loop.
+        // FIX: Explicitly close the loop by adding the start point at the end.
         points.push(new THREE.Vector2(chord / 2, thickness / 2));   // Top-front
         points.push(new THREE.Vector2(-chord / 2, 0));              // Trailing edge point
         points.push(new THREE.Vector2(chord / 2, -thickness / 2));  // Bottom-front
+        points.push(new THREE.Vector2(chord / 2, thickness / 2));   // Close the loop
     }
     else if (airfoilType === 'flat_plate') {
         points.push(new THREE.Vector2(chord / 2, thickness / 2));
@@ -798,17 +800,17 @@ const createSurface = (span, rootChord, taperRatio, sweepAngle, thickness, airfo
     const geometry = new THREE.BufferGeometry();
     const vertices = [];
     const indices = [];
+    const sectionPointsCounts = []; // FIX: Array to store point count for each section
     const segments = (airfoil === 'flat_plate' || airfoil === 'wedge' || airfoil === 'rectangular') ? 1 : 5; // Use fewer segments for simple shapes
-    let pointsPerSection = 0; // سيتم تحديده ديناميكيًا
 
     for (let i = 0; i <= segments; i++) {
         const spanProgress = i / segments;
         const currentY = spanProgress * effectiveSpan;
         const currentChord = rootChord + (rootChord * taperRatio - rootChord) * spanProgress;
         const currentSweep = currentY * Math.tan(sweepRad);
-        // The number of points depends on the airfoil type
+        // FIX: The number of points depends on the airfoil type
         const airfoilPoints = generateAirfoil(currentChord, thickness, airfoil, 15);
-        if (i === 0) pointsPerSection = airfoilPoints.length; // Set the number of points from the first section
+        sectionPointsCounts.push(airfoilPoints.length); // FIX: Store the point count for this specific section
 
         airfoilPoints.forEach(p => {
             if (isVertical) {
@@ -820,24 +822,46 @@ const createSurface = (span, rootChord, taperRatio, sweepAngle, thickness, airfo
     }
 
     for (let i = 0; i < segments; i++) {
+        const pointsPerSection = sectionPointsCounts[i]; // FIX: Use the count for the current section
+        const pointsPerNextSection = sectionPointsCounts[i + 1]; // FIX: Use the count for the next section
+        const baseIndex = sectionPointsCounts.slice(0, i).reduce((a, b) => a + b, 0);
+        const nextBaseIndex = baseIndex + pointsPerSection;
+
         for (let j = 0; j < pointsPerSection; j++) {
-            const p1 = i * pointsPerSection + j;
-            const p2 = i * pointsPerSection + ((j + 1) % pointsPerSection);
-            const p3 = (i + 1) * pointsPerSection + j;
-            const p4 = (i + 1) * pointsPerSection + ((j + 1) % pointsPerSection);
+            // FIX: Handle potentially different point counts between sections
+            const p1 = baseIndex + j;
+            const p2 = baseIndex + ((j + 1) % pointsPerSection);
+            const p3 = nextBaseIndex + Math.floor(j * (pointsPerNextSection / pointsPerSection));
+            const p4 = nextBaseIndex + Math.floor(((j + 1) % pointsPerSection) * (pointsPerNextSection / pointsPerSection));
             indices.push(p1, p3, p4, p1, p4, p2);
         }
     }
 
-    const tipStartIndex = segments * pointsPerSection;
-    for (let j = 1; j < pointsPerSection - 1; j++) {
-        indices.push(tipStartIndex, tipStartIndex + j + 1, tipStartIndex + j);
+    const tipStartIndex = sectionPointsCounts.slice(0, segments).reduce((a, b) => a + b, 0);
+    const tipPointsCount = sectionPointsCounts[segments];
+
+    // --- FIX: Handle tip cap creation for simple vs complex shapes ---
+    if (tipPointsCount === 3) { // For a wedge (3 points: top-front, trailing-edge, bottom-front)
+        // Create a single triangle face for the tip, ensuring counter-clockwise winding
+        // The correct order is (0, 1, 2) which corresponds to (top-front, trailing-edge, bottom-front)
+        indices.push(tipStartIndex, tipStartIndex + 1, tipStartIndex + 2);
+    } else if (tipPointsCount === 4) { // For a rectangle or flat plate (4 points)
+        // Create a simple two-triangle face for the tip
+        // Triangle 1: (0, 1, 2)
+        // Triangle 2: (0, 2, 3)
+        indices.push(tipStartIndex, tipStartIndex + 2, tipStartIndex + 1);
+        indices.push(tipStartIndex, tipStartIndex + 3, tipStartIndex + 2);
+    } else { // For complex airfoil shapes
+        for (let j = 1; j < tipPointsCount - 1; j++) {
+            indices.push(tipStartIndex, tipStartIndex + j + 1, tipStartIndex + j);
+        }
     }
 
     // Add root cap if requested
     if (createRootCap) {
         const rootStartIndex = 0;
-        for (let j = 1; j < pointsPerSection - 1; j++) {
+        // FIX: Use the point count from the first section (the root) for the root cap.
+        for (let j = 1; j < sectionPointsCounts[0] - 1; j++) {
             // Wind in the opposite direction for the root cap
             indices.push(rootStartIndex, rootStartIndex + j, rootStartIndex + j + 1);
         }
@@ -1313,8 +1337,8 @@ function updatePlaneModel() {
     const wingGeometry = new THREE.BufferGeometry();
     const vertices = [];
     const indices = [];
+    const sectionPointsCounts = []; // FIX: Array to store point count for each section
     const segments = 10; // عدد المقاطع على طول الجناح لزيادة الدقة
-    const pointsPerSection = (15 * 2); // 15 نقطة للسطح العلوي و 15 للسفلي
 
     // إنشاء نقاط لكل مقطع على طول الجناح
     const aileronActive = hasAileronInput.checked;
@@ -1324,13 +1348,13 @@ function updatePlaneModel() {
     const aileronZStart = halfSpan - aileronPosition - aileronLength;
     const aileronZEnd = halfSpan - aileronPosition;
 
-
     for (let i = 0; i <= segments; i++) {
         const spanProgress = i / segments;
         const currentZ = spanProgress * halfSpan;
         const currentChord = rootChord + (rootChord * taperRatio - rootChord) * spanProgress;
         const currentSweep = currentZ * Math.tan(sweepRad);
         const airfoilPoints = generateAirfoil(currentChord, wingThickness, airfoilType, 15);
+        sectionPointsCounts.push(airfoilPoints.length); // FIX: Store the point count for this specific section
 
         airfoilPoints.forEach(p => {
             vertices.push(p.x + currentSweep, p.y, currentZ);
@@ -1341,6 +1365,11 @@ function updatePlaneModel() {
     for (let i = 0; i < segments; i++) {
         const z_start = (i / segments) * halfSpan;
         const z_end = ((i + 1) / segments) * halfSpan; // نهاية المقطع الحالي على طول الجناح
+        // FIX: Use dynamic point counts for building faces
+        const pointsPerSection = sectionPointsCounts[i];
+        const pointsPerNextSection = sectionPointsCounts[i + 1];
+        const baseIndex = sectionPointsCounts.slice(0, i).reduce((a, b) => a + b, 0);
+        const nextBaseIndex = baseIndex + pointsPerSection;
 
         for (let j = 0; j < pointsPerSection; j++) {
             // Check if this face is part of the aileron cutout
@@ -1356,17 +1385,19 @@ function updatePlaneModel() {
                 continue; // Skip creating this face, effectively creating a hole
             }
 
-            const p1 = i * pointsPerSection + j;
-            const p2 = i * pointsPerSection + ((j + 1) % pointsPerSection);
-            const p3 = (i + 1) * pointsPerSection + j;
-            const p4 = (i + 1) * pointsPerSection + ((j + 1) % pointsPerSection);
+            // FIX: Handle potentially different point counts between sections
+            const p1 = baseIndex + j;
+            const p2 = baseIndex + ((j + 1) % pointsPerSection);
+            const p3 = nextBaseIndex + Math.floor(j * (pointsPerNextSection / pointsPerSection));
+            const p4 = nextBaseIndex + Math.floor(((j + 1) % pointsPerSection) * (pointsPerNextSection / pointsPerSection));
             indices.push(p1, p3, p4, p1, p4, p2);
         }
     }
 
     // إضافة غطاء لنهاية الجناح (wing tip) لسد الفتحة
-    const tipStartIndex = segments * pointsPerSection;
-    for (let j = 1; j < pointsPerSection - 1; j++) {
+    const tipStartIndex = sectionPointsCounts.slice(0, segments).reduce((a, b) => a + b, 0);
+    const tipPointsCount = sectionPointsCounts[segments];
+    for (let j = 1; j < tipPointsCount - 1; j++) {
         // The vertices should be wound counter-clockwise to face outwards
         indices.push(tipStartIndex, tipStartIndex + j + 1, tipStartIndex + j);
     }
@@ -2210,6 +2241,32 @@ function updatePlaneModel() {
         accessoriesGroup.add(box);
     };
 
+    // --- FIX: Re-add energy source scaling logic to the visual update function ---
+    energySourceGroup.visible = false; // Hide by default
+
+    if (engineType === 'electric') {
+        energySourceGroup.visible = true;
+        const batteryWeightGrams = getValidNumber(batteryWeightInput);
+        const batteryDensityG_cm3 = 1.5; // Approximate density for LiPo
+        const volume_cm3 = batteryWeightGrams > 0 ? batteryWeightGrams / batteryDensityG_cm3 : 0;
+        const volume_m3 = volume_cm3 / 1e6;
+
+        // Calculate dimensions from volume, maintaining an approximate ratio (L:W:H = 4:2:1)
+        const x_dim = volume_m3 > 0 ? Math.cbrt(volume_m3 / (4 * 2 * 1)) : 0;
+        const height = x_dim * 1;
+        const width = x_dim * 2;
+        const length = x_dim * 4;
+        energySourceMesh.scale.set(length, height, width);
+
+        const batteryPositionFromNose = getValidNumber(batteryPositionInput) * conversionFactor;
+        energySourceGroup.position.x = (fuselageLength / 2) - batteryPositionFromNose;
+    } else if (engineType === 'ic') {
+        energySourceGroup.visible = true;
+        energySourceMesh.scale.set(getValidNumber(fuelTankLengthInput) * conversionFactor, getValidNumber(fuelTankHeightInput) * conversionFactor, getValidNumber(fuelTankWidthInput) * conversionFactor);
+        const tankPositionFromNose = getValidNumber(fuelTankPositionInput) * conversionFactor;
+        energySourceGroup.position.x = (fuselageLength / 2) - tankPositionFromNose;
+    }
+
     // استدعاء الدالة مع الإحداثيات الجديدة
     createAccessoryBox(getValidNumber(receiverWeightInput), getValidNumber(receiverPositionInput), getValidNumber(receiverPositionYInput), getValidNumber(receiverPositionZInput), 'Receiver');
     createAccessoryBox(getValidNumber(cameraWeightInput), getValidNumber(cameraPositionInput), getValidNumber(cameraPositionYInput), getValidNumber(cameraPositionZInput), 'Camera');
@@ -2217,36 +2274,6 @@ function updatePlaneModel() {
     createAccessoryBox(getValidNumber(servoG1WeightInput) * getValidNumber(servoG1CountInput), getValidNumber(servoG1PositionXInput), getValidNumber(servoG1PositionYInput), getValidNumber(servoG1PositionZInput), 'Servo Group 1');
     createAccessoryBox(getValidNumber(servoG2WeightInput) * getValidNumber(servoG2CountInput), getValidNumber(servoG2PositionXInput), getValidNumber(servoG2PositionYInput), getValidNumber(servoG2PositionZInput), 'Servo Group 2');
 
-    // --- FIX: Energy Source (Battery/Fuel Tank) Logic ---
-    energySourceGroup.visible = false; // إخفاؤه افتراضيًا
-
-    if (engineType === 'electric') {
-        energySourceGroup.visible = true;
-
-        // حساب الحجم بناءً على الوزن والكثافة التقديرية للبطارية
-        const batteryWeightGrams = getValidNumber(batteryWeightInput); // Already in grams
-        const batteryDensityG_cm3 = 1.5; // كثافة تقديرية للبطارية مع الغلاف (جرام/سم^3)
-        const volume_cm3 = batteryWeightGrams > 0 ? batteryWeightGrams / batteryDensityG_cm3 : 0;
-        const volume_m3 = volume_cm3 / 1e6;
-
-        // حساب الأبعاد من الحجم مع الحفاظ على نسبة أبعاد تقديرية (L:W:H = 4:2:1)
-        const x_dim = volume_m3 > 0 ? Math.cbrt(volume_m3 / (4 * 2 * 1)) : 0;
-        const height = x_dim * 1;
-        const width = x_dim * 2;
-        const length = x_dim * 4;
-
-        energySourceMesh.scale.set(length, height, width);
-
-        const batteryPositionFromNose = getValidNumber(batteryPositionInput) * conversionFactor;
-        energySourceGroup.position.x = (fuselageLength / 2) - batteryPositionFromNose;
-
-    } else if (engineType === 'ic') {
-        energySourceGroup.visible = true;
-
-        energySourceMesh.scale.set(getValidNumber(fuelTankLengthInput) * conversionFactor, getValidNumber(fuelTankHeightInput) * conversionFactor, getValidNumber(fuelTankWidthInput) * conversionFactor);
-        const tankPositionFromNose = getValidNumber(fuelTankPositionInput) * conversionFactor;
-        energySourceGroup.position.x = (fuselageLength / 2) - tankPositionFromNose;
-    }
 }
 
 /**
@@ -2591,6 +2618,9 @@ function calculateAerodynamics() {
     // Cd = Cdp + Cdi (سحب طفيلي + سحب مستحث)
     const aspectRatio = totalWingArea > 0 ? Math.pow(wingSpan, 2) / totalWingArea : 0;
 
+    // --- FIX: Initialize cdp before it's used ---
+    let cdp = 0.025; // معامل سحب طفيلي أساسي (لجسم الطائرة والذيل وغيرها)
+
     // --- تعديل كفاءة أوزوالد بناءً على وجود وشكل أطراف الجناح ---
     // أطراف الجناح تقلل من السحب المستحث عن طريق زيادة نسبة العرض إلى الارتفاع الفعالة.
     let oswaldEfficiency = 0.8; // قيمة أساسية بدون أطراف
@@ -2609,9 +2639,6 @@ function calculateAerodynamics() {
         // 'symmetrical' is considered the baseline and adds no extra drag compared to the main wing
     }
     const cdi = (aspectRatio > 0) ? (Math.pow(cl, 2) / (Math.PI * aspectRatio * oswaldEfficiency)) : 0;
-
-    // --- حساب السحب الطفيلي (Parasitic Drag) ---
-    let cdp = 0.025; // معامل سحب طفيلي أساسي (لجسم الطائرة والذيل وغيرها)
 
     // إضافة تأثير سحب الجنيحات بناءً على شكلها
     if (hasAileron) {
