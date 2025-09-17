@@ -1074,7 +1074,8 @@ function updatePlaneModel() {
     // --- FIX: Define all necessary variables at the top of the function scope ---
     const conversionFactor = UNIT_CONVERSIONS[unitSelector.value];
     const engineType = engineTypeInput.value;
-
+  // FIX: Declare variables at the top of the function to avoid ReferenceError
+    let fuselageWidthAtWing, fuselageHeightAtWing;
     // قراءة قيم الجناح
     const wingSpan = getValidNumber(wingSpanInput) * conversionFactor;
     const wingChord = getValidNumber(wingChordInput) * conversionFactor;
@@ -1086,7 +1087,6 @@ function updatePlaneModel() {
     const wingIncidenceAngle = getValidNumber(wingIncidenceAngleInput);
     // قراءة قيم المحرك والمروحة
     const engineVerticalPosition = getValidNumber(engineVerticalPositionInput) * conversionFactor;
-
     // --- FIX: Read fuselage diameters here for model creation ---
     const fuselageDiameter = getValidNumber(fuselageDiameterInput) * conversionFactor;
     const fuselageFrontDiameter = getValidNumber(fuselageFrontDiameterInput) * conversionFactor;
@@ -1118,9 +1118,10 @@ function updatePlaneModel() {
     // Calculate X positions for components relative to fuselage center (0,0,0)
     const wingNoseDistance = getValidNumber(wingNoseDistanceInput) * conversionFactor;
     const wingPositionX = (fuselageLength / 2) - wingNoseDistance;
+    const tailPositionX = wingPositionX - (getValidNumber(wingTailDistanceInput) * conversionFactor); // FIX: Define tailPositionX
     // --- FIX: Calculate the actual fuselage width/height at the wing attachment point ---
     // --- FIX: Calculate the actual fuselage width/height at the wing attachment point ---
-    let fuselageWidthAtWing, fuselageHeightAtWing;
+    //et fuselageWidthAtWing, fuselageHeightAtWing;
 
     if (fuselageShapeInput.value === 'teardrop') {
         const frontDiameter = getValidNumber(fuselageFrontDiameterInput) * conversionFactor;
@@ -1183,13 +1184,9 @@ function updatePlaneModel() {
     const fuselageTaperRatio = getValidNumber(fuselageTaperRatioInput);
 
     // New: Read component distances (wing is now the reference)
-    // const wingNoseDistance = getValidNumber(wingNoseDistanceInput) * conversionFactor;
+
     const wingPropDistance = getValidNumber(wingPropDistanceInput) * conversionFactor;
     const wingTailDistance = getValidNumber(wingTailDistanceInput) * conversionFactor;
-    // Calculate X positions for components relative to fuselage center (0,0,0)
-
-    const tailPositionX = wingPositionX - wingTailDistance; // Tail is relative to wing
-
     // قيم المروحة تبقى بالبوصة كما هي متعارف عليها
     const propDiameter = getValidNumber(propDiameterInput) * 0.0254; // to meters
     const propChord = getValidNumber(propChordInput) * conversionFactor;
@@ -1467,8 +1464,8 @@ function updatePlaneModel() {
 
     // --- تطبيق زاوية الديhedral ---
     // يتم الدوران حول المحور X (المحور الممتد من مقدمة الجناح لمؤخرته)
-    const dihedralRad = dihedralAngle * (Math.PI / 180);
-    rightWing.rotation.x = -dihedralRad; // إشارة سالبة لرفع الجناح للأعلى عند قيمة موجبة
+    const dihedralRad = dihedralAngle * (Math.PI / 180); // FIX: Correctly define dihedralRad
+    rightWing.rotation.x = -dihedralRad;
     leftWing.rotation.x = -dihedralRad; // نفس الدوران، لأن الانعكاس في المقياس Z يعكس التأثير تلقائيًا
 
     // FIX: Use the calculated fuselage width at the wing's specific X position
@@ -1590,14 +1587,40 @@ function updatePlaneModel() {
         leftWing.add(leftAileronPivot);
     }
 
-    // تحديث موضع الجناح (علوي/متوسط/سفلي)
-    wingGroup.position.x = wingPositionX;
-    if (wingPosition === 'high') wingGroup.position.y = currentFuselageHeight / 2;
-    else if (wingPosition === 'mid') wingGroup.position.y = 0;
-    else if (wingPosition === 'low') wingGroup.position.y = -currentFuselageHeight / 2;
-    // تطبيق زاوية ميلان الجناح (Incidence)
-    wingGroup.rotation.z = wingIncidenceAngle * (Math.PI / 180);
 
+    // --- FIX: Calculate fuselage dimensions at wing position BEFORE using them ---
+    // This is crucial for tapered fuselages to ensure the wing is positioned correctly.
+
+    const wingPosRatio = (wingPositionX + fuselageLength / 2) / fuselageLength; // 0 at rear, 1 at front
+ 
+    if (fuselageShape === 'teardrop') {
+        const frontDiameter = getValidNumber(fuselageFrontDiameterInput) * conversionFactor;
+        const rearDiameter = getValidNumber(fuselageRearDiameterInput) * conversionFactor;
+        const diameterAtWing = rearDiameter + wingPosRatio * (frontDiameter - rearDiameter);
+        fuselageWidthAtWing = diameterAtWing;
+        fuselageHeightAtWing = diameterAtWing;
+    } else { // Rectangular or Cylindrical
+        const frontWidth = (fuselageShape === 'rectangular') ? getValidNumber(fuselageWidthInput) * conversionFactor : getValidNumber(fuselageDiameterInput) * conversionFactor;
+        const frontHeight = (fuselageShape === 'rectangular') ? getValidNumber(fuselageHeightInput) * conversionFactor : getValidNumber(fuselageDiameterInput) * conversionFactor;
+        const rearWidth = frontWidth * fuselageTaperRatio;
+        const rearHeight = frontHeight * fuselageTaperRatio;
+        fuselageWidthAtWing = rearWidth + wingPosRatio * (frontWidth - rearWidth);
+        fuselageHeightAtWing = rearHeight + wingPosRatio * (frontHeight - rearHeight);
+    }
+ 
+    // Now that we have the correct fuselage dimensions, position the wing.
+    rightWing.position.z = fuselageWidthAtWing / 2;
+    leftWing.position.z = -fuselageWidthAtWing / 2;
+ 
+    // Position the entire wing group
+    wingGroup.position.x = wingPositionX;
+    if (wingPosition === 'high') wingGroup.position.y = (fuselageHeightAtWing / 2);
+    else if (wingPosition === 'mid') wingGroup.position.y = 0;
+    else if (wingPosition === 'low') wingGroup.position.y = -(fuselageHeightAtWing / 2);
+ 
+    // Apply wing incidence angle
+    wingGroup.rotation.z = wingIncidenceAngle * (Math.PI / 180);
+ 
     // --- تحديث الأبعاد الأخرى ---
     // --- إعادة بناء مجموعة الذيل بالكامل ---
     while (tailAssembly.children.length > 0) {
@@ -1611,7 +1634,7 @@ function updatePlaneModel() {
         });
         tailAssembly.remove(child);
     }
-
+ 
     const tailThickness = getValidNumber(tailThicknessInput) * conversionFactor;
     const controlSurfaceThickness = getValidNumber(controlSurfaceThicknessInput) * conversionFactor;
     const hasElevator = hasElevatorInput.checked;
@@ -5709,6 +5732,8 @@ function animate() {
         if (wingAirflowParticleSystem) wingAirflowParticleSystem.visible = showAmbientWindInput.checked;
         if (vortexParticleSystem) vortexParticleSystem.visible = showVorticesInput.checked;
         const engineType = engineTypeInput.value;
+        // FIX: Declare variables at the top of the function to avoid ReferenceError
+        let fuselageWidthAtWing, fuselageHeightAtWing;
         if (smokeParticleSystem) smokeParticleSystem.visible = showSmokeInput.checked && engineType === 'ic';
         if (heatHazeParticleSystem) heatHazeParticleSystem.visible = showHeatHazeInput.checked && engineType === 'ic';
 

@@ -351,12 +351,9 @@
                 padding: 15px;
                 /* تقليل الحشوة على الهاتف */
                 min-width: 100%;
-                /* FIX: Explicitly set mobile-only styles to override desktop sticky behavior */
-                position: static;
-                /* Prevent controls from being sticky on mobile */
-                top: auto;
-                max-height: none; /* Allow the controls to expand fully on mobile */
-                overflow-y: visible; /* Remove the dedicated scrollbar on mobile */
+                /* جعل لوحة التحكم قابلة للتمرير بشكل مستقل على الهاتف */
+                max-height: 100vh; /* السماح لها بأخذ ارتفاع كبير */
+                overflow-y: auto; /* إضافة شريط تمرير عند الحاجة */
             }
 
             .viewer {
