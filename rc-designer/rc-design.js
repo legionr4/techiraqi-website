@@ -703,17 +703,17 @@ const planeParams = {}; // Object to hold cached plane parameters for the animat
 let liftChart, dragChart, thrustChart, propEfficiencyChart, ldRatioChart, stabilityChart, pitchingMomentChart, powerChart, rocChart, liftCurveChart, weightDistChart, costDistChart, dragPolarChart;
 let isPropSpinning = false; // متغير لتتبع حالة دوران المروحة
 let propParticleSystem, propParticleCount = 400; // لتدفق هواء المروحة (تم تقليل العدد)
-let wingAirflowParticleSystem, wingAirflowParticleCount = 2500; // لتدفق الهواء العام
+let wingAirflowParticleSystem, wingAirflowParticleCount = 15000; // FIX: زيادة عدد الجسيمات لملء المساحة الموسعة بصريًا
 let vortexParticleSystem, vortexParticleCount = 1000; // لدوامات أطراف الجناح
 let smokeParticleSystem, smokeParticleCount = 500; // لدخان محرك IC
 let sonicBoomParticleSystem, sonicBoomParticleCount = 500; // لتأثير كسر حاجز الصوت
 let isSonicBoomActive = false;
 let sonicBoomTime = 0;
-let streamlinesGroup, streamlineLines = [], streamlineVelocities = []; // Streamline variables
+let streamlinesGroup, streamlineLines = [], streamlineLifeData = [];
 // --- FIX: Debounced function for recalculating aerodynamics during animation ---
 const debouncedRecalculateAero = debounce(calculateAerodynamics, 100); // 100ms delay
 
-let hasBoomed = false; // لمنع إعادة تفعيل التأثير في كل إطار
+let hasBoomed = false;
 
 let heatHazeParticleSystem, heatHazeParticleCount = 300; // لتأثير الحرارة
 
@@ -1107,30 +1107,67 @@ function updatePlaneModel() {
     const tailDihedralRad = tailDihedralAngle * (Math.PI / 180);
     const tailTaperRatio = getValidNumber(tailTaperRatioInput);
 
+    // Calculate X positions for components relative to fuselage center (0,0,0)
+    const wingNoseDistance = getValidNumber(wingNoseDistanceInput) * conversionFactor;
+    const wingPositionX = (fuselageLength / 2) - wingNoseDistance;
+
+    // --- FIX: Calculate the actual fuselage width/height at the wing attachment point ---
+    let fuselageWidthAtWing, fuselageHeightAtWing;
+
+
+    if (fuselageShapeInput.value === 'teardrop') {
+        const frontDiameter = getValidNumber(fuselageFrontDiameterInput) * conversionFactor;
+        const rearDiameter = getValidNumber(fuselageRearDiameterInput) * conversionFactor;
+        // Interpolate to find the diameter at the wing's position
+        const t = (wingPositionX + fuselageLength / 2) / fuselageLength;
+        const diameterAtWing = rearDiameter + t * (frontDiameter - rearDiameter);
+        fuselageWidthAtWing = diameterAtWing;
+        fuselageHeightAtWing = diameterAtWing;
+    } else if (fuselageShapeInput.value === 'rectangular' || fuselageShapeInput.value === 'cylindrical') {
+        // Also apply taper ratio for these shapes
+        const frontWidth = (fuselageShapeInput.value === 'rectangular') ? getValidNumber(fuselageWidthInput) * conversionFactor : getValidNumber(fuselageDiameterInput) * conversionFactor;
+        const frontHeight = (fuselageShapeInput.value === 'rectangular') ? getValidNumber(fuselageHeightInput) * conversionFactor : getValidNumber(fuselageDiameterInput) * conversionFactor;
+        const fuselageTaperRatio = getValidNumber(fuselageTaperRatioInput);
+        const rearWidth = frontWidth * fuselageTaperRatio;
+        const rearHeight = frontHeight * fuselageTaperRatio;
+        const t = (wingPositionX + fuselageLength / 2) / fuselageLength;
+        fuselageWidthAtWing = rearWidth + t * (frontWidth - rearWidth);
+        fuselageHeightAtWing = rearHeight + t * (frontHeight - rearHeight);
+    }
     // قراءة قيم جسم الطائرة
     const fuselageShape = fuselageShapeInput.value;
 
     // تحديد الأبعاد الفعلية لجسم الطائرة (الارتفاع والعرض) بناءً على الشكل المختار
-    // تم نقل هذا الجزء للأعلى لضمان أن الأبعاد الحالية متاحة لجميع حسابات المواضع التالية
+    // FIX: Define rear dimensions separately to correctly position the tail.
     let currentFuselageHeight;
     let currentFuselageWidth;
+    let rearFuselageHeight;
+    let rearFuselageWidth;
 
     if (fuselageShape === 'rectangular') {
         currentFuselageWidth = getValidNumber(fuselageWidthInput) * conversionFactor;
         currentFuselageHeight = getValidNumber(fuselageHeightInput) * conversionFactor;
+        rearFuselageWidth = currentFuselageWidth * getValidNumber(fuselageTaperRatioInput);
+        rearFuselageHeight = currentFuselageHeight * getValidNumber(fuselageTaperRatioInput);
     } else if (fuselageShape === 'cylindrical') {
         const fuselageDiameter = getValidNumber(fuselageDiameterInput) * conversionFactor;
         currentFuselageWidth = fuselageDiameter;
         currentFuselageHeight = fuselageDiameter; // القطر هو الارتفاع والعرض للأسطوانة
+        rearFuselageWidth = currentFuselageWidth * getValidNumber(fuselageTaperRatioInput);
+        rearFuselageHeight = currentFuselageHeight * getValidNumber(fuselageTaperRatioInput);
     } else if (fuselageShape === 'teardrop') {
         const frontDiameter = getValidNumber(fuselageFrontDiameterInput) * conversionFactor;
         const rearDiameter = getValidNumber(fuselageRearDiameterInput) * conversionFactor;
         // Use the largest diameter for positioning calculations to avoid clipping
         currentFuselageWidth = Math.max(frontDiameter, rearDiameter);
         currentFuselageHeight = Math.max(frontDiameter, rearDiameter);
+        rearFuselageWidth = rearDiameter;
+        rearFuselageHeight = rearDiameter;
     } else {
         currentFuselageWidth = 0.15; // Default values
         currentFuselageHeight = 0.15; // Default values
+        rearFuselageWidth = 0.15;
+        rearFuselageHeight = 0.15;
     }
 
 
@@ -1138,12 +1175,11 @@ function updatePlaneModel() {
     const fuselageTaperRatio = getValidNumber(fuselageTaperRatioInput);
 
     // New: Read component distances (wing is now the reference)
-    const wingNoseDistance = getValidNumber(wingNoseDistanceInput) * conversionFactor;
+   // const wingNoseDistance = getValidNumber(wingNoseDistanceInput) * conversionFactor;
     const wingPropDistance = getValidNumber(wingPropDistanceInput) * conversionFactor;
     const wingTailDistance = getValidNumber(wingTailDistanceInput) * conversionFactor;
-
     // Calculate X positions for components relative to fuselage center (0,0,0)
-    const wingPositionX = (fuselageLength / 2) - wingNoseDistance;
+   
     const tailPositionX = wingPositionX - wingTailDistance; // Tail is relative to wing
 
     // قيم المروحة تبقى بالبوصة كما هي متعارف عليها
@@ -1428,8 +1464,8 @@ function updatePlaneModel() {
     leftWing.rotation.x = -dihedralRad; // نفس الدوران، لأن الانعكاس في المقياس Z يعكس التأثير تلقائيًا
 
     // تحديد موضع الجناحين ليبدآ من جانبي جسم الطائرة
-    rightWing.position.z = currentFuselageWidth / 2;
-    leftWing.position.z = -currentFuselageWidth / 2;
+    rightWing.position.z = fuselageWidthAtWing / 2; // FIX: Use interpolated width
+    leftWing.position.z = -fuselageWidthAtWing / 2; // FIX: Use interpolated width
 
     // تصحيح: إنشاء مجموعات محركات منفصلة لكل جناح لترث دوران الديhedral
     const rightWingEngineGroup = new THREE.Group();
@@ -1552,9 +1588,9 @@ function updatePlaneModel() {
 
     // تحديث موضع الجناح (علوي/متوسط/سفلي)
     wingGroup.position.x = wingPositionX;
-    if (wingPosition === 'high') wingGroup.position.y = currentFuselageHeight / 2;
+    if (wingPosition === 'high') wingGroup.position.y = fuselageHeightAtWing / 2; // FIX: Use interpolated height
     else if (wingPosition === 'mid') wingGroup.position.y = 0;
-    else if (wingPosition === 'low') wingGroup.position.y = -currentFuselageHeight / 2;
+    else if (wingPosition === 'low') wingGroup.position.y = -fuselageHeightAtWing / 2; // FIX: Use interpolated height
 
     // تطبيق زاوية ميلان الجناح (Incidence)
     wingGroup.rotation.z = wingIncidenceAngle * (Math.PI / 180);
@@ -1587,16 +1623,15 @@ function updatePlaneModel() {
     tailAssembly.position.y = 0; // Y position is handled by components inside
     tailAssembly.position.z = 0;
     tailAssembly.rotation.z = tailIncidenceAngle * (Math.PI / 180);
-
     // --- Tail Assembly ---
     if (tailType === 'conventional') {
         const hStabChordEffective = hasElevator ? tailChord - elevatorWidth : tailChord;
         const vStabChordEffective = hasRudder ? vStabChord - rudderWidth : vStabChord;
 
-        // Create right half of the horizontal stabilizer
+        // Create right haبlf of the horizontal stabilizer
         const hStabGeom = createSurface(tailSpan, hStabChordEffective, tailTaperRatio, tailSweepAngle, tailThickness, tailAirfoilType, false);
         // إزاحة المثبت الأفقي ليبدأ من جانب جسم الطائرة
-        hStabGeom.translate(0, 0, currentFuselageWidth / 2);
+        hStabGeom.translate(0, 0, rearFuselageWidth / 2);
         const rightHStab = new THREE.Mesh(hStabGeom, tailMaterial); // Define rightHStab
         rightHStab.position.x = -hStabChordEffective / 2; // Position relative to tailAssembly
         rightHStab.userData.isVertical = false;
@@ -1621,7 +1656,7 @@ function updatePlaneModel() {
         // FIX: Store original positions for flutter effect
         vStab.geometry.userData.originalPositions = vStab.geometry.attributes.position.array.slice();
 
-        vStab.position.y = currentFuselageHeight / 2;
+        vStab.position.y = rearFuselageHeight / 2; // FIX: Use rear fuselage height
 
         tailAssembly.add(rightHStab, leftHStab, vStab);
     } else if (tailType === 't-tail') {
@@ -1632,7 +1667,7 @@ function updatePlaneModel() {
         const hStabGeom = createSurface(tailSpan, hStabChordEffective, tailTaperRatio, tailSweepAngle, tailThickness, tailAirfoilType, false);
         const rightHStab = new THREE.Mesh(hStabGeom, tailMaterial);
         // رفع المثبت الأفقي ليجلس فوق المثبت العمودي
-        rightHStab.position.set(-hStabChordEffective / 2, vStabHeight + currentFuselageHeight / 2, 0);
+        rightHStab.position.set(-hStabChordEffective / 2, vStabHeight + rearFuselageHeight / 2, 0); // FIX: Use rear fuselage height
         rightHStab.userData.isVertical = false;
         // FIX: Store original positions for flutter effect
         rightHStab.geometry.userData.originalPositions = rightHStab.geometry.attributes.position.array.slice();
@@ -1654,7 +1689,7 @@ function updatePlaneModel() {
         // FIX: Store original positions for flutter effect
         vStab.geometry.userData.originalPositions = vStab.geometry.attributes.position.array.slice();
         // رفع المثبت العمودي ليجلس فوق جسم الطائرة
-        vStab.position.y = currentFuselageHeight / 2;
+         vStab.position.y = rearFuselageHeight / 2; // FIX: Use rear fuselage height
         tailAssembly.add(rightHStab, leftHStab, vStab);
     } else if (tailType === 'v-tail') {
         const vStabChordEffective = hasRudder ? vStabChord - rudderWidth : vStabChord;
@@ -1663,7 +1698,7 @@ function updatePlaneModel() {
 
         const rightVPanel = new THREE.Mesh(vTailPanelGeom, tailMaterial);
         // إزاحة اللوحة اليمنى إلى جانب جسم الطائرة
-        rightVPanel.position.z = currentFuselageWidth / 2;
+        rightVPanel.position.z = rearFuselageWidth / 2; // FIX: Use rear fuselage width
         rightVPanel.userData.isVertical = true; // Treat as vertical for flutter
         rightVPanel.geometry.userData.originalPositions = rightVPanel.geometry.attributes.position.array.slice();
         rightVPanel.rotation.x = -angleRad; // تدوير حول المحور X للحصول على شكل V
@@ -1672,7 +1707,7 @@ function updatePlaneModel() {
         // FIX: Store original positions for flutter effect on cloned part
         leftVPanel.geometry.userData.originalPositions = leftVPanel.geometry.attributes.position.array.slice();
         // إزاحة اللوحة اليسرى إلى الجانب الآخر
-        leftVPanel.position.z = -currentFuselageWidth / 2;
+        leftVPanel.position.z = -rearFuselageWidth / 2; // FIX: Use rear fuselage width
         leftVPanel.rotation.x = angleRad; // تدوير معاكس للجهة الأخرى
         leftVPanel.userData.isVertical = true; // Treat as vertical for flutter
 
@@ -1680,7 +1715,7 @@ function updatePlaneModel() {
         vTailAssembly.add(rightVPanel, leftVPanel);
         vTailAssembly.position.x = -vStabChordEffective / 2;
         // رفع مجموعة الذيل لتجلس فوق جسم الطائرة
-        vTailAssembly.position.y = currentFuselageHeight / 2;
+        vTailAssembly.position.y = rearFuselageHeight / 2; // FIX: Use rear fuselage height
         tailAssembly.add(vTailAssembly);
 
     }
@@ -1691,7 +1726,7 @@ function updatePlaneModel() {
         const elevatorHalfGeom = createSurface(elevatorLength * 2, elevatorWidth, tailTaperRatio, tailSweepAngle, controlSurfaceThickness, elevatorAirfoilType, false, true);
         elevatorHalfGeom.translate(-elevatorWidth / 2, 0, 0); // تمدد للخلف من نقطة المفصل
         // إزاحة الرافع ليبدأ من جانب جسم الطائرة، مما يخلق فجوة في المنتصف
-        elevatorHalfGeom.translate(0, 0, currentFuselageWidth / 2);
+        elevatorHalfGeom.translate(0, 0, rearFuselageWidth / 2);
 
         // الرافع الأيمن
         const rightElevator = new THREE.Mesh(elevatorHalfGeom, aileronMaterial);
@@ -1713,10 +1748,15 @@ function updatePlaneModel() {
         // نضع المحور عند الحافة الخلفية للجزء الثابت من الذيل
         const hStabRootChordEffective = tailChord - elevatorWidth;
         const pivotX = -hStabRootChordEffective;
-        const elevatorY = (tailType === 't-tail' ? vStabHeight + currentFuselageHeight / 2 : 0);
+        const elevatorY = (tailType === 't-tail' ? vStabHeight + rearFuselageHeight / 2 : 0);
 
         rightElevatorPivot.position.set(pivotX, elevatorY, 0);
         leftElevatorPivot.position.set(pivotX, elevatorY, 0);
+
+        // FIX: Apply the same dihedral rotation to the elevator pivots to match the horizontal stabilizer
+        rightElevatorPivot.rotation.x = tailDihedralRad;
+        leftElevatorPivot.rotation.x = tailDihedralRad;
+
         tailAssembly.add(rightElevatorPivot, leftElevatorPivot);
     }
 
@@ -1739,7 +1779,7 @@ function updatePlaneModel() {
         // يجب أن يكون موضع المحور عند الحافة الخلفية للجزء الثابت من الذيل العمودي
         const pivotX = -vStabRootChordEffective;
 
-        rudderPivot.position.set(pivotX, currentFuselageHeight / 2, 0); // تبدأ الهندسة من y=0، لذا نرفعها
+        rudderPivot.position.set(pivotX, rearFuselageHeight / 2, 0); // تبدأ الهندسة من y=0، لذا نرفعها
 
         tailAssembly.add(rudderPivot);
     } else if (hasRudder && tailType === 'v-tail') {
@@ -1772,9 +1812,9 @@ function updatePlaneModel() {
 
         // تطبيق نفس دوران وموضع الألواح الرئيسية
         const angleRad = vTailAngle * Math.PI / 180;
-        rightRuddervatorPivot.position.set(pivotX, currentFuselageHeight / 2, currentFuselageWidth / 2);
+        rightRuddervatorPivot.position.set(pivotX, rearFuselageHeight / 2, rearFuselageWidth / 2); // FIX: Use rear dimensions
         rightRuddervatorPivot.rotation.x = -angleRad;
-        leftRuddervatorPivot.position.set(pivotX, currentFuselageHeight / 2, -currentFuselageWidth / 2);
+        leftRuddervatorPivot.position.set(pivotX, rearFuselageHeight / 2, -rearFuselageWidth / 2); // FIX: Use rear dimensions
         leftRuddervatorPivot.rotation.x = angleRad;
 
         tailAssembly.add(rightRuddervatorPivot, leftRuddervatorPivot);
@@ -1958,7 +1998,6 @@ function updatePlaneModel() {
 
         propellerGroup.position.set((fuselageLength / 2) + engineLengthMeters + 0.01, engineVerticalPosition, 0);
         propellerGroup.rotation.copy(engineGroup.rotation);
-
     } else if (enginePlacement === 'rear') {
         if (engineProto) {
             engineGroup.add(engineProto.clone());
@@ -1973,7 +2012,6 @@ function updatePlaneModel() {
 
         propellerGroup.position.set(-(fuselageLength / 2) - engineLengthMeters - 0.01, engineVerticalPosition, 0);
         propellerGroup.rotation.copy(engineGroup.rotation);
-
     } else if (enginePlacement === 'wing') {
         if (engineProto) {
             // قراءة جميع خيارات تركيب الجناح
@@ -2031,14 +2069,16 @@ function updatePlaneModel() {
 
                 const rightPylon = new THREE.Mesh(pylonGeom, pylonMaterial);
                 rightPylon.position.set(pylonX_local, pylonY_local, localZ);
-                const leftPylon = rightPylon.clone(); // يستنسخ الموضع المحلي الصحيح
-
+                const leftPylon = rightPylon.clone();
+                // FIX: Explicitly mirror the Z position for the left pylon.
+                // Since the parent wing is already scaled by -1 on Z, we need to negate the local Z to counteract the double-negative.
+                leftPylon.position.z *= -1;
                 // تصحيح: إضافة الحوامل إلى مجموعات المحركات الخاصة بكل جناح
                 rightWingEngineGroup.add(rightPylon);
                 leftWingEngineGroup.add(leftPylon);
             }
 
-            // --- حساب موضع المحرك والمروحة بناءً على موضع الحامل ---
+        // --- حساب موضع المحرك والمروحة بناءً على موضع الحامل ---
             if (wingEngineForeAft === 'leading') {
                 // المحرك يقع أمام الحامل
                 engineCenterX = leadingEdgeX_local + pylonForeAftLength + (engineLengthMeters / 2);
@@ -2064,16 +2104,16 @@ function updatePlaneModel() {
 
             // تصحيح: استخدام الإحداثيات المحلية لجميع المكونات
             rightEngine.position.set(engineCenterX, engineY_relative, localZ);
-            leftEngine.position.set(engineCenterX, engineY_relative, localZ);
+        leftEngine.position.set(engineCenterX, engineY_relative, -localZ);
 
             rightProp.position.set(propCenterX, engineY_relative, localZ);
-            leftProp.position.set(propCenterX, engineY_relative, localZ);
+        leftProp.position.set(propCenterX, engineY_relative, -localZ);
 
             // Apply thrust angles to each component
             rightEngine.rotation.set(0, engineSideThrustAngle, engineThrustAngle);
-            leftEngine.rotation.set(0, engineSideThrustAngle, engineThrustAngle);
+        leftEngine.rotation.set(0, -engineSideThrustAngle, engineThrustAngle);
             rightProp.rotation.set(0, engineSideThrustAngle, engineThrustAngle);
-            leftProp.rotation.set(0, engineSideThrustAngle, engineThrustAngle);
+        leftProp.rotation.set(0, -engineSideThrustAngle, engineThrustAngle);
 
             // For pusher props on the wing, add the 180 deg rotation
             if (wingEngineForeAft === 'trailing') {
@@ -2090,7 +2130,6 @@ function updatePlaneModel() {
     while (landingGearGroup.children.length > 0) {
         landingGearGroup.remove(landingGearGroup.children[0]);
     }
-
     if (hasLandingGearInput.checked) {
         const gearType = gearTypeInput.value;
         const wheelDiameter = getValidNumber(wheelDiameterInput) * conversionFactor;
@@ -2164,7 +2203,6 @@ function updatePlaneModel() {
     while (cockpitGroup.children.length > 0) {
         cockpitGroup.remove(cockpitGroup.children[0]);
     }
-
     if (hasCockpitInput.checked) {
         const cockpitLength = getValidNumber(cockpitLengthInput) * conversionFactor;
         const cockpitWidth = getValidNumber(cockpitWidthInput) * conversionFactor;
@@ -2212,7 +2250,6 @@ function updatePlaneModel() {
         });
         accessoriesGroup.remove(child);
     }
-
     const accessoryMaterial = new THREE.MeshStandardMaterial({ color: accessoryColor, transparent: true, opacity: 0.8 }); // This will now work
 
     const createAccessoryBox = (weightGrams, posX_cm, posY_cm, posZ_cm, name) => {
@@ -2415,20 +2452,28 @@ function calculateAerodynamics() {
 
     const fuselageWallThickness = getVal(fuselageWallThicknessInput);
     // --- Fix: Determine current fuselage dimensions for calculations ---
-    let currentFuselageWidth, currentFuselageHeight;
+    let currentFuselageWidth, currentFuselageHeight, rearFuselageHeight, rearFuselageWidth;
     if (fuselageShape === 'rectangular') {
         currentFuselageWidth = fuselageWidth;
         currentFuselageHeight = fuselageHeight;
+        rearFuselageWidth = currentFuselageWidth * fuselageTaperRatio;
+        rearFuselageHeight = currentFuselageHeight * fuselageTaperRatio;
     } else if (fuselageShape === 'cylindrical') {
         const fuselageDiameter = getVal(fuselageDiameterInput);
         currentFuselageWidth = fuselageDiameter;
         currentFuselageHeight = fuselageDiameter;
+        rearFuselageWidth = currentFuselageWidth * fuselageTaperRatio;
+        rearFuselageHeight = currentFuselageHeight * fuselageTaperRatio;
     } else if (fuselageShape === 'teardrop') {
         currentFuselageWidth = Math.max(fuselageFrontDiameter, fuselageRearDiameter);
         currentFuselageHeight = Math.max(fuselageFrontDiameter, fuselageRearDiameter);
+        rearFuselageWidth = fuselageRearDiameter;
+        rearFuselageHeight = fuselageRearDiameter;
     } else {
         currentFuselageWidth = 0.15; // Default
         currentFuselageHeight = 0.15; // Default
+        rearFuselageWidth = 0.15;
+        rearFuselageHeight = 0.15;
     }
     // This ensures fuselageHeight is correctly set for pylon calculations below
     if (fuselageShape !== 'rectangular') {
@@ -3299,11 +3344,26 @@ function calculateAerodynamics() {
     const rotatedCgX_offset = wingCgX_offset_local * cosIncidence; // Y-offset does not affect X in this rotation
     const rotatedCgY_offset = wingCgX_offset_local * sinIncidence + wingCgY_offset_local; // Add Y offset after rotation
 
+    // --- FIX: Calculate fuselage height at wing position for accurate CG ---
+    let fuselageHeightAtWing;
+    if (fuselageShape === 'teardrop') {
+        const t = (wingPositionX + fuselageLength / 2) / fuselageLength;
+        fuselageHeightAtWing = fuselageRearDiameter + t * (fuselageFrontDiameter - fuselageRearDiameter);
+    } else if (fuselageShape === 'rectangular' || fuselageShape === 'cylindrical') {
+        const frontHeight = (fuselageShape === 'rectangular') ? getVal(fuselageHeightInput) : getVal(fuselageDiameterInput);
+        const rearHeight = frontHeight * fuselageTaperRatio;
+        const t = (wingPositionX + fuselageLength / 2) / fuselageLength;
+        fuselageHeightAtWing = rearHeight + t * (frontHeight - rearHeight);
+    } else {
+        // Fallback for default shape
+        fuselageHeightAtWing = (fuselageShape === 'rectangular') ? getVal(fuselageHeightInput) : getVal(fuselageDiameterInput);
+    }
+
     // حساب الموضع Y العام للجناح
     let wingYPosition;
-    if (wingPosition === 'high') wingYPosition = currentFuselageHeight / 2;
+    if (wingPosition === 'high') wingYPosition = fuselageHeightAtWing / 2; // FIX: Use interpolated height
     else if (wingPosition === 'mid') wingYPosition = 0;
-    else if (wingPosition === 'low') wingYPosition = -currentFuselageHeight / 2;
+    else if (wingPosition === 'low') wingYPosition = -fuselageHeightAtWing / 2; // FIX: Use interpolated height
 
     // حساب الموضع النهائي لمركز ثقل كل نصف جناح وإضافة عزمه
     const finalCgX = wingPositionX + rotatedCgX_offset;
@@ -3354,10 +3414,10 @@ function calculateAerodynamics() {
 
         let hStabCgY = 0;
         if (tailType === 't-tail') {
-            hStabCgY = vStabHeight + currentFuselageHeight / 2;
+            hStabCgY = vStabHeight + rearFuselageHeight / 2; // FIX: Use rear fuselage height for CG calc
         }
         hStabCgY += hStabCgSpanwise * Math.tan(tailDihedralAngle * Math.PI / 180);
-
+        
         tailAssemblyLocalMomentX += hStabWeightKg * hStabCgX_local;
         tailAssemblyLocalMomentY += hStabWeightKg * hStabCgY;
     }
@@ -3374,9 +3434,9 @@ function calculateAerodynamics() {
         let vStabCgY;
         if (tailType === 'v-tail') {
             const vTailAngleRad = getRaw(vTailAngleInput) * (Math.PI / 180);
-            vStabCgY = (currentFuselageHeight / 2) + (vStabCgSpanwise * Math.sin(vTailAngleRad));
+            vStabCgY = (rearFuselageHeight / 2) + (vStabCgSpanwise * Math.sin(vTailAngleRad)); // FIX: Use rear fuselage height for CG calc
         } else {
-            vStabCgY = (currentFuselageHeight / 2) + vStabCgSpanwise;
+            vStabCgY = (rearFuselageHeight / 2) + vStabCgSpanwise; // FIX: Use rear fuselage height for CG calc
         }
 
         tailAssemblyLocalMomentX += vStabWeightKg * vStabCgX_local;
@@ -3389,7 +3449,7 @@ function calculateAerodynamics() {
         const elevatorCgX_local = -hStabRootChordEffective - (elevatorWidth / 2);
         let elevatorCgY = 0;
         if (tailType === 't-tail') {
-            elevatorCgY = vStabHeight + currentFuselageHeight / 2;
+            elevatorCgY = vStabHeight + rearFuselageHeight / 2; // FIX: Use rear fuselage height for CG calc
         }
         tailAssemblyLocalMomentX += elevatorWeightKg * elevatorCgX_local;
         tailAssemblyLocalMomentY += elevatorWeightKg * elevatorCgY; // يفترض نفس ارتفاع الجزء الثابت
@@ -3399,14 +3459,14 @@ function calculateAerodynamics() {
     if (hasRudder && rudderWeightKg > 0) {
         const vStabRootChordEffective = vStabChord - rudderWidth;
         const rudderCgX_local = -vStabRootChordEffective - (rudderWidth / 2);
-        const rudderCgY = (currentFuselageHeight / 2) + (vStabHeight / 2);
+        const rudderCgY = (rearFuselageHeight / 2) + (vStabHeight / 2); // FIX: Use rear fuselage height for CG calc
         tailAssemblyLocalMomentX += rudderWeightKg * rudderCgX_local;
         tailAssemblyLocalMomentY += rudderWeightKg * rudderCgY;
     } else if (hasRudder && rudderWeightKg > 0 && tailType === 'v-tail') {
         // --- FIX: Add moment calculation for V-Tail ruddervators ---
         const vStabRootChordEffective = vStabChord - rudderWidth;
         const ruddervatorCgX_local = -vStabRootChordEffective - (rudderWidth / 2);
-        const ruddervatorCgY_local = (currentFuselageHeight / 2) + (vStabHeight / 2); // Mid-height of the panel
+        const ruddervatorCgY_local = (rearFuselageHeight / 2) + (vStabHeight / 2); // FIX: Use rear fuselage height for CG calc
 
         // Add moment for both ruddervators. Z-moment cancels out.
         // The Y position is the same for both, so we can add the weight.
@@ -3504,7 +3564,7 @@ function calculateAerodynamics() {
     // عزم القمرة
     if (hasCockpit) {
         const cockpitCenterX = (fuselageLength / 2) - cockpitPosition - (cockpitLength / 2);
-        const cockpitCenterY = currentFuselageHeight / 2 + cockpitHeight / 2;
+        const cockpitCenterY = fuselageGroup.position.y + currentFuselageHeight / 2 + cockpitHeight / 2; // FIX: Use the wing's Y position as a base
         addMoment(cockpitWeightKg, cockpitCenterX, cockpitCenterY, 0);
     }
 
@@ -5698,6 +5758,22 @@ function animate() {
         const userParticleSize = getValidNumber(particleSizeInput);
         const userVibrationIntensity = getValidNumber(vibrationIntensityInput);
         const airflowTransparency = getValidNumber(airflowTransparencyInput);
+        // --- NEW: Calculate environmental factor for airflow density and speed ---
+        const maxRpm = parseFloat(propRpmControlSlider.max) || 15000;
+        const rpmFactor = Math.min(1.5, currentRpm / maxRpm);
+
+        const currentAirDensity = getValidNumber(airDensityInput);
+        // Normalize against standard air density (1.225 kg/m^3) and clamp the value
+        const densityRatio = Math.max(0.5, Math.min(1.5, currentAirDensity / 1.225));
+
+        // Normalize against a typical cruise speed of 30 m/s
+        const speedRatio = Math.max(0.5, Math.min(2.0, mainAirSpeed / 30));
+
+        // Combine factors, giving RPM the most weight. This factor will modulate opacity and speed.
+        // A value around 1.0 is "normal".
+        const environmentalFactor = (rpmFactor * 0.5) + (densityRatio * 0.25) + (speedRatio * 0.25);
+
+
         const flutterIntensity = getValidNumber(flutterIntensityInput);
 
         const densityFactor = userParticleDensity * 2; // مضاعفة لجعل 50% هو الافتراضي
@@ -5892,10 +5968,12 @@ function animate() {
 
                         const age = propPos.distanceTo(new THREE.Vector3(positions[i3], positions[i3 + 1], positions[i3 + 2]));
 
-                        if (age > travelDistance || positions[i3] === 0) {
-                            positions[i3] = propPos.x;
-                            positions[i3 + 1] = propPos.y;
-                            positions[i3 + 2] = propPos.z;
+                        if (age > travelDistance || positions[i3] === 0) { // FIX: Randomize reset position to prevent pulsing
+                            const randomOffset = thrustVector.clone().multiplyScalar(Math.random() * 0.5);
+                            positions[i3] = propPos.x + randomOffset.x;
+                            positions[i3 + 1] = propPos.y + randomOffset.y;
+                            positions[i3 + 2] = propPos.z + randomOffset.z;
+
                             spiralData[i2] = emissionRadius * Math.sqrt(Math.random());
                             spiralData[i2 + 1] = Math.random() * 2 * Math.PI;
                         }
@@ -5939,7 +6017,8 @@ function animate() {
                     const i3 = i * 3;
 
                     if (positions[i3] < endX || positions[i3] === 0) {
-                        positions[i3] = startX;
+                        // FIX: Randomize reset position to prevent pulsing
+                        positions[i3] = startX + (Math.random() * 0.5);
                         spiralData[i2] = emissionRadius * Math.sqrt(Math.random());
                         spiralData[i2 + 1] = Math.random() * 2 * Math.PI;
                     }
@@ -6028,7 +6107,8 @@ function animate() {
                 }
 
                 // Update position based on velocity
-                positions[i3] -= mainAirSpeed * deltaTime; // Main forward/backward motion
+                // FIX: Modulate speed by the environmental factor
+                positions[i3] -= (mainAirSpeed * environmentalFactor) * deltaTime; // Main forward/backward motion
                 positions[i3 + 1] += velocities[i3 + 1] * deltaTime;
                 positions[i3 + 2] += velocities[i3 + 2] * deltaTime;
 
@@ -6037,14 +6117,19 @@ function animate() {
                 const ageRatio = Math.max(0, Math.min(1, currentTravel / travelDistance));
                 const effectStrength = Math.sin(ageRatio * Math.PI); // Smooth fade-in and fade-out
 
-                opacities[i] = effectStrength * 0.15 * densityFactor * airflowTransparency; // جعلها شفافة جداً
+                // FIX: Modulate opacity by the environmental factor
+                opacities[i] = effectStrength * 0.15 * densityFactor * airflowTransparency * environmentalFactor;
                 scales[i] = effectStrength * 0.4 * sizeFactor;    // جعلها دقيقة جداً
 
                 // Reset particle if it goes too far behind
                 if (positions[i3] < endX) {
-                    const emissionWidth = planeParams.wingSpan * 1.2;
-                    const emissionHeight = 2;
-                    positions[i3] = startX; // Reset in front of the plane
+                    // FIX: Use the same large, fixed emission area for consistency.
+                    const emissionWidth = 20;
+                    const emissionHeight = 15;
+
+                    // FIX: Randomize the reset position along the X-axis to prevent visual "pulsing" or "choppiness".
+                    // This matches the initial particle distribution logic.
+                    positions[i3] = startX + Math.random() * 2.0;
                     positions[i3 + 1] = (Math.random() - 0.5) * emissionHeight;
                     positions[i3 + 2] = (Math.random() - 0.5) * emissionWidth;
                 }
@@ -6067,10 +6152,24 @@ function animate() {
             const elevatorDeflection = Math.abs(parseFloat(elevatorControlSlider.value));
 
             // Vortex strength is proportional to the lift coefficient (read from cached params)
-            const baseVortexStrength = Math.max(0, planeParams.cl) * 0.25; // زيادة التأثير قليلاً
+            // FIX: Vortex strength should be proportional to lift, which depends on both Cl and airspeed.
+            const baseVortexStrength = Math.max(0, planeParams.cl) * mainAirSpeed * 0.05;
             const vortexRotationSpeed = 15; // How fast the particles spiral
             const travelLength = 5.0; // How far back the vortices travel before resetting
 
+            // --- NEW: Add downwash effect based on Angle of Attack ---
+            // This will make vortices drift downwards at higher AoA.
+            const downwashFactor = 0.5; // How strongly AoA affects downwash
+            const downwashVelocity = -mainAirSpeed * Math.sin(planeParams.angleOfAttack * Math.PI / 180) * downwashFactor;
+
+            // --- NEW: Get precise emitter positions if winglets are used ---
+            const rightEmitterObj = scene.getObjectByName('rightVortexEmitter');
+            const worldEmitterPos = new THREE.Vector3();
+            let wingletEmitterPos = null;
+            if (rightEmitterObj) {
+                rightEmitterObj.getWorldPosition(worldEmitterPos);
+                wingletEmitterPos = planeGroup.worldToLocal(worldEmitterPos);
+            }
             // حساب مواضع الانبعاث
             const wingTipZ = (planeParams.wingSpan / 2);
             const wingTipY = wingGroup.position.y;
@@ -6095,50 +6194,58 @@ function animate() {
                 let emitterX, emitterY, emitterZ, side, currentVortexStrength;
 
                 // تقسيم الجسيمات بين المصادر المختلفة
-                if (i < 800) { // دوامات الجناح الرئيسية
-                    emitterX = wingTipX;
-                    emitterY = wingTipY;
-                    emitterZ = wingTipZ;
+                if (i < 800) { // Main wing vortices
+                    // FIX: Use precise winglet emitter position if available
+                    if (wingletEmitterPos) {
+                        emitterX = wingletEmitterPos.x;
+                        emitterY = wingletEmitterPos.y;
+                        emitterZ = wingletEmitterPos.z;
+                    } else { // Fallback to simple wingtip calculation
+                        emitterX = wingTipX;
+                        emitterY = wingTipY;
+                        emitterZ = wingTipZ;
+                    }
                     side = (i < 400) ? 1 : -1;
-                    currentVortexStrength = baseVortexStrength;
+                    currentVortexStrength = baseVortexStrength * environmentalFactor; // FIX: Modulate by environment
                 } else if (i < 1600) { // دوامات الذيل الأفقي
                     emitterX = tailTipX;
                     emitterY = tailTipY;
                     emitterZ = tailTipZ;
                     side = (i < 1200) ? 1 : -1;
-                    currentVortexStrength = baseVortexStrength * 0.4; // دوامات الذيل أضعف
+                    currentVortexStrength = (baseVortexStrength * 0.4) * environmentalFactor; // FIX: Modulate by environment
                 } else if (i < 2000) { // دوامة الذيل العمودي
                     emitterX = vStabTipX;
                     emitterY = vStabTipY;
                     emitterZ = 0;
                     side = 1; // جانب واحد فقط
-                    currentVortexStrength = baseVortexStrength * 0.3; // أضعف
+                    currentVortexStrength = (baseVortexStrength * 0.3) * environmentalFactor; // FIX: Modulate by environment
                 } else if (i < 2500) { // دوامات جسم الطائرة
                     emitterX = -planeParams.fuselageLength / 2;
                     emitterY = 0;
                     emitterZ = planeParams.fuselageWidth / 2;
                     side = (i < 2250) ? 1 : -1;
-                    currentVortexStrength = baseVortexStrength * 0.1; // ضعيفة جداً
+                    currentVortexStrength = (baseVortexStrength * 0.1) * environmentalFactor; // FIX: Modulate by environment
                 } else { // دوامات أسطح التحكم
                     if (i < 3000) { // دوامات الجنيحات
                         emitterX = aileronTipX;
                         emitterY = aileronTipY;
                         emitterZ = aileronTipZ;
                         side = (i < 2750) ? 1 : -1;
-                        currentVortexStrength = baseVortexStrength * 0.5 * aileronDeflection; // تعتمد على مقدار الانحراف
+                        currentVortexStrength = (baseVortexStrength * 0.5 * aileronDeflection) * environmentalFactor; // FIX: Modulate by environment
                     } else { // دوامات الرافع
                         emitterX = tailTipX;
                         emitterY = tailTipY;
                         emitterZ = tailTipZ;
                         side = (i < 3250) ? 1 : -1;
-                        currentVortexStrength = baseVortexStrength * 0.3 * elevatorDeflection;
+                        currentVortexStrength = (baseVortexStrength * 0.3 * elevatorDeflection) * environmentalFactor; // FIX: Modulate by environment
                     }
                 }
 
                 // إعادة تعيين الجسيم إذا كان قديمًا
                 const age = emitterX - positions[i3];
                 if (age > travelLength || age < 0 || lifeData[i2] <= 0) {
-                    positions[i3] = emitterX;
+                    // FIX: Randomize reset position to prevent pulsing/choppiness
+                    positions[i3] = emitterX + (Math.random() * 0.5);
                     positions[i3 + 1] = emitterY;
                     positions[i3 + 2] = emitterZ * side;
                     spiralData[i] = Math.random() * Math.PI * 2;
@@ -6150,6 +6257,8 @@ function animate() {
 
                 // Move particle backward
                 positions[i3] -= mainAirSpeed * deltaTime;
+                // --- NEW: Apply downwash velocity ---
+                positions[i3 + 1] += downwashVelocity * deltaTime;
 
                 // Update spiral angle
                 spiralData[i] += vortexRotationSpeed * deltaTime * side;
@@ -6384,8 +6493,8 @@ function animate() {
 
                 // --- تحديث شفافية الخط بناءً على عمره ---
                 const lifeRatio = Math.max(0, life.current / life.max); // Now 'life' is defined
-                // جعل التلاشي أكثر حدة في النهاية
-                line.material.opacity = Math.pow(lifeRatio, 2) * 0.7;
+                // FIX: Use a smoother fade-out and make it slightly more visible
+                line.material.opacity = lifeRatio * 0.8;
 
                 // --- إعادة تعيين الخط الانسيابي إذا انتهى عمره ---
                 if (life.current <= 0) {
@@ -6393,22 +6502,20 @@ function animate() {
                     life.max = 3.0 + Math.random() * 2.0; // عمر جديد عشوائي بين 3 و 5 ثوانٍ
                     life.current = life.max;
 
-                    // إعادة تعيين الموضع
+                    // FIX: Reset the entire line to a new random position to avoid artifacts
+                    // when the plane moves significantly.
                     const emissionWidth = (planeParams.wingSpan || 2) * 1.5; // Wider emission area
                     const emissionHeight = (planeParams.fuselageHeight || 1) * 2.0;
                     const startX = 2.5; // Start further in front
                     const startY = (Math.random() - 0.5) * emissionHeight;
                     const startZ = (Math.random() - 0.5) * emissionWidth;
-                    // Reset all points to the new starting position
                     for (let j = 0; j < pointsPerStreamline; j++) {
                         positions[j * 3] = startX;
                         positions[j * 3 + 1] = startY;
                         positions[j * 3 + 2] = startZ;
                     }
                 }
-
                 line.geometry.attributes.position.needsUpdate = true;
-                line.computeLineDistances(); // Required for dashed lines
             }
         }
         // --- تحديث دخان محرك IC ---
@@ -6562,8 +6669,9 @@ function initWingAirflowParticles() {
     const opacities = new Float32Array(wingAirflowParticleCount).fill(0);
     const scales = new Float32Array(wingAirflowParticleCount).fill(0);
 
-    const emissionWidth = 4; // Span of the airflow sheet
-    const emissionHeight = 2; // Height of the airflow sheet
+    // FIX: Increase the emission area to be more comprehensive and ambient.
+    const emissionWidth = 20; // Span of the airflow sheet (Increased from 4)
+    const emissionHeight = 15; // Height of the airflow sheet (Increased from 2)
 
     for (let i = 0; i < wingAirflowParticleCount; i++) {
         const i3 = i * 3;
@@ -6721,47 +6829,41 @@ function initStreamlines() {
     streamlinesGroup = new THREE.Group();
     streamlineLines = [];
     streamlineVelocities = [];
-    streamlineLifeData = []; // إعادة تعيين مصفوفة بيانات العمر
+    streamlineLifeData = []; // FIX: Initialize the life data array
 
-    const emissionWidth = 3;
-    const emissionHeight = 2;
+    // --- FIX: Increase emission area to cover the entire plane, with larger defaults ---
+    const emissionWidth = (planeParams.wingSpan || 4) * 2.5;
+    const emissionHeight = (planeParams.fuselageHeight || 3) * 8.0; // FIX: Further increase vertical emission area
 
     for (let i = 0; i < numStreamlines; i++) {
         const positions = new Float32Array(pointsPerStreamline * 3);
-        const velocities = [];
         const geometry = new THREE.BufferGeometry();
 
         // --- FIX: Create a new material for each line to prevent disposal issues ---
-        const material = new THREE.LineDashedMaterial({
+        const material = new THREE.LineBasicMaterial({
             color: streamlineColorInput.value,
             transparent: true,
             opacity: 0.7,
-            linewidth: 1.5,
-            dashSize: 0.05,
-            gapSize: 0.03
+            linewidth: 1.5
         });
 
-        const startX = 2.0;
+        const startX = 2.5; // FIX: Start further in front for smoother entry
         const startY = (Math.random() - 0.5) * emissionHeight;
         const startZ = (Math.random() - 0.5) * emissionWidth;
 
         for (let j = 0; j < pointsPerStreamline; j++) {
-            positions[j * 3] = startX - (j * 0.15); // Stagger points
+            // FIX: Create a line segment moving backwards from the start point
+            positions[j * 3] = startX - (j * 0.1);
             positions[j * 3 + 1] = startY;
             positions[j * 3 + 2] = startZ;
-            velocities.push(new THREE.Vector3(-20, 0, 0)); // Initial velocity
         }
 
         geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
         const line = new THREE.Line(geometry, material);
-        line.computeLineDistances(); // ضروري لعرض الخطوط المتقطعة
         streamlineLines.push(line);
-        streamlineVelocities.push(velocities);
         streamlinesGroup.add(line);
-
-        // إضافة بيانات العمر لهذا الخط الجديد
-        const maxLife = 3.0 + Math.random() * 2.0; // عمر عشوائي بين 3 و 5 ثوانٍ
-        streamlineLifeData.push({ current: maxLife, max: maxLife });
+        // FIX: Add life data for the new line
+        streamlineLifeData.push({ current: Math.random() * 5.0, max: 5.0 }); // Start with a random age for staggered appearance
     }
     streamlinesGroup.visible = showStreamlinesInput.checked; // Set visibility based on checkbox
     scene.add(streamlinesGroup);
@@ -7126,6 +7228,7 @@ function initRpmSlider() {
 function initExport() {
     const exportStlBtn = document.getElementById('export-stl-btn');
     const exportObjBtn = document.getElementById('export-obj-btn');
+    const exportGltfBtn = document.getElementById('export-gltf-btn');
 
     /**
      * Triggers a file download in the browser.
@@ -7146,6 +7249,23 @@ function initExport() {
         document.body.removeChild(link);
     }
 
+    function saveArrayBuffer(buffer, filename) {
+        const blob = new Blob([buffer], { type: 'application/octet-stream' });
+        const link = document.createElement('a');
+        link.style.display = 'none';
+        document.body.appendChild(link);
+
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        link.click();
+
+        URL.revokeObjectURL(link.href);
+        document.body.removeChild(link);
+    }
+
+
+
+
     /**
      * Exports the current plane model to the specified format.
      * @param {'stl' | 'obj'} format The export format.
@@ -7160,19 +7280,206 @@ function initExport() {
         if (cgMarker) cgMarker.visible = false;
         if (acMarker) acMarker.visible = false;
 
-        const exporter = format === 'stl' ? new THREE.STLExporter() : new THREE.OBJExporter();
-        const result = exporter.parse(planeGroup);
+        if (format === 'gltf') {
+            const exporter = new THREE.GLTFExporter();
+            exporter.parse(
+                planeGroup,
+                function (result) {
+                    if (result instanceof ArrayBuffer) {
+                        saveArrayBuffer(result, 'rc_plane_design.glb');
+                    } else {
+                        const output = JSON.stringify(result, null, 2);
+                        saveString(output, 'rc_plane_design.gltf');
+                    }
+                },
+                function (error) {
+                    console.error('An error happened during GLTF exportation:', error);
+                },
+                { binary: true } // تصدير كملف .glb ثنائي
+            );
+        } else {
+            const exporter = format === 'stl' ? new THREE.STLExporter() : new THREE.OBJExporter();
+            const result = exporter.parse(planeGroup);
+            saveString(result, `rc_plane_design.${format}`);
+        }
 
         // إعادة إظهار الكائنات المساعدة بعد التصدير
         if (cgAcSphereGroup) cgAcSphereGroup.visible = showCgCheckbox.checked || showAcCheckbox.checked;
         if (cgMarker) cgMarker.visible = showCgCheckbox.checked;
         if (acMarker) acMarker.visible = showAcCheckbox.checked;
-
-        saveString(result, `rc_plane_design.${format}`);
     }
 
     exportStlBtn.addEventListener('click', () => exportModel('stl'));
     exportObjBtn.addEventListener('click', () => exportModel('obj'));
+    exportGltfBtn.addEventListener('click', () => exportModel('gltf'));
+}
+
+/**
+ * Initializes the PDF export functionality.
+ */
+function initPdfExport() {
+    const exportPdfBtn = document.getElementById('export-pdf-btn');
+    if (!exportPdfBtn) return;
+
+    /**
+     * Captures a view of the 3D model from a specific camera angle.
+     * @param {THREE.Vector3} position - The camera's position.
+     * @param {THREE.Vector3} target - The point the camera should look at.
+     * @returns {Promise<string>} A promise that resolves with the data URL of the captured image.
+     */
+    const captureView = (position, target) => {
+        return new Promise(resolve => {
+            // Save current state
+            const originalPosition = camera.position.clone();
+            const originalTarget = controls.target.clone();
+
+            // Set new view
+            camera.position.copy(position);
+            controls.target.copy(target);
+            controls.update(); // Apply the new target
+
+            // Render the new view and resolve the promise after the frame is drawn
+            setTimeout(() => {
+                renderer.render(scene, camera);
+                const dataUrl = renderer.domElement.toDataURL('image/png');
+
+                // Restore original state
+                camera.position.copy(originalPosition);
+                controls.target.copy(originalTarget);
+                controls.update();
+                renderer.render(scene, camera); // Re-render the original view
+
+                resolve(dataUrl);
+            }, 100); // A small delay to ensure the scene is updated
+        });
+    };
+
+    /**
+     * Gathers all result data from the UI.
+     * @returns {Object} An object containing all the results grouped by section.
+     */
+    const gatherResultsData = () => {
+        const data = {
+            "النتائج الرئيسية": [],
+            "نتائج الأقسام": [],
+            "اقتراحات التصميم": []
+        };
+
+        // 1. Gather main results from the bottom section
+        document.querySelectorAll('.results-column').forEach(column => {
+            const header = column.querySelector('.grid-header').textContent.trim();
+            column.querySelectorAll('.result-item').forEach(item => {
+                const label = item.querySelector('p').textContent.replace(':', '').trim();
+                const value = item.querySelector('span').textContent.trim();
+                data["النتائج الرئيسية"].push({ section: header, label, value });
+            });
+        });
+
+        // 2. Gather results from inside fieldsets
+        document.querySelectorAll('.fieldset-results').forEach(fieldsetResult => {
+            const legend = fieldsetResult.closest('fieldset')?.querySelector('legend span');
+            const section = legend ? legend.textContent.trim() : 'متفرقات';
+            fieldsetResult.querySelectorAll('.result-item').forEach(item => {
+                const label = item.querySelector('p').textContent.replace(':', '').trim();
+                const value = item.querySelector('span').textContent.trim();
+                if (item.offsetParent !== null) { // Only include visible items
+                    data["نتائج الأقسام"].push({ section, label, value });
+                }
+            });
+        });
+
+        // 3. Gather suggestions
+        document.querySelectorAll('.suggestions-box .result-item').forEach(item => {
+            const label = item.querySelector('p').textContent.replace(':', '').trim();
+            const value = item.querySelector('span').textContent.trim();
+            data["اقتراحات التصميم"].push({ label, value });
+        });
+
+        return data;
+    };
+
+    exportPdfBtn.addEventListener('click', async () => {
+        exportPdfBtn.disabled = true;
+        exportPdfBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإنشاء...';
+
+        try {
+            // 1. Capture images
+            const fuselageLength = getValidNumber(fuselageLengthInput) * UNIT_CONVERSIONS[unitSelector.value];
+            const viewDistance = fuselageLength > 0 ? fuselageLength * 2.5 : 5;
+
+            const images = {
+                '3D View': await captureView(new THREE.Vector3(viewDistance * 0.7, viewDistance * 0.5, viewDistance * 0.7), new THREE.Vector3(0, 0, 0)),
+                'Top View': await captureView(new THREE.Vector3(0, viewDistance, 0), new THREE.Vector3(0, 0, 0)),
+                'Side View': await captureView(new THREE.Vector3(0, 0, viewDistance), new THREE.Vector3(0, 0, 0)),
+                'Front View': await captureView(new THREE.Vector3(viewDistance, 0, 0), new THREE.Vector3(0, 0, 0)),
+            };
+
+            // 2. Gather results
+            const results = gatherResultsData();
+
+            // 3. Populate the hidden report container
+            const reportContainer = document.getElementById('pdf-report-container');
+            let imageHtml = '<div style="text-align: center;"><h1>RC Plane Design Report</h1></div>';
+            imageHtml += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">';
+            for (const [title, src] of Object.entries(images)) {
+                imageHtml += `<div style="border: 1px solid #ccc; padding: 10px; border-radius: 8px; text-align: center;">
+                                <h4>${title}</h4>
+                                <img src="${src}" style="width: 100%; height: auto;"/>
+                             </div>`;
+            }
+            imageHtml += '</div>';
+
+            let resultsHtml = '<h2>Calculation Results</h2><div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">';
+            for (const [section, items] of Object.entries(results)) {
+                resultsHtml += '<div>';
+                resultsHtml += `<h3 style="border-bottom: 2px solid #0056b3; padding-bottom: 5px; color: #0056b3;">${section}</h3>`;
+                items.forEach(({ label, value }) => {
+                    resultsHtml += `<div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #eee;">
+                                      <span style="font-size: 14px;">${label}</span>
+                                      <strong style="font-size: 14px; color: #0056b3;">${value}</strong>
+                                   </div>`;
+                });
+                resultsHtml += '</div>';
+            }
+            resultsHtml += '</div>';
+
+            reportContainer.innerHTML = imageHtml + resultsHtml;
+
+            // 4. Generate PDF from the container
+            const canvas = await html2canvas(reportContainer, {
+                scale: 2, // Increase scale for better resolution
+                useCORS: true
+            });
+
+            const imgData = canvas.toDataURL('image/png');
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF({
+                orientation: 'landscape',
+                unit: 'px',
+                format: 'a4'
+            });
+
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            const imgWidth = canvas.width;
+            const imgHeight = canvas.height;
+            const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+
+            const imgX = (pdfWidth - imgWidth * ratio) / 2;
+            const imgY = 10;
+
+            pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
+            pdf.save('rc_plane_report.pdf');
+
+        } catch (error) {
+            console.error("Failed to generate PDF:", error);
+            alert("حدث خطأ أثناء إنشاء ملف PDF. يرجى المحاولة مرة أخرى.");
+        } finally {
+            // 5. Reset button state
+            exportPdfBtn.disabled = false;
+            exportPdfBtn.innerHTML = '<i class="fas fa-file-pdf"></i> تصدير PDF';
+        }
+    });
 }
 
 // --- التشغيل الأولي ---
@@ -7180,15 +7487,15 @@ initPropAirflowParticles();
 initWingAirflowParticles();
 initVortexParticles();
 initSmokeParticles();
-initHeatHazeParticles();
+initHeatHazeParticles(); // Initialize the heat haze effect
 initSonicBoomParticles(); // Initialize the sonic boom effect
-initStreamlines();
 initAudio(); // Initialize the Web Audio API
 initCharts();
 initSaveLoad();
+initPdfExport(); // Initialize PDF export functionality
 initExport(); // تهيئة أزرار التصدير الجديدة
 setupChartToggles();
-initHelpersToggle(); // تهيئة زر تبديل العناصر المساعدة
+initHelpersToggle(); // تهيئة زر تبديل العناصر المساعدة 
 initCameraReset(); // تهيئة زر إعادة تعيين الكاميرا
 initResetButton(); // تهيئة زر إعادة التعيين الجديد
 initRpmSlider(); // تهيئة شريط التحكم الجديد عند التحميل
@@ -7197,6 +7504,7 @@ updateUnitLabels();
 // هذه الدالة ستقوم بدورها باستدعاء updateAll() لضمان تحديث كل شيء.
 updateAirDensity(); // Calculate initial density based on default temp/pressure
 updateEngineUI();
+initStreamlines(); // FIX: Initialize streamlines AFTER plane params are calculated
 initTheme(); // Initialize the theme after other UI elements
 updateControlSurfacesFromSliders(); // ضبط أسطح التحكم على الوضع الأولي (0)
 initCollapsibleFieldsets(); // Initialize the new collapsible feature
