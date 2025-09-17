@@ -355,9 +355,8 @@
                 position: static;
                 /* Prevent controls from being sticky on mobile */
                 top: auto;
-                max-height: 85vh;
-                overflow-y: auto;
-                /* إضافة شريط تمرير مستقل عند الحاجة على الهاتف */
+                max-height: none; /* Allow the controls to expand fully on mobile */
+                overflow-y: visible; /* Remove the dedicated scrollbar on mobile */
             }
 
             .viewer {

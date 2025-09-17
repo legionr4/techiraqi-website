@@ -55,10 +55,10 @@ scene.add(xAxisLabel, yAxisLabel, zAxisLabel);
 
 // --- FIX: منع خطوط التدفق من الاصطدام بالمحاور وتسمياتها ---
 // جعل هذه الكائنات غير مرئية لـ Raycaster
-axesHelper.raycast = () => {};
-xAxisLabel.raycast = () => {};
-yAxisLabel.raycast = () => {};
-zAxisLabel.raycast = () => {};
+axesHelper.raycast = () => { };
+xAxisLabel.raycast = () => { };
+yAxisLabel.raycast = () => { };
+zAxisLabel.raycast = () => { };
 
 // --- Web Audio API for Gapless Loop ---
 let audioContext;
@@ -745,17 +745,25 @@ function generateAirfoil(chord, thickness, airfoilType, numPoints = 15) {
         // Center horizontally and flip
         points.forEach(p => { p.x = (chord / 2) - p.x; });
     } else if (airfoilType === 'flat-bottom') {
-        // Top surface
+        // FIX: Final, robust fix for flat-bottom airfoil centering.
+        // Generate the shape first, then find its bounds and center it.
+        // Top surface (curve starts from y=0)
         for (let i = 0; i <= numPoints; i++) {
             const x_norm = i / numPoints;
-            points.push(new THREE.Vector2(x_norm * chord, thickness * airfoilCurve(x_norm) - (thickness / 2)));
+            points.push(new THREE.Vector2(x_norm * chord, thickness * airfoilCurve(x_norm)));
         }
         // Bottom surface (flat)
         for (let i = numPoints - 1; i >= 1; i--) {
             const x_norm = i / numPoints;
-            points.push(new THREE.Vector2(x_norm * chord, -thickness / 2));
+            points.push(new THREE.Vector2(x_norm * chord, 0));
         }
 
+        // Dynamically find the min and max Y to calculate the exact geometric center
+        const yCoords = points.map(p => p.y);
+        const minY = Math.min(...yCoords);
+        const maxY = Math.max(...yCoords);
+        const verticalCenter = (maxY + minY) / 2;
+        points.forEach(p => p.y -= verticalCenter); // Apply the calculated offset
         // Center horizontally and flip
         points.forEach(p => { p.x = (chord / 2) - p.x; });
     }
@@ -1110,10 +1118,9 @@ function updatePlaneModel() {
     // Calculate X positions for components relative to fuselage center (0,0,0)
     const wingNoseDistance = getValidNumber(wingNoseDistanceInput) * conversionFactor;
     const wingPositionX = (fuselageLength / 2) - wingNoseDistance;
-
+    // --- FIX: Calculate the actual fuselage width/height at the wing attachment point ---
     // --- FIX: Calculate the actual fuselage width/height at the wing attachment point ---
     let fuselageWidthAtWing, fuselageHeightAtWing;
-
 
     if (fuselageShapeInput.value === 'teardrop') {
         const frontDiameter = getValidNumber(fuselageFrontDiameterInput) * conversionFactor;
@@ -1133,6 +1140,7 @@ function updatePlaneModel() {
         const t = (wingPositionX + fuselageLength / 2) / fuselageLength;
         fuselageWidthAtWing = rearWidth + t * (frontWidth - rearWidth);
         fuselageHeightAtWing = rearHeight + t * (frontHeight - rearHeight);
+
     }
     // قراءة قيم جسم الطائرة
     const fuselageShape = fuselageShapeInput.value;
@@ -1175,11 +1183,11 @@ function updatePlaneModel() {
     const fuselageTaperRatio = getValidNumber(fuselageTaperRatioInput);
 
     // New: Read component distances (wing is now the reference)
-   // const wingNoseDistance = getValidNumber(wingNoseDistanceInput) * conversionFactor;
+    // const wingNoseDistance = getValidNumber(wingNoseDistanceInput) * conversionFactor;
     const wingPropDistance = getValidNumber(wingPropDistanceInput) * conversionFactor;
     const wingTailDistance = getValidNumber(wingTailDistanceInput) * conversionFactor;
     // Calculate X positions for components relative to fuselage center (0,0,0)
-   
+
     const tailPositionX = wingPositionX - wingTailDistance; // Tail is relative to wing
 
     // قيم المروحة تبقى بالبوصة كما هي متعارف عليها
@@ -1463,10 +1471,9 @@ function updatePlaneModel() {
     rightWing.rotation.x = -dihedralRad; // إشارة سالبة لرفع الجناح للأعلى عند قيمة موجبة
     leftWing.rotation.x = -dihedralRad; // نفس الدوران، لأن الانعكاس في المقياس Z يعكس التأثير تلقائيًا
 
-    // تحديد موضع الجناحين ليبدآ من جانبي جسم الطائرة
-    rightWing.position.z = fuselageWidthAtWing / 2; // FIX: Use interpolated width
-    leftWing.position.z = -fuselageWidthAtWing / 2; // FIX: Use interpolated width
-
+    // FIX: Use the calculated fuselage width at the wing's specific X position
+    rightWing.position.z = fuselageWidthAtWing / 2;
+    leftWing.position.z = -fuselageWidthAtWing / 2;
     // تصحيح: إنشاء مجموعات محركات منفصلة لكل جناح لترث دوران الديhedral
     const rightWingEngineGroup = new THREE.Group();
     rightWingEngineGroup.name = "rightWingEngineGroup"; // إضافة اسم لسهولة العثور عليها
@@ -1509,7 +1516,7 @@ function updatePlaneModel() {
         const leftWingtipGeom = wingtipGeometry.clone().applyMatrix4(new THREE.Matrix4().makeScale(1, 1, -1));
         leftWingtipGeom.computeVertexNormals(); // Recompute normals for correct lighting
         const leftWingtip = new THREE.Mesh(leftWingtipGeom, wingtipMaterial);
-        
+
         // Mirror the position on the Z-axis relative to the wing's local space
         leftWingtip.position.set(rightWingtip.position.x, rightWingtip.position.y, -rightWingtip.position.z);
         // Apply mirrored rotations for cant and twist
@@ -1583,15 +1590,11 @@ function updatePlaneModel() {
         leftWing.add(leftAileronPivot);
     }
 
-
-
-
     // تحديث موضع الجناح (علوي/متوسط/سفلي)
     wingGroup.position.x = wingPositionX;
-    if (wingPosition === 'high') wingGroup.position.y = fuselageHeightAtWing / 2; // FIX: Use interpolated height
+    if (wingPosition === 'high') wingGroup.position.y = currentFuselageHeight / 2;
     else if (wingPosition === 'mid') wingGroup.position.y = 0;
-    else if (wingPosition === 'low') wingGroup.position.y = -fuselageHeightAtWing / 2; // FIX: Use interpolated height
-
+    else if (wingPosition === 'low') wingGroup.position.y = -currentFuselageHeight / 2;
     // تطبيق زاوية ميلان الجناح (Incidence)
     wingGroup.rotation.z = wingIncidenceAngle * (Math.PI / 180);
 
@@ -1689,7 +1692,7 @@ function updatePlaneModel() {
         // FIX: Store original positions for flutter effect
         vStab.geometry.userData.originalPositions = vStab.geometry.attributes.position.array.slice();
         // رفع المثبت العمودي ليجلس فوق جسم الطائرة
-         vStab.position.y = rearFuselageHeight / 2; // FIX: Use rear fuselage height
+        vStab.position.y = rearFuselageHeight / 2; // FIX: Use rear fuselage height
         tailAssembly.add(rightHStab, leftHStab, vStab);
     } else if (tailType === 'v-tail') {
         const vStabChordEffective = hasRudder ? vStabChord - rudderWidth : vStabChord;
@@ -2078,7 +2081,7 @@ function updatePlaneModel() {
                 leftWingEngineGroup.add(leftPylon);
             }
 
-        // --- حساب موضع المحرك والمروحة بناءً على موضع الحامل ---
+            // --- حساب موضع المحرك والمروحة بناءً على موضع الحامل ---
             if (wingEngineForeAft === 'leading') {
                 // المحرك يقع أمام الحامل
                 engineCenterX = leadingEdgeX_local + pylonForeAftLength + (engineLengthMeters / 2);
@@ -2104,16 +2107,16 @@ function updatePlaneModel() {
 
             // تصحيح: استخدام الإحداثيات المحلية لجميع المكونات
             rightEngine.position.set(engineCenterX, engineY_relative, localZ);
-        leftEngine.position.set(engineCenterX, engineY_relative, -localZ);
+            leftEngine.position.set(engineCenterX, engineY_relative, -localZ);
 
             rightProp.position.set(propCenterX, engineY_relative, localZ);
-        leftProp.position.set(propCenterX, engineY_relative, -localZ);
+            leftProp.position.set(propCenterX, engineY_relative, -localZ);
 
             // Apply thrust angles to each component
             rightEngine.rotation.set(0, engineSideThrustAngle, engineThrustAngle);
-        leftEngine.rotation.set(0, -engineSideThrustAngle, engineThrustAngle);
+            leftEngine.rotation.set(0, -engineSideThrustAngle, engineThrustAngle);
             rightProp.rotation.set(0, engineSideThrustAngle, engineThrustAngle);
-        leftProp.rotation.set(0, -engineSideThrustAngle, engineThrustAngle);
+            leftProp.rotation.set(0, -engineSideThrustAngle, engineThrustAngle);
 
             // For pusher props on the wing, add the 180 deg rotation
             if (wingEngineForeAft === 'trailing') {
@@ -3417,7 +3420,7 @@ function calculateAerodynamics() {
             hStabCgY = vStabHeight + rearFuselageHeight / 2; // FIX: Use rear fuselage height for CG calc
         }
         hStabCgY += hStabCgSpanwise * Math.tan(tailDihedralAngle * Math.PI / 180);
-        
+
         tailAssemblyLocalMomentX += hStabWeightKg * hStabCgX_local;
         tailAssemblyLocalMomentY += hStabWeightKg * hStabCgY;
     }
