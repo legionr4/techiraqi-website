@@ -373,7 +373,11 @@
                 min-width: 100%;
                 /* FIX: Re-enable independent scrolling for the control panel on mobile */
                 max-height: 60vh; /* Give it a max height */
-                overflow-y: auto; /* Add scrollbar when needed */
+            overflow-y: auto;
+            /* Add scrollbar when needed */
+            /* FIX: Reorder controls to be after the viewer on mobile */
+            order: 2;
+            margin-top: 0;
             }
 
             .viewer {
@@ -388,8 +392,9 @@
             }
 
             .results {
-                order: 2; /* Place results after the viewer */
+            order: 3; /* Place results after the controls on mobile */
                 margin-top: 0;
+            margin-bottom: 20px;
                 /* Padding is handled by the main container */
             }
 
@@ -2753,7 +2758,6 @@
             <div class="viewer-actions-container"><button id="reset-camera-btn" class="viewer-action-btn" title="إعادة تعيين الكاميرا"><i class="fas fa-camera-rotate"></i></button><button id="toggle-helpers-btn" class="viewer-action-btn" title="إخفاء العناصر المساعدة"><i class="fas fa-eye"></i></button></div>
         </div>
     </div>
-
     <div class="results">
         <h2><i class="fas fa-poll"></i><span>النتائج</span></h2>
         <p style="font-size: 0.8em; text-align: center; color: #555;">(قيم تقريبية لأغراض توضيحية)</p>
@@ -2894,7 +2898,6 @@
                 </div>
             </div>
         </div>
-    </div>
     </div>
 
     <div class="charts-container" id="charts-container">
