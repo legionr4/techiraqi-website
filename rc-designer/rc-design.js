@@ -19,6 +19,10 @@ controls.enableDamping = true; // يضيف تأثير القصور الذاتي 
 controls.touches.UP = 0; // Set vertical pan to 0 (disabled)
 controls.touches.BOTTOM = 0; // Set vertical pan to 0 (disabled)
 controls.dampingFactor = 0.1;
+// FIX: Explicitly prevent OrbitControls from capturing touchmove events on the document.
+// This is a more robust fix to ensure that scrolling on other page elements (like the control panel)
+// works reliably on all mobile devices.
+controls.domElement.addEventListener('touchmove', event => event.stopPropagation(), { passive: true });
 
 // --- إضافة إضاءة ---
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
@@ -7573,6 +7577,31 @@ initHelpersToggle(); // تهيئة زر تبديل العناصر المساعد
 initCameraReset(); // تهيئة زر إعادة تعيين الكاميرا
 initResetButton(); // تهيئة زر إعادة التعيين الجديد
 initRpmSlider(); // تهيئة شريط التحكم الجديد عند التحميل
+/**
+ * Initializes the master toggle for showing/hiding all help buttons.
+ */
+function initHelpButtonToggle() {
+    const toggleCheckbox = document.getElementById('toggle-all-help-btns');
+    const form = document.getElementById('plane-form');
+
+    if (!toggleCheckbox || !form) return;
+
+    // Function to apply the class based on checkbox state
+    const applyHelpVisibility = () => {
+        if (toggleCheckbox.checked) {
+            form.classList.remove('help-buttons-hidden');
+        } else {
+            form.classList.add('help-buttons-hidden');
+        }
+    };
+
+    // Add event listener
+    toggleCheckbox.addEventListener('change', applyHelpVisibility);
+
+    // Apply initial state on load
+    applyHelpVisibility();
+}
+initHelpButtonToggle(); // تهيئة زر التحكم الرئيسي بأزرار المساعدة
 initHelpTooltips(); // تهيئة أزرار المساعدة الجديدة
 updateUnitLabels();
 // استدعاء updateEngineUI أولاً لملء حقول المحرك بالقيم الافتراضية.
@@ -7580,6 +7609,9 @@ updateUnitLabels();
 updateAirDensity(); // Calculate initial density based on default temp/pressure
 updateEngineUI();
 initStreamlines(); // FIX: Initialize streamlines AFTER plane params are calculated
+
+
+
 initTheme(); // Initialize the theme after other UI elements
 updateControlSurfacesFromSliders(); // ضبط أسطح التحكم على الوضع الأولي (0)
 initCollapsibleFieldsets(); // Initialize the new collapsible feature

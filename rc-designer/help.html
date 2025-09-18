@@ -66,6 +66,7 @@
         .help-image {
             max-width: 100%;
             height: auto;
+            cursor: zoom-in; /* Add a visual cue for clickable images */
             border-radius: 8px;
             margin: 1.5rem auto;
             display: block;
@@ -214,6 +215,12 @@
             color: #fff;
             transform: translateY(-2px); /* تأثير الحركة عند التمرير */
         }
+        /* New style for the active link in the TOC */
+        .toc-container li a.active {
+            background-color: var(--primary-hover);
+            color: #fff;
+            transform: translateY(-2px);
+        }
         /* Mobile view for Table of Contents */
         @media (max-width: 768px) {
             .toc-container {
@@ -223,17 +230,48 @@
                 display: none; /* FIX: Hide title on mobile to save space */
             }
             .toc-container ul {
-                flex-wrap: nowrap; /* Prevent items from wrapping to the next line */
-                overflow-x: auto;  /* Enable horizontal scrolling */
-                justify-content: flex-start; /* Align items to the start for better scrolling experience */
-                /* FIX: Hide scrollbar for a cleaner look on mobile */
-                -ms-overflow-style: none;  /* IE and Edge */
-                scrollbar-width: none;  /* Firefox */
+                /* FIX: Allow items to wrap to the next line instead of horizontal scrolling */
+                flex-wrap: wrap;
+                justify-content: center; /* Center the wrapped items */
             }
-            /* FIX: Hide scrollbar for Chrome, Safari and Opera */
-            .toc-container ul::-webkit-scrollbar {
-                display: none;
-            }
+        }
+        /* New styles for the image lightbox */
+        .lightbox-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .lightbox-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        .lightbox-content {
+            max-width: 90%;
+            max-height: 90%;
+            transform: scale(0.8);
+            transition: transform 0.3s ease;
+        }
+        .lightbox-overlay.show .lightbox-content {
+            transform: scale(1);
+        }
+        .lightbox-close {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            color: #fff;
+            font-size: 2.5rem;
+            font-weight: bold;
+            cursor: pointer;
         }
     </style>
 </head>
@@ -492,6 +530,82 @@
             }
         }
         updateCopyrightYear();
+
+        /**
+         * Initializes the image lightbox functionality.
+         */
+        function initLightbox() {
+            const images = document.querySelectorAll('.help-image');
+            if (images.length === 0) return;
+
+            // Create lightbox elements once
+            const overlay = document.createElement('div');
+            overlay.className = 'lightbox-overlay';
+            const content = document.createElement('img');
+            content.className = 'lightbox-content';
+            const closeBtn = document.createElement('span');
+            closeBtn.className = 'lightbox-close';
+            closeBtn.innerHTML = '&times;';
+
+            overlay.appendChild(content);
+            overlay.appendChild(closeBtn);
+            document.body.appendChild(overlay);
+
+            // Show lightbox
+            images.forEach(image => {
+                image.addEventListener('click', () => {
+                    // Handle both regular <img> and inline <svg>
+                    if (image.tagName.toLowerCase() === 'img') {
+                        content.src = image.src;
+                    } else if (image.tagName.toLowerCase() === 'svg') {
+                        const svgString = new XMLSerializer().serializeToString(image);
+                        content.src = 'data:image/svg+xml;base64,' + btoa(svgString);
+                    }
+                    overlay.classList.add('show');
+                });
+            });
+
+            // Hide lightbox
+            const hideLightbox = () => {
+                overlay.classList.remove('show');
+            };
+            overlay.addEventListener('click', hideLightbox);
+            closeBtn.addEventListener('click', hideLightbox);
+        }
+        initLightbox();
+
+        /**
+         * Initializes the Table of Contents scroll spy functionality.
+         */
+        function initTocScrollSpy() {
+            const tocLinks = document.querySelectorAll('.toc-container a');
+            const sections = Array.from(tocLinks).map(link => document.querySelector(link.getAttribute('href'))).filter(Boolean);
+
+            if (sections.length === 0) return;
+
+            const observerOptions = {
+                root: null, // relative to the viewport
+                rootMargin: '0px 0px -70% 0px', // Trigger when the section is in the top 30% of the screen
+                threshold: 0
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const id = entry.target.getAttribute('id');
+                        const activeLink = document.querySelector(`.toc-container a[href="#${id}"]`);
+                        
+                        tocLinks.forEach(link => link.classList.remove('active'));
+                        if (activeLink) {
+                            activeLink.classList.add('active');
+                        }
+                    }
+                });
+            }, observerOptions);
+
+            sections.forEach(section => observer.observe(section));
+        }
+        initTocScrollSpy();
     </script>
 </body>
 </html>

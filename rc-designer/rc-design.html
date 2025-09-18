@@ -35,6 +35,10 @@
             background-color: var(--body-bg);
             color: var(--text-color);
         }
+        /* FIX: Hide horizontal scrollbar across all views */
+        body {
+            overflow-x: hidden;
+        }
 
         h1,
         h2 {
@@ -59,6 +63,9 @@
             flex-wrap: wrap;
             padding: 20px;
             align-items: flex-start;
+            /* FIX: Center the main container and give it a max-width to remove large empty space on the left */
+            max-width: 1600px;
+            margin: 0 auto;
             /* لمحاذاة العناصر في الأعلى لضمان عمل التثبيت بشكل صحيح */
         }
 
@@ -308,6 +315,7 @@
             gap: 20px;
             padding: 20px;
             max-width: 1200px;
+            width: 100%; /* FIX: Ensure container does not overflow its parent */
             margin: 20px auto;
         }
 
@@ -743,7 +751,11 @@
             color: #000;
             border-color: #ffc107;
         }
-
+ 
+        /* RTL */
+        label > .help-btn {
+            margin-left: auto;
+        }
         /* New styles for help buttons and tooltips */
         .help-btn {
             display: inline-flex;
@@ -787,6 +799,11 @@
         .tooltip-text.show {
             visibility: visible;
             opacity: 1;
+        }
+
+        /* New style to hide help buttons via a parent class */
+        .help-buttons-hidden .help-btn {
+            display: none;
         }
     </style>
 </head>
@@ -832,13 +849,19 @@
                     </legend>
                     <div class="collapsible-content">
                         <div class="input-group">
-                            <label for="unit-selector">اختر وحدة القياس</label>
+                            <label for="unit-selector">اختر وحدة القياس
+                                <button type="button" class="help-btn" data-tooltip="اختر وحدة القياس التي تفضلها لجميع المدخلات والأبعاد في التطبيق. سيتم تحويل جميع القيم تلقائيًا.">?</button>
+                            </label>
                             <select id="unit-selector">
                                 <option value="m" data-label="متر">متر (m)</option>
                                 <option value="cm" data-label="سم" selected>سنتيمتر (cm)</option>
                                 <option value="mm" data-label="مم">مليمتر (mm)</option>
                                 <option value="in" data-label="بوصة">بوصة (in)</option>
                             </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="toggle-all-help-btns">إظهار أزرار المساعدة
+                                <input type="checkbox" id="toggle-all-help-btns" checked style="width: auto; margin-right: auto; margin-left: 0;">
                         </div>
                     </div>
                 </fieldset>
@@ -916,12 +939,14 @@
                         </div>
                         <div class="input-group">
                             <label for="has-aileron">إضافة جناح قلاب (Aileron)؟</label>
-                            <input type="checkbox" id="has-aileron" checked>
+                            <input type="checkbox" id="has-aileron" checked> <button type="button" class="help-btn" data-tooltip="الجنيحات هي أسطح تحكم على الحافة الخلفية للجناح للتحكم في دوران الطائرة (Roll).">?</button>
                         </div>
 
                         <div id="aileron-controls" style="margin-top: 10px; display:none;">
                             <div class="input-group">
-                                <label for="aileron-airfoil-type">شكل مقطع الجنيح</label>
+                                <label for="aileron-airfoil-type">شكل مقطع الجنيح
+                                    <button type="button" class="help-btn" data-tooltip="شكل المقطع العرضي للجنيح. 'اللوح المسطح' هو الأبسط، بينما 'الإسفين' يوفر استجابة أفضل.">?</button>
+                                </label>
                                 <select id="aileron-airfoil-type">
                                     <option value="flat_plate" selected>لوح مسطح (Flat Plate)</option>
                                     <option value="wedge">إسفين (Wedge)</option>
@@ -929,22 +954,29 @@
                                 </select>
                             </div>
                             <div class="input-group">
-                                <label for="aileron-length">طول الجنيح (<span class="unit-label">سم</span>):</label>
+                                <label for="aileron-length">طول الجنيح (<span class="unit-label">سم</span>):
+                                    <button type="button" class="help-btn" data-tooltip="طول الجنيح على امتداد الجناح. الجنيحات الأطول توفر تحكمًا أكبر في الدوران.">?</button>
+                                </label>
                                 <input type="number" id="aileron-length" value="40" step="1">
                             </div>
                             <div class="input-group">
-                                <label for="aileron-width">عرض الجنيح (<span class="unit-label">سم</span>):</label>
+                                <label for="aileron-width">عرض الجنيح (<span class="unit-label">سم</span>):
+                                    <button type="button" class="help-btn" data-tooltip="عرض الجنيح (من الحافة الأمامية إلى الخلفية). يؤثر على فعالية التحكم.">?</button>
+                                </label>
                                 <input type="number" id="aileron-width" value="6" step="0.5">
                             </div>
                             <div class="input-group">
-                                <label for="aileron-thickness">سمك الجنيح (<span class="unit-label">سم</span>):</label>
+                                <label for="aileron-thickness">سمك الجنيح (<span class="unit-label">سم</span>):
+                                    <button type="button" class="help-btn" data-tooltip="سماكة الجنيح. يؤثر على الوزن وقوة الهيكل.">?</button>
+                                </label>
                                 <input type="number" id="aileron-thickness" value="0.5" step="0.1">
                             </div>
 
 
                             <div class="input-group">
-                                <label for="aileron-position">المسافة من نهاية الجناح (<span
-                                        class="unit-label">سم</span>):</label>
+                                <label for="aileron-position">المسافة من نهاية الجناح (<span class="unit-label">سم</span>):
+                                    <button type="button" class="help-btn" data-tooltip="المسافة التي يبدأ عندها الجنيح من طرف الجناح الخارجي.">?</button>
+                                </label>
                                 <input type="number" id="aileron-position" value="10" step="1">
                             </div>
 
@@ -962,12 +994,14 @@
 
                         <div class="input-group">
                             <label for="has-wingtip">إضافة طرف جناح؟</label>
-                            <input type="checkbox" id="has-wingtip">
+                            <input type="checkbox" id="has-wingtip"> <button type="button" class="help-btn" data-tooltip="أطراف الجناح (Winglets) هي امتدادات رأسية صغيرة في نهاية الجناح لتقليل السحب المستحث وزيادة الكفاءة.">?</button>
                         </div>
 
                         <div id="wingtip-controls" style="margin-top: 10px; display:none;">
                             <div class="input-group">
-                                <label for="wingtip-airfoil-type">شكل مقطع الطرف</label>
+                                <label for="wingtip-airfoil-type">شكل مقطع الطرف
+                                    <button type="button" class="help-btn" data-tooltip="شكل المقطع العرضي لطرف الجناح. 'المتماثل' هو الأكثر شيوعًا لتحقيق الانسيابية.">?</button>
+                                </label>
                                 <select id="wingtip-airfoil-type">
                                     <option value="symmetrical" selected>متماثل (Symmetrical)</option>
                                     <option value="rectangular">مستطيل (Rectangular)</option>
@@ -975,42 +1009,56 @@
                                 </select>
                             </div>
                             <div class="input-group">
-                                <label for="wingtip-shape">شكل طرف الجناح</label>
+                                <label for="wingtip-shape">شكل طرف الجناح
+                                    <button type="button" class="help-btn" data-tooltip="'المائل' هو طرف جناح مستقيم ومائل للأعلى. 'المنحني' يندمج بسلاسة مع الجناح.">?</button>
+                                </label>
                                 <select id="wingtip-shape">
                                     <option value="canted" selected>مائل (Canted)</option>
                                     <option value="blended">منحني (Blended)</option>
                                 </select>
                             </div>
                             <div class="input-group">
-                                <label for="wingtip-length">طول الطرف (<span class="unit-label">سم</span>):</label>
+                                <label for="wingtip-length">طول الطرف (<span class="unit-label">سم</span>):
+                                    <button type="button" class="help-btn" data-tooltip="الارتفاع الرأسي لطرف الجناح.">?</button>
+                                </label>
                                 <input type="number" id="wingtip-length" value="12" step="1">
                             </div>
                             <div class="input-group">
-                                <label for="wingtip-width">عرض الطرف (<span class="unit-label">سم</span>):</label>
+                                <label for="wingtip-width">عرض الطرف (<span class="unit-label">سم</span>):
+                                    <button type="button" class="help-btn" data-tooltip="عرض طرف الجناح عند نقطة اتصاله بالجناح الرئيسي.">?</button>
+                                </label>
                                 <input type="number" id="wingtip-width" value="25" step="0.5">
                             </div>
                             <div class="input-group">
-                                <label for="wingtip-thickness">سمك الطرف (<span class="unit-label">سم</span>):</label>
+                                <label for="wingtip-thickness">سمك الطرف (<span class="unit-label">سم</span>):
+                                    <button type="button" class="help-btn" data-tooltip="سماكة المقطع الهوائي لطرف الجناح.">?</button>
+                                </label>
                                 <input type="number" id="wingtip-thickness" value="1.5" step="0.1">
                             </div>
 
                             <div class="input-group">
-                                <label for="wingtip-angle">زاوية الطرف (Cant) (°):</label>
+                                <label for="wingtip-angle">زاوية الطرف (Cant) (°):
+                                    <button type="button" class="help-btn" data-tooltip="الزاوية التي يميل بها طرف الجناح للأعلى.">?</button>
+                                </label>
                                 <input type="number" id="wingtip-angle" value="75" step="5">
                             </div>
                             <div class="input-group">
-                                <label for="wingtip-twist-angle">زاوية الالتواء (Toe/Twist) (°):</label>
+                                <label for="wingtip-twist-angle">زاوية الالتواء (Toe/Twist) (°):
+                                    <button type="button" class="help-btn" data-tooltip="زاوية دوران طرف الجناح للداخل (Toe-in) أو للخارج (Toe-out) بالنسبة لاتجاه الطيران.">?</button>
+                                </label>
                                 <input type="number" id="wingtip-twist-angle" value="0" step="1" min="-15" max="15">
                             </div>
                             <div class="input-group">
-                                <label for="wingtip-taper-ratio">نسبة استدقاق الطرف: <span
-                                        id="wingtip-taper-value">1.00</span></label>
+                                <label for="wingtip-taper-ratio">نسبة استدقاق الطرف: <span id="wingtip-taper-value">1.00</span>
+                                    <button type="button" class="help-btn" data-tooltip="نسبة عرض نهاية طرف الجناح إلى عرضه عند القاعدة.">?</button>
+                                </label>
                                 <input type="range" id="wingtip-taper-ratio" min="0.2" max="1.0" value="0.7"
                                     step="0.05">
                             </div>
                             <div class="input-group">
-                                <label for="wingtip-sweep-angle">زاوية ميلان الطرف: <span
-                                        id="wingtip-sweep-value">0</span>°</label>
+                                <label for="wingtip-sweep-angle">زاوية ميلان الطرف: <span id="wingtip-sweep-value">0</span>°
+                                    <button type="button" class="help-btn" data-tooltip="زاوية ميلان طرف الجناح للخلف.">?</button>
+                                </label>
                                 <input type="range" id="wingtip-sweep-angle" min="-30" max="30" value="0" step="1">
                             </div>
                         </div>
@@ -1050,7 +1098,9 @@
                     </legend>
                     <div class="collapsible-content">
                         <div class="input-group">
-                            <label for="fuselage-shape">شكل الجسم</label>
+                            <label for="fuselage-shape">شكل الجسم
+                                <button type="button" class="help-btn" data-tooltip="شكل المقطع العرضي لجسم الطائرة. 'المستطيل' أسهل في البناء، بينما 'الأسطواني' و 'القطرة' أكثر انسيابية.">?</button>
+                            </label>
                             <select id="fuselage-shape">
                                 <option value="rectangular" selected>مستطيل (Rectangular)</option>
                                 <option value="cylindrical">أسطواني (Cylindrical)</option>
@@ -1058,47 +1108,61 @@
                             </select>
                         </div>
                         <div class="input-group">
-                            <label for="fuselage-length">طول الجسم (<span class="unit-label">سم</span>)</label>
+                            <label for="fuselage-length">طول الجسم (<span class="unit-label">سم</span>)
+                                <button type="button" class="help-btn" data-tooltip="الطول الكلي لجسم الطائرة من المقدمة إلى المؤخرة. يؤثر على الاستقرار الطولي والوزن.">?</button>
+                            </label>
                             <input type="number" id="fuselage-length" value="100" step="1">
                         </div>
                         <!-- Rectangular specific inputs -->
                         <div class="input-group fuselage-shape-input" id="fuselage-rectangular-width-group">
-                            <label for="fuselage-width">عرض الجسم (<span class="unit-label">سم</span>)</label>
+                            <label for="fuselage-width">عرض الجسم (<span class="unit-label">سم</span>)
+                                <button type="button" class="help-btn" data-tooltip="أقصى عرض لجسم الطائرة المستطيل.">?</button>
+                            </label>
                             <input type="number" id="fuselage-width" value="15" step="0.5">
                         </div>
                         <div class="input-group fuselage-shape-input" id="fuselage-rectangular-height-group">
-                            <label for="fuselage-height">ارتفاع الجسم (<span class="unit-label">سم</span>)</label>
+                            <label for="fuselage-height">ارتفاع الجسم (<span class="unit-label">سم</span>)
+                                <button type="button" class="help-btn" data-tooltip="أقصى ارتفاع لجسم الطائرة المستطيل.">?</button>
+                            </label>
                             <input type="number" id="fuselage-height" value="15" step="0.5">
                         </div>
                         <!-- Cylindrical specific inputs -->
                         <div class="input-group fuselage-shape-input" id="fuselage-cylindrical-diameter-group"
                             style="display:none;">
-                            <label for="fuselage-diameter">قطر الجسم (<span class="unit-label">سم</span>)</label>
+                            <label for="fuselage-diameter">قطر الجسم (<span class="unit-label">سم</span>)
+                                <button type="button" class="help-btn" data-tooltip="أقصى قطر لجسم الطائرة الأسطواني.">?</button>
+                            </label>
                             <input type="number" id="fuselage-diameter" value="15" step="0.5">
                         </div>
                         <!-- Teardrop specific inputs -->
                         <div class="input-group fuselage-shape-input" id="fuselage-teardrop-front-diameter-group"
                             style="display:none;">
-                            <label for="fuselage-front-diameter">قطر المقدمة (<span
-                                    class="unit-label">سم</span>)</label>
+                            <label for="fuselage-front-diameter">قطر المقدمة (<span class="unit-label">سم</span>)
+                                <button type="button" class="help-btn" data-tooltip="أقصى قطر للجزء الأمامي من جسم الطائرة ذي شكل القطرة.">?</button>
+                            </label>
                             <input type="number" id="fuselage-front-diameter" value="20" step="0.5">
                         </div>
                         <div class="input-group fuselage-shape-input" id="fuselage-teardrop-rear-diameter-group"
                             style="display:none;">
-                            <label for="fuselage-rear-diameter">قطر المؤخرة (<span class="unit-label">سم</span>)</label>
+                            <label for="fuselage-rear-diameter">قطر المؤخرة (<span class="unit-label">سم</span>)
+                                <button type="button" class="help-btn" data-tooltip="قطر الجزء الخلفي من جسم الطائرة ذي شكل القطرة.">?</button>
+                            </label>
                             <input type="number" id="fuselage-rear-diameter" value="5" step="0.5">
                         </div>
                         <!-- New Fuselage Taper Ratio input -->
                         <div class="input-group fuselage-shape-input" id="fuselage-taper-group" style="display:none;">
-                            <label for="fuselage-taper-ratio">نسبة الاستدقاق (Taper): <span
-                                    id="fuselage-taper-value">1.00</span></label>
+                            <label for="fuselage-taper-ratio">نسبة الاستدقاق (Taper): <span id="fuselage-taper-value">1.00</span>
+                                <button type="button" class="help-btn" data-tooltip="نسبة أبعاد المؤخرة إلى المقدمة. القيمة 1.0 تعني عدم وجود استدقاق.">?</button>
+                            </label>
                             <input type="range" id="fuselage-taper-ratio" min="0.2" max="1.0" value="1.0" step="0.05">
                         </div>
                         <!-- New Fuselage Ends Controls (conditionally visible) -->
                         <div id="fuselage-ends-controls"
                             style="display:none; margin-top: 10px; border-top: 1px solid #eee; padding-top: 10px;">
                             <div class="input-group">
-                                <label for="fuselage-nose-shape">شكل المقدمة الانسيابي</label>
+                                <label for="fuselage-nose-shape">شكل المقدمة الانسيابي
+                                    <button type="button" class="help-btn" data-tooltip="شكل غطاء مقدمة الجسم. 'المستدير' و 'البيضوي' يقللان من السحب.">?</button>
+                                </label>
                                 <select id="fuselage-nose-shape">
                                     <option value="flat" selected>مسطح (Flat)</option>
                                     <option value="rounded">مستدير (Rounded)</option>
@@ -1106,7 +1170,9 @@
                                 </select>
                             </div>
                             <div class="input-group">
-                                <label for="fuselage-tail-shape">شكل المؤخرة الانسيابي</label>
+                                <label for="fuselage-tail-shape">شكل المؤخرة الانسيابي
+                                    <button type="button" class="help-btn" data-tooltip="شكل غطاء مؤخرة الجسم.">?</button>
+                                </label>
                                 <select id="fuselage-tail-shape">
                                     <option value="flat" selected>مسطح (Flat)</option>
                                     <option value="rounded">مستدير (Rounded)</option>
@@ -1114,28 +1180,33 @@
                             </div>
                         </div>
                         <div class="input-group">
-                            <label for="wing-nose-distance">موضع الجناح من المقدمة (<span
-                                    class="unit-label">سم</span>)</label>
+                            <label for="wing-nose-distance">موضع الجناح من المقدمة (<span class="unit-label">سم</span>)
+                                <button type="button" class="help-btn" data-tooltip="المسافة من مقدمة الجسم إلى الحافة الأمامية للجناح. يؤثر بشكل كبير على مركز الجاذبية والاستقرار.">?</button>
+                            </label>
                             <input type="number" id="wing-nose-distance" value="20" step="1">
                         </div>
                         <div class="input-group">
-                            <label for="wing-prop-distance">المسافة بين الجناح والمروحة (<span
-                                    class="unit-label">سم</span>)</label>
+                            <label for="wing-prop-distance">المسافة بين الجناح والمروحة (<span class="unit-label">سم</span>)
+                                <button type="button" class="help-btn" data-tooltip="المسافة الأفقية بين الحافة الأمامية للجناح ومركز المروحة.">?</button>
+                            </label>
                             <input type="number" id="wing-prop-distance" value="20" step="1">
                         </div>
                         <div class="input-group">
-                            <label for="wing-tail-distance">المسافة بين الجناح والذيل (<span
-                                    class="unit-label">سم</span>)</label>
+                            <label for="wing-tail-distance">المسافة بين الجناح والذيل (<span class="unit-label">سم</span>)
+                                <button type="button" class="help-btn" data-tooltip="المسافة الأفقية بين الحافة الخلفية للجناح والحافة الأمامية للذيل. تُعرف بـ 'ذراع الذيل' وتؤثر بشكل كبير على الاستقرار.">?</button>
+                            </label>
                             <input type="number" id="wing-tail-distance" value="60" step="1">
                         </div>
                         <div class="input-group">
-                            <label for="fuselage-opacity">شفافية الجسم: <span
-                                    id="fuselage-opacity-value">100</span>%</label>
-                            <input type="range" id="fuselage-opacity" min="0" max="1" value="1" step="0.05">
+                            <label for="fuselage-opacity">شفافية الجسم: <span id="fuselage-opacity-value">100</span>%
+                                <button type="button" class="help-btn" data-tooltip="التحكم في شفافية جسم الطائرة لرؤية المكونات الداخلية.">?</button>
+                            </label>
+                            <input type="range" id="fuselage-opacity" min="0" max="1" value="1" step="0.05" style="width: 100%;">
                         </div>
                         <div class="input-group">
-                            <label for="fuselage-wall-thickness">سمك جدار الجسم (<span
-                                    class="unit-label">سم</span>)</label>
+                            <label for="fuselage-wall-thickness">سمك جدار الجسم (<span class="unit-label">سم</span>)
+                                <button type="button" class="help-btn" data-tooltip="يستخدم لحساب الوزن بناءً على مساحة السطح (أكثر دقة للهياكل المجوفة).">?</button>
+                            </label>
                             <input type="number" id="fuselage-wall-thickness" value="0.5" step="0.1" min="0.1"
                                 title="يستخدم لحساب الوزن بناءً على مساحة السطح (أكثر دقة للهياكل المجوفة).">
                         </div>
@@ -1143,34 +1214,45 @@
                         <!-- Cockpit Controls -->
                         <div class="input-group"
                             style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 10px;">
-                            <label for="has-cockpit">إضافة قمرة قيادة؟</label>
+                            <label for="has-cockpit">إضافة قمرة قيادة؟
+                                <button type="button" class="help-btn" data-tooltip="هل ترغب في إضافة قمرة قيادة مرئية إلى التصميم؟ هذا يؤثر على الشكل والوزن.">?</button>
+                            </label>
                             <input type="checkbox" id="has-cockpit" checked
                                 style="flex-basis: auto; margin-left: auto;">
                         </div>
                         <div id="cockpit-controls"
                             style="display:none; padding-right: 15px; border-right: 3px solid #eee;">
                             <div class="input-group">
-                                <label for="cockpit-shape">شكل القمرة</label>
+                                <label for="cockpit-shape">شكل القمرة
+                                    <button type="button" class="help-btn" data-tooltip="'المحدب' هو الشكل التقليدي، بينما 'الانسيابي' يندمج بشكل أفضل مع الجسم.">?</button>
+                                </label>
                                 <select id="cockpit-shape">
                                     <option value="bubble" selected>محدب (Bubble)</option>
                                     <option value="streamlined">انسيابي (Streamlined)</option>
                                 </select>
                             </div>
                             <div class="input-group">
-                                <label for="cockpit-length">طول القمرة (<span class="unit-label">سم</span>)</label>
+                                <label for="cockpit-length">طول القمرة (<span class="unit-label">سم</span>)
+                                    <button type="button" class="help-btn" data-tooltip="الطول الكلي لقمرة القيادة.">?</button>
+                                </label>
                                 <input type="number" id="cockpit-length" value="30" step="1">
                             </div>
                             <div class="input-group">
-                                <label for="cockpit-width">عرض القمرة (<span class="unit-label">سم</span>)</label>
+                                <label for="cockpit-width">عرض القمرة (<span class="unit-label">سم</span>)
+                                    <button type="button" class="help-btn" data-tooltip="العرض الأقصى لقمرة القيادة.">?</button>
+                                </label>
                                 <input type="number" id="cockpit-width" value="14" step="0.5">
                             </div>
                             <div class="input-group">
-                                <label for="cockpit-height">ارتفاع القمرة (<span class="unit-label">سم</span>)</label>
+                                <label for="cockpit-height">ارتفاع القمرة (<span class="unit-label">سم</span>)
+                                    <button type="button" class="help-btn" data-tooltip="الارتفاع الأقصى لقمرة القيادة عن سطح الجسم.">?</button>
+                                </label>
                                 <input type="number" id="cockpit-height" value="10" step="0.5">
                             </div>
                             <div class="input-group">
-                                <label for="cockpit-position">الموضع من المقدمة (<span
-                                        class="unit-label">سم</span>)</label>
+                                <label for="cockpit-position">الموضع من المقدمة (<span class="unit-label">سم</span>)
+                                    <button type="button" class="help-btn" data-tooltip="المسافة من مقدمة الجسم إلى بداية قمرة القيادة.">?</button>
+                                </label>
                                 <input type="number" id="cockpit-position" value="5" step="1">
                             </div>
                             <div class="input-group">
@@ -1208,7 +1290,9 @@
                     </legend>
                     <div class="collapsible-content">
                         <div class="input-group">
-                            <label for="tail-type">نوع الذيل</label>
+                            <label for="tail-type">نوع الذيل
+                                <button type="button" class="help-btn" data-tooltip="نوع تصميم الذيل. 'التقليدي' هو الأكثر شيوعًا، 'T-Tail' يبعد الذيل الأفقي عن اضطراب الجناح، و 'V-Tail' يدمج المثبتات الأفقية والعمودية.">?</button>
+                            </label>
                             <select id="tail-type">
                                 <option value="conventional" selected>تقليدي (Conventional)</option>
                                 <option value="t-tail">على شكل T (T-Tail)</option>
@@ -1216,27 +1300,39 @@
                             </select>
                         </div>
                         <div class="input-group" id="h-stab-span-group">
-                            <label for="tail-span">طول الذيل الأفقي (<span class="unit-label">سم</span>)</label>
+                            <label for="tail-span">طول الذيل الأفقي (<span class="unit-label">سم</span>)
+                                <button type="button" class="help-btn" data-tooltip="الطول الكلي للمثبت الأفقي من طرف إلى طرف.">?</button>
+                            </label>
                             <input type="number" id="tail-span" value="50" step="1">
                         </div>
                         <div class="input-group" id="h-stab-chord-group">
-                            <label for="tail-chord">عرض الذيل الأفقي (<span class="unit-label">سم</span>)</label>
+                            <label for="tail-chord">عرض الذيل الأفقي (<span class="unit-label">سم</span>)
+                                <button type="button" class="help-btn" data-tooltip="عرض وتر المثبت الأفقي عند اتصاله بالجسم.">?</button>
+                            </label>
                             <input type="number" id="tail-chord" value="15" step="1">
                         </div>
                         <div class="input-group" id="v-stab-group">
-                            <label for="v-stab-height">ارتفاع الذيل العمودي (<span class="unit-label">سم</span>)</label>
+                            <label for="v-stab-height">ارتفاع الذيل العمودي (<span class="unit-label">سم</span>)
+                                <button type="button" class="help-btn" data-tooltip="ارتفاع المثبت العمودي من قاعدته إلى قمته.">?</button>
+                            </label>
                             <input type="number" id="v-stab-height" value="20" step="1">
                         </div>
                         <div class="input-group" id="v-stab-chord-group">
-                            <label for="v-stab-chord">عرض الذيل العمودي (<span class="unit-label">سم</span>)</label>
+                            <label for="v-stab-chord">عرض الذيل العمودي (<span class="unit-label">سم</span>)
+                                <button type="button" class="help-btn" data-tooltip="عرض وتر المثبت العمودي عند قاعدته.">?</button>
+                            </label>
                             <input type="number" id="v-stab-chord" value="18" step="1">
                         </div>
                         <div class="input-group" id="v-tail-angle-group" style="display:none;">
-                            <label for="v-tail-angle">زاوية الذيل V (°)</label>
+                            <label for="v-tail-angle">زاوية الذيل V (°)
+                                <button type="button" class="help-btn" data-tooltip="الزاوية بين لوحي الذيل V. عادة ما تكون بين 30 و 45 درجة.">?</button>
+                            </label>
                             <input type="number" id="v-tail-angle" value="35" step="1">
                         </div>
                         <div class="input-group">
-                            <label for="tail-airfoil-type">شكل مقطع الذيل</label>
+                            <label for="tail-airfoil-type">شكل مقطع الذيل
+                                <button type="button" class="help-btn" data-tooltip="شكل المقطع العرضي لأسطح الذيل. 'المتماثل' هو الأكثر شيوعًا لتحقيق استقرار متساوٍ في كلا الاتجاهين.">?</button>
+                            </label>
                             <select id="tail-airfoil-type">
                                 <option value="symmetrical" selected>متماثل (Symmetrical)</option>
                                 <option value="flat-bottom">مسطح (Flat)</option>
@@ -1244,34 +1340,42 @@
                             </select>
                         </div>
                         <div class="input-group">
-                            <label for="tail-thickness">سماكة الذيل (الأفقي والعمودي) (<span
-                                    class="unit-label">سم</span>)</label>
+                            <label for="tail-thickness">سماكة الذيل (الأفقي والعمودي) (<span class="unit-label">سم</span>)
+                                <button type="button" class="help-btn" data-tooltip="أقصى سماكة للمقطع الهوائي لأسطح الذيل الثابتة.">?</button>
+                            </label>
                             <input type="number" id="tail-thickness" value="2" step="0.1">
                         </div>
                         <div class="input-group">
-                            <label for="control-surface-thickness">سماكة أسطح التحكم (الرافع/الدفة) (<span
-                                    class="unit-label">سم</span>)</label>
+                            <label for="control-surface-thickness">سماكة أسطح التحكم (الرافع/الدفة) (<span class="unit-label">سم</span>)
+                                <button type="button" class="help-btn" data-tooltip="سماكة أسطح التحكم المتحركة مثل الرافع والدفة.">?</button>
+                            </label>
                             <input type="number" id="control-surface-thickness" value="0.5" step="0.1">
                         </div>
                         <div class="input-group">
-                            <label for="tail-incidence-angle">زاوية ميلان الذيل (Incidence): <span
-                                    id="tail-incidence-value">0.0</span>°</label>
+                            <label for="tail-incidence-angle">زاوية ميلان الذيل (Incidence): <span id="tail-incidence-value">0.0</span>°
+                                <button type="button" class="help-btn" data-tooltip="الزاوية الثابتة التي يتم بها تركيب المثبت الأفقي. عادة ما تكون 0 أو قيمة سالبة صغيرة لتحقيق استقرار إضافي.">?</button>
+                            </label>
                             <input type="range" id="tail-incidence-angle" min="-5" max="5" value="0" step="0.5">
                         </div>
                         <div class="input-group">
-                            <label for="tail-dihedral-angle">زاوية الديhedral للذيل: <span
-                                    id="tail-dihedral-value">0</span>°</label>
+                            <label for="tail-dihedral-angle">زاوية الديhedral للذيل: <span id="tail-dihedral-value">0</span>°
+                                <button type="button" class="help-btn" data-tooltip="الزاوية الرأسية لأعلى للمثبت الأفقي. يمكن أن تزيد من الاستقرار.">?</button>
+                            </label>
                             <input type="range" id="tail-dihedral-angle" min="0" max="15" value="0" step="1">
                         </div>
 
                         <div class="input-group">
-                            <label for="has-elevator">إضافة رافع (Elevator)؟</label>
-                            <input type="checkbox" id="has-elevator" checked>
+                            <label for="has-elevator">إضافة رافع (Elevator)؟
+                                <button type="button" class="help-btn" data-tooltip="الرافع هو سطح التحكم على المثبت الأفقي للتحكم في الانحدار (Pitch).">?</button>
+                            </label>
+                            <input type="checkbox" id="has-elevator" checked> 
                         </div>
                         <div id="elevator-controls"
                             style="display:none; padding-right: 15px; border-right: 3px solid #eee;">
                             <div class="input-group">
-                                <label for="elevator-airfoil-type">شكل مقطع الرافع</label>
+                                <label for="elevator-airfoil-type">شكل مقطع الرافع
+                                    <button type="button" class="help-btn" data-tooltip="شكل المقطع العرضي للرافع.">?</button>
+                                </label>
                                 <select id="elevator-airfoil-type">
                                     <option value="rectangular" selected>مستطيل (Rectangular)</option>
                                     <option value="wedge">إسفين (Wedge)</option>
@@ -1279,41 +1383,50 @@
                                 </select>
                             </div>
                             <div class="input-group">
-                                <label for="elevator-width">عرض الرافع (<span class="unit-label">سم</span>)</label>
+                                <label for="elevator-width">عرض الرافع (<span class="unit-label">سم</span>)
+                                    <button type="button" class="help-btn" data-tooltip="عرض وتر الرافع. عادة ما يكون 25-40% من عرض وتر المثبت الأفقي.">?</button>
+                                </label>
                                 <input type="number" id="elevator-width" value="4" step="0.5">
                             </div>
                             <div class="input-group">
-                                <label for="elevator-length">طول الرافع (لكل جانب) (<span
-                                        class="unit-label">سم</span>)</label>
+                                <label for="elevator-length">طول الرافع (لكل جانب) (<span class="unit-label">سم</span>)
+                                    <button type="button" class="help-btn" data-tooltip="طول الرافع على امتداد المثبت الأفقي.">?</button>
+                                </label>
                                 <input type="number" id="elevator-length" value="20" step="1">
                             </div>
                         </div>
                         <div class="input-group">
-                            <label for="tail-sweep-angle">ميلان الذيل الأفقي (Sweep): <span
-                                    id="tail-sweep-value">0</span>°</label>
+                            <label for="tail-sweep-angle">ميلان الذيل الأفقي (Sweep): <span id="tail-sweep-value">0</span>°
+                                <button type="button" class="help-btn" data-tooltip="زاوية ميلان المثبت الأفقي للخلف.">?</button>
+                            </label>
                             <input type="range" id="tail-sweep-angle" min="-20" max="30" value="0" step="1">
                         </div>
                         <div class="input-group">
                             <label for="vstab-sweep-angle">
-                                <span id="vstab-sweep-label-text">ميلان الذيل العمودي (Sweep):</span> <span
-                                    id="vstab-sweep-value">0</span>°
+                                <span id="vstab-sweep-label-text">ميلان الذيل العمودي (Sweep):</span> <span id="vstab-sweep-value">0</span>°
+                                <button type="button" class="help-btn" data-tooltip="زاوية ميلان الحافة الأمامية للمثبت العمودي للخلف.">?</button>
                             </label>
                             <input type="range" id="vstab-sweep-angle" min="-20" max="45" value="0" step="1">
                         </div>
                         <div class="input-group">
-                            <label for="tail-taper-ratio">استدقاق الذيل (Taper): <span
-                                    id="tail-taper-value">1.00</span></label>
+                            <label for="tail-taper-ratio">استدقاق الذيل (Taper): <span id="tail-taper-value">1.00</span>
+                                <button type="button" class="help-btn" data-tooltip="نسبة استدقاق أسطح الذيل (الأفقي والعمودي).">?</button>
+                            </label>
                             <input type="range" id="tail-taper-ratio" min="0.2" max="1.0" value="1.0" step="0.05">
                         </div>
 
                         <div class="input-group">
-                            <label for="has-rudder">إضافة دفة (Rudder)؟</label>
-                            <input type="checkbox" id="has-rudder" checked>
+                            <label for="has-rudder">إضافة دفة (Rudder)؟
+                                <button type="button" class="help-btn" data-tooltip="الدفة هي سطح التحكم على المثبت العمودي للتحكم في الانعراج (Yaw). في الذيل V، تعمل كـ 'Ruddervator'.">?</button>
+                            </label>
+                            <input type="checkbox" id="has-rudder" checked> 
                         </div>
                         <div id="rudder-controls"
                             style="display:none; padding-right: 15px; border-right: 3px solid #eee;">
                             <div class="input-group">
-                                <label for="rudder-airfoil-type">شكل مقطع الدفة</label>
+                                <label for="rudder-airfoil-type">شكل مقطع الدفة
+                                    <button type="button" class="help-btn" data-tooltip="شكل المقطع العرضي للدفة.">?</button>
+                                </label>
                                 <select id="rudder-airfoil-type">
                                     <option value="rectangular" selected>مستطيل (Rectangular)</option>
                                     <option value="wedge">إسفين (Wedge)</option>
@@ -1321,12 +1434,15 @@
                                 </select>
                             </div>
                             <div class="input-group">
-                                <label for="rudder-width">عرض الدفة (<span class="unit-label">سم</span>)</label>
+                                <label for="rudder-width">عرض الدفة (<span class="unit-label">سم</span>)
+                                    <button type="button" class="help-btn" data-tooltip="عرض وتر الدفة. عادة ما يكون 25-40% من عرض وتر المثبت العمودي.">?</button>
+                                </label>
                                 <input type="number" id="rudder-width" value="5" step="0.5">
                             </div>
                             <div class="input-group">
-                                <label for="rudder-length">طول (ارتفاع) الدفة (<span
-                                        class="unit-label">سم</span>)</label>
+                                <label for="rudder-length">طول (ارتفاع) الدفة (<span class="unit-label">سم</span>)
+                                    <button type="button" class="help-btn" data-tooltip="طول (أو ارتفاع) سطح الدفة.">?</button>
+                                </label>
                                 <input type="number" id="rudder-length" value="18" step="1">
                             </div>
                         </div>
@@ -1355,14 +1471,18 @@
                     </legend>
                     <div class="collapsible-content">
                         <div class="input-group">
-                            <label for="engine-type">نوع المحرك</label>
+                            <label for="engine-type">نوع المحرك
+                                <button type="button" class="help-btn" data-tooltip="اختر بين محرك كهربائي (نظيف وهادئ) أو محرك احتراق داخلي (IC) (أكثر قوة وضوضاء).">?</button>
+                            </label>
                             <select id="engine-type">
                                 <option value="electric" selected>كهربائي (Electric)</option>
                                 <option value="ic">ميكانيكي (IC)</option>
                             </select>
                         </div>
                         <div class="input-group">
-                            <label for="engine-placement">موضع المحرك</label>
+                            <label for="engine-placement">موضع المحرك
+                                <button type="button" class="help-btn" data-tooltip="اختر موضع تركيب المحرك. 'أمامي' (Tractor) هو الأكثر شيوعًا، 'خلفي' (Pusher) يحمي المروحة عند الهبوط، و 'على الجناح' يستخدم للطائرات متعددة المحركات.">?</button>
+                            </label>
                             <select id="engine-placement">
                                 <option value="front" selected>أمامي (Tractor)</option>
                                 <option value="rear">خلفي (Pusher)</option>
@@ -1371,47 +1491,58 @@
                         </div>
                         <!-- Engine Vertical Position for Front/Rear Mount -->
                         <div class="input-group" id="engine-vertical-position-group">
-                            <label for="engine-vertical-position">الموضع العمودي للمحرك (<span
-                                    class="unit-label">سم</span>)</label>
+                            <label for="engine-vertical-position">الموضع العمودي للمحرك (<span class="unit-label">سم</span>)
+                                <button type="button" class="help-btn" data-tooltip="الإزاحة العمودية للمحرك عن المحور المركزي للجسم. قيمة موجبة للأعلى، سالبة للأسفل. يؤثر على عزم الانحدار الناتج عن الدفع.">?</button>
+                            </label>
                             <input type="number" id="engine-vertical-position" value="0" step="0.5"
                                 title="قيمة موجبة للأعلى، سالبة للأسفل من المحور المركزي">
                         </div>
                         <!-- New Engine Thrust Angle -->
                         <div class="input-group" id="engine-thrust-angle-group">
-                            <label for="engine-thrust-angle">زاوية ميلان المحرك (°)</label>
+                            <label for="engine-thrust-angle">زاوية ميلان المحرك (°)
+                                <button type="button" class="help-btn" data-tooltip="زاوية ميلان المحرك العمودية. قيمة سالبة (Downthrust) شائعة لمعادلة ميلان الطائرة للأعلى عند زيادة السرعة.">?</button>
+                            </label>
                             <input type="number" id="engine-thrust-angle" value="-2" step="0.5" min="-10" max="10"
                                 title="قيمة سالبة للميلان للأسفل (Downthrust)، وهو الشائع.">
                         </div>
                         <!-- New Engine Side Thrust Angle -->
                         <div class="input-group" id="engine-side-thrust-angle-group">
-                            <label for="engine-side-thrust-angle">زاوية الميلان الجانبي (°)</label>
+                            <label for="engine-side-thrust-angle">زاوية الميلان الجانبي (°)
+                                <button type="button" class="help-btn" data-tooltip="زاوية ميلان المحرك الأفقية. قيمة موجبة (Right Thrust) شائعة لمعادلة عزم الدوران الناتج عن المروحة (Torque/P-Factor).">?</button>
+                            </label>
                             <input type="number" id="engine-side-thrust-angle" value="2" step="0.5" min="-10" max="10"
                                 title="قيمة موجبة للميلان لليمين (Right Thrust)، وهو الشائع لتعويض عزم الدوران.">
                         </div>
                         <!-- Wing Mount Options -->
                         <div id="wing-engine-placement-options" style="display:none;">
                             <div class="input-group">
-                                <label for="engine-wing-distance">المسافة من الجسم (<span
-                                        class="unit-label">سم</span>)</label>
+                                <label for="engine-wing-distance">المسافة من الجسم (<span class="unit-label">سم</span>)
+                                    <button type="button" class="help-btn" data-tooltip="المسافة من جانب الجسم إلى مركز المحرك على الجناح.">?</button>
+                                </label>
                                 <input type="number" id="engine-wing-distance" value="20" step="1">
                             </div>
                             <div class="input-group">
-                                <label for="engine-wing-vertical-pos">موضع التركيب العمودي</label>
+                                <label for="engine-wing-vertical-pos">موضع التركيب العمودي
+                                    <button type="button" class="help-btn" data-tooltip="هل المحرك مركب فوق الجناح أم أسفله؟">?</button>
+                                </label>
                                 <select id="engine-wing-vertical-pos">
                                     <option value="below" selected>أسفل الجناح</option>
                                     <option value="above">أعلى الجناح</option>
                                 </select>
                             </div>
                             <div class="input-group">
-                                <label for="engine-wing-fore-aft">موضع التركيب الأفقي</label>
+                                <label for="engine-wing-fore-aft">موضع التركيب الأفقي
+                                    <button type="button" class="help-btn" data-tooltip="هل المحرك مركب على الحافة الأمامية أم الخلفية للجناح؟">?</button>
+                                </label>
                                 <select id="engine-wing-fore-aft">
                                     <option value="leading" selected>على الحافة الأمامية</option>
                                     <option value="trailing">على الحافة الخلفية</option>
                                 </select>
                             </div>
                             <div class="input-group">
-                                <label for="engine-pylon-length">مسافة الحامل عن الجناح (<span
-                                        class="unit-label">سم</span>)</label>
+                                <label for="engine-pylon-length">مسافة الحامل عن الجناح (<span class="unit-label">سم</span>)
+                                    <button type="button" class="help-btn" data-tooltip="طول الحامل (Pylon) الذي يربط المحرك بالجناح.">?</button>
+                                </label>
                                 <input type="number" id="engine-pylon-length" value="2" step="0.5">
                             </div>
                         </div>
@@ -1419,7 +1550,9 @@
                         <!-- Electric Engine Options -->
                         <div id="electric-engine-options">
                             <div class="input-group">
-                                <label for="electric-motor-type">نوع المحرك الكهربائي</label>
+                                <label for="electric-motor-type">نوع المحرك الكهربائي
+                                    <button type="button" class="help-btn" data-tooltip="اختر من قائمة المحركات الكهربائية المحددة مسبقًا، أو قم بتعديل المواصفات يدويًا.">?</button>
+                                </label>
                                 <select id="electric-motor-type">
                                     <option value="dc_180" selected>DC 180</option>
                                     <option value="brushless_1000kv">Brushless 1000KV</option>
@@ -1456,7 +1589,9 @@
                         <!-- IC Engine Options -->
                         <div id="ic-engine-options" style="display:none;">
                             <div class="input-group">
-                                <label for="ic-engine-type">نوع المحرك الميكانيكي</label>
+                                <label for="ic-engine-type">نوع المحرك الميكانيكي
+                                    <button type="button" class="help-btn" data-tooltip="اختر من قائمة محركات الاحتراق الداخلي المحددة مسبقًا، أو قم بتعديل المواصفات يدويًا.">?</button>
+                                </label>
                                 <select id="ic-engine-type">
                                     <option value="glow_15" selected>.15 Glow Engine</option>
                                     <option value="glow_46">.46 Glow Engine</option>
@@ -1510,18 +1645,24 @@
                     </legend>
                     <div class="collapsible-content">
                         <div class="input-group">
-                            <label for="has-landing-gear">إضافة عجلات هبوط؟</label>
+                            <label for="has-landing-gear">إضافة عجلات هبوط؟
+                                <button type="button" class="help-btn" data-tooltip="هل ترغب في إضافة عجلات هبوط إلى تصميمك؟">?</button>
+                            </label>
                             <input type="checkbox" id="has-landing-gear" checked
                                 style="flex-basis: auto; margin-left: auto;">
                         </div>
                         <div id="landing-gear-controls" style="display:none;">
                             <div class="input-group">
-                                <label for="has-retractable-gear">قابلة للسحب (Retractable)؟</label>
+                                <label for="has-retractable-gear">قابلة للسحب (Retractable)؟
+                                    <button type="button" class="help-btn" data-tooltip="هل العجلات قابلة للسحب داخل الجسم أو الجناح؟ هذا الخيار يؤثر على المظهر فقط حاليًا.">?</button>
+                                </label>
                                 <input type="checkbox" id="has-retractable-gear"
                                     style="flex-basis: auto; margin-left: auto;">
                             </div>
                             <div class="input-group">
-                                <label for="gear-type">نوع العجلات</label>
+                                <label for="gear-type">نوع العجلات
+                                    <button type="button" class="help-btn" data-tooltip="'ثلاثية' (عجلة أمامية) توفر تحكمًا أفضل على الأرض. 'ذيلية' (عجلة خلفية) أخف وزنًا وأفضل للمدارج العشبية.">?</button>
+                                </label>
                                 <select id="gear-type">
                                     <option value="tricycle" selected>ثلاثية (Tricycle)</option>
                                     <option value="taildragger">ذيلية (Taildragger)</option>
@@ -1529,24 +1670,33 @@
                                 </select>
                             </div>
                             <div class="input-group">
-                                <label for="wheel-diameter">قطر العجلة (<span class="unit-label">سم</span>)</label>
+                                <label for="wheel-diameter">قطر العجلة (<span class="unit-label">سم</span>)
+                                    <button type="button" class="help-btn" data-tooltip="قطر العجلات الرئيسية. العجلات الأكبر أفضل للمدارج غير المستوية.">?</button>
+                                </label>
                                 <input type="number" id="wheel-diameter" value="8" step="0.5">
                             </div>
                             <div class="input-group">
-                                <label for="wheel-thickness">سمك العجلة (<span class="unit-label">سم</span>)</label>
+                                <label for="wheel-thickness">سمك العجلة (<span class="unit-label">سم</span>)
+                                    <button type="button" class="help-btn" data-tooltip="عرض أو سماكة إطار العجلة.">?</button>
+                                </label>
                                 <input type="number" id="wheel-thickness" value="2" step="0.2">
                             </div>
                             <div class="input-group">
-                                <label for="strut-length">طول الدعامة (<span class="unit-label">سم</span>)</label>
+                                <label for="strut-length">طول الدعامة (<span class="unit-label">سم</span>)
+                                    <button type="button" class="help-btn" data-tooltip="طول الدعامة التي تربط العجلة بالجسم. يجب أن يكون كافيًا لإبقاء المروحة بعيدة عن الأرض.">?</button>
+                                </label>
                                 <input type="number" id="strut-length" value="12" step="1">
                             </div>
                             <div class="input-group">
-                                <label for="strut-thickness">سمك الدعامة (<span class="unit-label">سم</span>)</label>
+                                <label for="strut-thickness">سمك الدعامة (<span class="unit-label">سم</span>)
+                                    <button type="button" class="help-btn" data-tooltip="قطر أو سماكة دعامة العجلة.">?</button>
+                                </label>
                                 <input type="number" id="strut-thickness" value="1" step="0.1">
                             </div>
                             <div class="input-group">
-                                <label for="main-gear-position">موضع العجلات الرئيسية (من المقدمة) (<span
-                                        class="unit-label">سم</span>)</label>
+                                <label for="main-gear-position">موضع العجلات الرئيسية (من المقدمة) (<span class="unit-label">سم</span>)
+                                    <button type="button" class="help-btn" data-tooltip="المسافة من مقدمة الجسم إلى محور العجلات الرئيسية. يجب أن تكون خلف مركز الجاذبية بقليل لمنع الطائرة من الانقلاب.">?</button>
+                                </label>
                                 <input type="number" id="main-gear-position" value="25" step="1">
                             </div>
                             <div class="input-group">
@@ -1584,12 +1734,15 @@
                     </legend>
                     <div class="collapsible-content">
                         <div class="input-group">
-                            <label for="receiver-weight">وزن جهاز الاستقبال (جرام)</label>
+                            <label for="receiver-weight">وزن جهاز الاستقبال (جرام)
+                                <button type="button" class="help-btn" data-tooltip="وزن جهاز الاستقبال (Receiver) الذي يستقبل الإشارات من جهاز التحكم.">?</button>
+                            </label>
                             <input type="number" id="receiver-weight" value="15" step="1">
                         </div>
                         <div class="input-group">
-                            <label for="receiver-position">موضع جهاز الاستقبال (من المقدمة) (<span
-                                    class="unit-label">سم</span>)</label>
+                            <label for="receiver-position">موضع جهاز الاستقبال (من المقدمة) (<span class="unit-label">سم</span>)
+                                <button type="button" class="help-btn" data-tooltip="المسافة من مقدمة الجسم إلى مركز جهاز الاستقبال.">?</button>
+                            </label>
                             <input type="number" id="receiver-position" value="10" step="1">
                         </div>
                         <div class="input-group">
@@ -1608,29 +1761,37 @@
                         <!-- Servo Group 1: Wing Servos -->
                         <p
                             style="font-weight: bold; color: #0056b3; margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px;">
-                            مجموعة السيرفو 1 (مثال: للجناح)</p>
+                            مجموعة السيرفو 1 (مثال: للجناح) <button type="button" class="help-btn" data-tooltip="يمكنك تعريف مجموعتين من السيرفوهات بأوزان ومواضع مختلفة (مثلاً، سيرفوهات صغيرة للجناح وسيرفوهات أكبر للذيل).">?</button>
+                        </p>
                         <div class="input-group">
-                            <label for="servo-g1-weight">وزن السيرفو الواحد (جرام)</label>
+                            <label for="servo-g1-weight">وزن السيرفو الواحد (جرام)
+                                <button type="button" class="help-btn" data-tooltip="وزن كل سيرفو في هذه المجموعة.">?</button>
+                            </label>
                             <input type="number" id="servo-g1-weight" value="9" step="1">
                         </div>
                         <div class="input-group">
-                            <label for="servo-g1-count">العدد</label>
+                            <label for="servo-g1-count">العدد
+                                <button type="button" class="help-btn" data-tooltip="عدد السيرفوهات في هذه المجموعة (مثلاً، 2 للجنيحات).">?</button>
+                            </label>
                             <input type="number" id="servo-g1-count" value="2" step="1" min="0">
                         </div>
                         <div class="input-group">
-                            <label for="servo-g1-position-x">الموضع من المقدمة (X) (<span
-                                    class="unit-label">سم</span>)</label>
+                            <label for="servo-g1-position-x">الموضع من المقدمة (X) (<span class="unit-label">سم</span>)
+                                <button type="button" class="help-btn" data-tooltip="الموضع الأفقي المتوسط لمركز كتلة هذه المجموعة من السيرفوهات.">?</button>
+                            </label>
                             <input type="number" id="servo-g1-position-x" value="30" step="1">
                         </div>
                         <div class="input-group">
-                            <label for="servo-g1-position-y">الموضع العمودي (Y) (<span
-                                    class="unit-label">سم</span>)</label>
+                            <label for="servo-g1-position-y">الموضع العمودي (Y) (<span class="unit-label">سم</span>)
+                                <button type="button" class="help-btn" data-tooltip="الموضع العمودي المتوسط لهذه المجموعة.">?</button>
+                            </label>
                             <input type="number" id="servo-g1-position-y" value="0" step="0.5"
                                 title="موجب للأعلى، سالب للأسفل">
                         </div>
                         <div class="input-group">
-                            <label for="servo-g1-position-z">الموضع الجانبي (Z) (<span
-                                    class="unit-label">سم</span>)</label>
+                            <label for="servo-g1-position-z">الموضع الجانبي (Z) (<span class="unit-label">سم</span>)
+                                <button type="button" class="help-btn" data-tooltip="الموضع الجانبي المتوسط. اتركه 0 إذا كانت السيرفوهات موزعة بشكل متناظر حول الجسم.">?</button>
+                            </label>
                             <input type="number" id="servo-g1-position-z" value="0" step="0.5"
                                 title="موضع متوسط، مثال: 0 إذا كانت السيرفوهات متناظرة">
                         </div>
@@ -1638,18 +1799,24 @@
                         <!-- Servo Group 2: Tail Servos -->
                         <p
                             style="font-weight: bold; color: #0056b3; margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px;">
-                            مجموعة السيرفو 2 (مثال: للذيل)</p>
+                            مجموعة السيرفو 2 (مثال: للذيل) <button type="button" class="help-btn" data-tooltip="مجموعة ثانية من السيرفوهات، مفيدة لوضع سيرفوهات الذيل في موضع مختلف عن سيرفوهات الجناح.">?</button>
+                        </p>
                         <div class="input-group">
-                            <label for="servo-g2-weight">وزن السيرفو الواحد (جرام)</label>
+                            <label for="servo-g2-weight">وزن السيرفو الواحد (جرام)
+                                <button type="button" class="help-btn" data-tooltip="وزن كل سيرفو في هذه المجموعة.">?</button>
+                            </label>
                             <input type="number" id="servo-g2-weight" value="9" step="1">
                         </div>
                         <div class="input-group">
-                            <label for="servo-g2-count">العدد</label>
+                            <label for="servo-g2-count">العدد
+                                <button type="button" class="help-btn" data-tooltip="عدد السيرفوهات في هذه المجموعة (مثلاً، 2 للرافع والدفة).">?</button>
+                            </label>
                             <input type="number" id="servo-g2-count" value="2" step="1" min="0">
                         </div>
                         <div class="input-group">
-                            <label for="servo-g2-position-x">الموضع من المقدمة (X) (<span
-                                    class="unit-label">سم</span>)</label>
+                            <label for="servo-g2-position-x">الموضع من المقدمة (X) (<span class="unit-label">سم</span>)
+                                <button type="button" class="help-btn" data-tooltip="الموضع الأفقي المتوسط لمركز كتلة هذه المجموعة من السيرفوهات.">?</button>
+                            </label>
                             <input type="number" id="servo-g2-position-x" value="85" step="1">
                         </div>
                         <div class="input-group">
@@ -1666,28 +1833,35 @@
                         </div>
 
                         <div class="input-group">
-                            <label for="camera-weight">وزن الكاميرا (إن وجدت) (جرام)</label>
+                            <label for="camera-weight">وزن الكاميرا (إن وجدت) (جرام)
+                                <button type="button" class="help-btn" data-tooltip="وزن أي حمولة إضافية مثل كاميرا FPV أو كاميرا تصوير.">?</button>
+                            </label>
                             <input type="number" id="camera-weight" value="0" step="5">
                         </div>
                         <div class="input-group">
-                            <label for="camera-position">موضع الكاميرا (من المقدمة) (<span
-                                    class="unit-label">سم</span>)</label>
+                            <label for="camera-position">موضع الكاميرا (من المقدمة) (<span class="unit-label">سم</span>)
+                                <button type="button" class="help-btn" data-tooltip="الموضع الأفقي لمركز كتلة الكاميرا.">?</button>
+                            </label>
                             <input type="number" id="camera-position" value="5" step="1">
                         </div>
                         <div class="input-group">
-                            <label for="camera-position-y">الموضع العمودي (Y) (<span
-                                    class="unit-label">سم</span>)</label>
+                            <label for="camera-position-y">الموضع العمودي (Y) (<span class="unit-label">سم</span>)
+                                <button type="button" class="help-btn" data-tooltip="الموضع العمودي للكاميرا.">?</button>
+                            </label>
                             <input type="number" id="camera-position-y" value="0" step="0.5"
                                 title="موجب للأعلى، سالب للأسفل">
                         </div>
                         <div class="input-group">
-                            <label for="camera-position-z">الموضع الجانبي (Z) (<span
-                                    class="unit-label">سم</span>)</label>
+                            <label for="camera-position-z">الموضع الجانبي (Z) (<span class="unit-label">سم</span>)
+                                <button type="button" class="help-btn" data-tooltip="الموضع الجانبي للكاميرا.">?</button>
+                            </label>
                             <input type="number" id="camera-position-z" value="0" step="0.5"
                                 title="موجب لليمين، سالب لليسار">
                         </div>
                         <div class="input-group">
-                            <label for="other-accessories-weight">أوزان أخرى (هيكل، غراء...) (جرام)</label>
+                            <label for="other-accessories-weight">أوزان أخرى (هيكل، غراء...) (جرام)
+                                <button type="button" class="help-btn" data-tooltip="وزن تقديري لأي مكونات أخرى غير مدرجة، مثل قضبان التحكم، الغراء، مواد التقوية، إلخ.">?</button>
+                            </label>
                             <input type="number" id="other-accessories-weight" value="250" step="10">
                         </div>
                     </div>
@@ -1712,15 +1886,19 @@
 
                     <div class="collapsible-content">
                         <div class="input-group">
-                            <label for="energy-source-color">لون مصدر الطاقة</label>
+                            <label for="energy-source-color">لون مصدر الطاقة
+                                <button type="button" class="help-btn" data-tooltip="تغيير لون الصندوق الذي يمثل البطارية أو خزان الوقود في النموذج ثلاثي الأبعاد.">?</button>
+                            </label>
                             <input type="color" id="energy-source-color" value="#f39c12">
                         </div>
 
                         <!-- Battery Options (for Electric Engines) -->
                         <div id="battery-options" style="display:none;">
-                            <h4>خصائص البطارية</h4>
+                            <h4>خصائص البطارية <button type="button" class="help-btn" data-tooltip="مواصفات البطارية المستخدمة في نظام الدفع الكهربائي.">?</button></h4>
                             <div class="input-group">
-                                <label for="battery-type">نوع البطارية</label>
+                                <label for="battery-type">نوع البطارية
+                                    <button type="button" class="help-btn" data-tooltip="نوع كيمياء البطارية. يؤثر على كثافة الطاقة والوزن.">?</button>
+                                </label>
                                 <select id="battery-type">
                                     <option value="lipo" selected>Li-Po</option>
                                     <option value="liion">Li-Ion</option>
@@ -1728,24 +1906,33 @@
                                 </select>
                             </div>
                             <div class="input-group">
-                                <label for="battery-capacity">السعة (mAh)</label>
+                                <label for="battery-capacity">السعة (mAh)
+                                    <button type="button" class="help-btn" data-tooltip="سعة البطارية بـ (ملي أمبير/ساعة). السعة الأعلى تعني وقت طيران أطول ولكن وزنًا أكبر.">?</button>
+                                </label>
                                 <input type="number" id="battery-capacity" value="2200" step="100">
                             </div>
                             <div class="input-group">
-                                <label for="battery-voltage">الفولتية (V)</label>
+                                <label for="battery-voltage">الفولتية (V)
+                                    <button type="button" class="help-btn" data-tooltip="جهد البطارية. يؤثر على سرعة دوران المحرك (RPM).">?</button>
+                                </label>
                                 <input type="number" id="battery-voltage" value="11.1" step="0.1">
                             </div>
                             <div class="input-group">
-                                <label for="battery-c-rating">معدل التفريغ (C)</label>
+                                <label for="battery-c-rating">معدل التفريغ (C)
+                                    <button type="button" class="help-btn" data-tooltip="معدل التفريغ الأقصى للبطارية. قيمة C الأعلى تسمح بسحب تيار أكبر.">?</button>
+                                </label>
                                 <input type="number" id="battery-c-rating" value="25" step="5">
                             </div>
                             <div class="input-group">
-                                <label for="battery-weight">الوزن (جرام)</label>
+                                <label for="battery-weight">الوزن (جرام)
+                                    <button type="button" class="help-btn" data-tooltip="الوزن الفعلي للبطارية. هذا هو أحد أهم العوامل التي تؤثر على مركز الجاذبية.">?</button>
+                                </label>
                                 <input type="number" id="battery-weight" value="180" step="10">
                             </div>
                             <div class="input-group">
-                                <label for="battery-position">موضع البطارية من المقدمة (<span
-                                        class="unit-label">سم</span>)</label>
+                                <label for="battery-position">موضع البطارية من المقدمة (<span class="unit-label">سم</span>)
+                                    <button type="button" class="help-btn" data-tooltip="المسافة من مقدمة الجسم إلى مركز البطارية. تغيير هذا الموضع هو الطريقة الرئيسية لضبط مركز الجاذبية (CG).">?</button>
+                                </label>
                                 <input type="number" id="battery-position" value="20" step="1" min="0"
                                     title="المسافة للخلف من مقدمة الطائرة. تغيير هذا الموضع يؤثر بشكل كبير على مركز الجاذبية (CG).">
                             </div>
@@ -1753,37 +1940,50 @@
 
                         <!-- Fuel Tank Options (for IC Engines) -->
                         <div id="fuel-tank-options" style="display:none;">
-                            <h4>خصائص خزان الوقود</h4>
+                            <h4>خصائص خزان الوقود <button type="button" class="help-btn" data-tooltip="مواصفات خزان الوقود المستخدم في نظام الدفع الميكانيكي.">?</button></h4>
                             <div class="input-group">
-                                <label for="fuel-tank-capacity">سعة الخزان (ml)</label>
+                                <label for="fuel-tank-capacity">سعة الخزان (ml)
+                                    <button type="button" class="help-btn" data-tooltip="سعة خزان الوقود بالملليلتر. السعة الأكبر تعني وقت تشغيل أطول ولكن وزنًا أكبر.">?</button>
+                                </label>
                                 <input type="number" id="fuel-tank-capacity" value="250" step="10">
                             </div>
                             <div class="input-group">
-                                <label for="fuel-tank-length">طول الخزان (<span class="unit-label">سم</span>)</label>
+                                <label for="fuel-tank-length">طول الخزان (<span class="unit-label">سم</span>)
+                                    <button type="button" class="help-btn" data-tooltip="أبعاد الخزان المرئي في النموذج ثلاثي الأبعاد.">?</button>
+                                </label>
                                 <input type="number" id="fuel-tank-length" value="12" step="1">
                             </div>
                             <div class="input-group">
-                                <label for="fuel-tank-width">عرض الخزان (<span class="unit-label">سم</span>)</label>
+                                <label for="fuel-tank-width">عرض الخزان (<span class="unit-label">سم</span>)
+                                    <button type="button" class="help-btn" data-tooltip="أبعاد الخزان المرئي في النموذج ثلاثي الأبعاد.">?</button>
+                                </label>
                                 <input type="number" id="fuel-tank-width" value="7" step="0.5">
                             </div>
                             <div class="input-group">
-                                <label for="fuel-tank-height">ارتفاع الخزان (<span class="unit-label">سم</span>)</label>
+                                <label for="fuel-tank-height">ارتفاع الخزان (<span class="unit-label">سم</span>)
+                                    <button type="button" class="help-btn" data-tooltip="أبعاد الخزان المرئي في النموذج ثلاثي الأبعاد.">?</button>
+                                </label>
                                 <input type="number" id="fuel-tank-height" value="5" step="0.5">
                             </div>
                             <div class="input-group">
-                                <label for="fuel-type">نوع الوقود</label>
+                                <label for="fuel-type">نوع الوقود
+                                    <button type="button" class="help-btn" data-tooltip="نوع الوقود المستخدم. يؤثر على كثافة الوقود وبالتالي على الوزن.">?</button>
+                                </label>
                                 <select id="fuel-type">
                                     <option value="methanol_nitro" selected>ميثانول/نايترو</option>
                                     <option value="gasoline">بنزين</option>
                                 </select>
                             </div>
                             <div class="input-group">
-                                <label for="fuel-level">مستوى الوقود: <span id="fuel-level-value">100</span>%</label>
+                                <label for="fuel-level">مستوى الوقود: <span id="fuel-level-value">100</span>%
+                                    <button type="button" class="help-btn" data-tooltip="النسبة المئوية للوقود في الخزان. يؤثر على الوزن الحالي ومركز الجاذبية.">?</button>
+                                </label>
                                 <input type="range" id="fuel-level" min="0" max="1" value="1" step="0.05">
                             </div>
                             <div class="input-group">
-                                <label for="fuel-tank-position">موضع الخزان من المقدمة (<span
-                                        class="unit-label">سم</span>)</label>
+                                <label for="fuel-tank-position">موضع الخزان من المقدمة (<span class="unit-label">سم</span>)
+                                    <button type="button" class="help-btn" data-tooltip="المسافة من مقدمة الجسم إلى مركز خزان الوقود. تغيير هذا الموضع هو الطريقة الرئيسية لضبط مركز الجاذبية (CG).">?</button>
+                                </label>
                                 <input type="number" id="fuel-tank-position" value="15" step="1" min="0"
                                     title="المسافة للخلف من مقدمة الطائرة. تغيير هذا الموضع يؤثر بشكل كبير على مركز الجاذبية (CG).">
                             </div>
@@ -1813,11 +2013,15 @@
                     </legend>
                     <div class="collapsible-content">
                         <div class="input-group">
-                            <label for="prop-diameter">قطر المروحة (بوصة)</label>
+                            <label for="prop-diameter">قطر المروحة (بوصة)
+                                <button type="button" class="help-btn" data-tooltip="القطر الكلي للمروحة بالبوصة. القطر الأكبر يولد دفعًا أكبر عند سرعات دوران منخفضة.">?</button>
+                            </label>
                             <input type="number" id="prop-diameter" value="10" step="1">
                         </div>
                         <div class="input-group">
-                            <label for="prop-blade-shape">شكل شفرة المروحة</label>
+                            <label for="prop-blade-shape">شكل شفرة المروحة
+                                <button type="button" class="help-btn" data-tooltip="الشكل الهندسي لشفرات المروحة. يؤثر على الكفاءة والضوضاء.">?</button>
+                            </label>
                             <select id="prop-blade-shape">
                                 <option value="flat-bottom" selected>شبه انسيابي (Flat Bottom)</option>
                                 <option value="symmetrical">متماثل (Symmetrical)</option>
@@ -1826,28 +2030,39 @@
                             </select>
                         </div>
                         <div class="input-group">
-                            <label for="prop-pitch">خطوة المروحة (بوصة)</label>
+                            <label for="prop-pitch">خطوة المروحة (بوصة)
+                                <button type="button" class="help-btn" data-tooltip="المسافة النظرية التي تتقدمها المروحة في دورة واحدة كاملة. الخطوة الأعلى تعني سرعة قصوى أعلى، ولكن تسارع أبطأ.">?</button>
+                            </label>
                             <input type="number" id="prop-pitch" value="6" step="1">
                         </div>
                         <div class="input-group">
-                            <label for="prop-chord">عرض الشفرة عند القاعدة (<span class="unit-label">سم</span>)</label>
+                            <label for="prop-chord">عرض الشفرة عند القاعدة (<span class="unit-label">سم</span>)
+                                <button type="button" class="help-btn" data-tooltip="عرض شفرة المروحة عند نقطة اتصالها بالمحور. يؤثر على قوة الشفرة والوزن.">?</button>
+                            </label>
                             <input type="number" id="prop-chord" value="2.5" step="0.1">
                         </div>
                         <div class="input-group">
-                            <label for="prop-thickness">سماكة الشفرة (<span class="unit-label">سم</span>)</label>
+                            <label for="prop-thickness">سماكة الشفرة (<span class="unit-label">سم</span>)
+                                <button type="button" class="help-btn" data-tooltip="أقصى سماكة للمقطع الهوائي لشفرة المروحة.">?</button>
+                            </label>
                             <input type="number" id="prop-thickness" value="0.5" step="0.1">
                         </div>
                         <div class="input-group">
-                            <label for="spinner-diameter">قطر المحور/المخروط (<span
-                                    class="unit-label">سم</span>)</label>
+                            <label for="spinner-diameter">قطر المحور/المخروط (<span class="unit-label">سم</span>)
+                                <button type="button" class="help-btn" data-tooltip="قطر المخروط الانسيابي (Spinner) الذي يغطي محور المروحة.">?</button>
+                            </label>
                             <input type="number" id="spinner-diameter" value="4" step="0.5">
                         </div>
                         <div class="input-group">
-                            <label for="prop-blades">عدد الشفرات</label>
+                            <label for="prop-blades">عدد الشفرات
+                                <button type="button" class="help-btn" data-tooltip="عدد شفرات المروحة. معظم مراوح الطائرات لها شفرتان أو ثلاث.">?</button>
+                            </label>
                             <input type="number" id="prop-blades" value="2" step="1" min="2">
                         </div>
                         <div class="input-group">
-                            <label for="prop-rpm">سرعة الدوران (RPM)</label>
+                            <label for="prop-rpm">سرعة الدوران (RPM)
+                                <button type="button" class="help-btn" data-tooltip="سرعة دوران المروحة في الدقيقة. يتم حساب القيمة تلقائياً عند تغيير المحرك، ولكن يمكنك تعديلها يدوياً.">?</button>
+                            </label>
                             <input type="number" id="prop-rpm" value="8000" step="100"
                                 title="يتم حساب القيمة تلقائياً عند تغيير المحرك، ولكن يمكنك تعديلها يدوياً.">
                         </div>
@@ -1911,23 +2126,33 @@
                     </legend>
                     <div class="collapsible-content">
                         <div class="input-group">
-                            <label for="angle-of-attack">زاوية الهجوم (°)</label>
+                            <label for="angle-of-attack">زاوية الهجوم (°)
+                                <button type="button" class="help-btn" data-tooltip="الزاوية بين وتر الجناح واتجاه تدفق الهواء القادم. هي العامل الرئيسي في توليد الرفع.">?</button>
+                            </label>
                             <input type="number" id="angle-of-attack" value="5" step="1">
                         </div>
                         <div class="input-group">
-                            <label for="air-speed">سرعة الهواء (م/ث)</label>
+                            <label for="air-speed">سرعة الهواء (م/ث)
+                                <button type="button" class="help-btn" data-tooltip="سرعة الطائرة بالنسبة للهواء المحيط بها. تؤثر بشكل كبير على قوى الرفع والسحب.">?</button>
+                            </label>
                             <input type="number" id="air-speed" value="20" step="1">
                         </div>
                         <div class="input-group">
-                            <label for="air-density">كثافة الهواء (كجم/م³)</label>
+                            <label for="air-density">كثافة الهواء (كجم/م³)
+                                <button type="button" class="help-btn" data-tooltip="كثافة الهواء المحيط. تقل مع زيادة الارتفاع. القيمة الافتراضية هي عند مستوى سطح البحر.">?</button>
+                            </label>
                             <input type="number" id="air-density" value="1.225" step="0.001">
                         </div>
                         <div class="input-group">
-                            <label for="temperature">الحرارة (°C)</label>
+                            <label for="temperature">الحرارة (°C)
+                                <button type="button" class="help-btn" data-tooltip="درجة حرارة الهواء. تؤثر على كثافة الهواء وأداء المحرك.">?</button>
+                            </label>
                             <input type="number" id="temperature" value="15" step="1">
                         </div>
                         <div class="input-group">
-                            <label for="pressure">الضغط (باسكال)</label>
+                            <label for="pressure">الضغط (باسكال)
+                                <button type="button" class="help-btn" data-tooltip="الضغط الجوي. يؤثر على كثافة الهواء.">?</button>
+                            </label>
                             <input type="number" id="pressure" value="101325" step="100">
                         </div>
                     </div>
@@ -1943,92 +2168,118 @@
                     </legend>
                     <div class="collapsible-content">
                         <div class="input-group">
-                            <label for="toggle-prop-spin">تشغيل المحاكاة (الدوران والهواء)</label>
+                            <label for="toggle-prop-spin">تشغيل المحاكاة (الدوران والهواء)
+                                <button type="button" class="help-btn" data-tooltip="بدء وإيقاف محاكاة دوران المروحة وتأثيرات تدفق الهواء.">?</button>
+                            </label>
                             <button type="button" id="toggle-prop-spin" class="sim-control-button">تشغيل</button>
                         </div>
                         <!-- شريط التحكم الجديد لسرعة المروحة -->
                         <div class="input-group">
-                            <label for="prop-rpm-control">سرعة المروحة (RPM): <span
-                                    id="prop-rpm-control-value">8000</span></label>
+                            <label for="prop-rpm-control">سرعة المروحة (RPM): <span id="prop-rpm-control-value">8000</span>
+                                <button type="button" class="help-btn" data-tooltip="التحكم في سرعة دوران المروحة بشكل تفاعلي أثناء تشغيل المحاكاة.">?</button>
+                            </label>
                             <input type="range" id="prop-rpm-control" min="0" max="8000" value="8000" step="50">
                         </div>
                         <div class="input-group">
-                            <label for="toggle-sound-btn">صوت المحرك</label>
+                            <label for="toggle-sound-btn">صوت المحرك
+                                <button type="button" class="help-btn" data-tooltip="تشغيل أو كتم صوت المحرك أثناء المحاكاة.">?</button>
+                            </label>
                             <button type="button" id="toggle-sound-btn" class="sim-control-button">كتم الصوت</button>
                         </div>
                         <!-- أشرطة التحكم الجديدة -->
                         <div class="input-group">
-                            <label for="aileron-control">تحكم الدوران (Roll): <span
-                                    id="aileron-control-value">0.00</span></label>
+                            <label for="aileron-control">تحكم الدوران (Roll): <span id="aileron-control-value">0.00</span>
+                                <button type="button" class="help-btn" data-tooltip="محاكاة حركة الجنيحات للتحكم في دوران الطائرة حول محورها الطولي.">?</button>
+                            </label>
                             <input type="range" id="aileron-control" min="-1" max="1" value="0" step="0.05">
                         </div>
                         <div class="input-group">
-                            <label for="elevator-control">تحكم الانحدار (Pitch): <span
-                                    id="elevator-control-value">0.00</span></label>
+                            <label for="elevator-control">تحكم الانحدار (Pitch): <span id="elevator-control-value">0.00</span>
+                                <button type="button" class="help-btn" data-tooltip="محاكاة حركة الرافع للتحكم في ميلان مقدمة الطائرة للأعلى أو للأسفل.">?</button>
+                            </label>
                             <input type="range" id="elevator-control" min="-1" max="1" value="0" step="0.05">
                         </div>
                         <div class="input-group">
-                            <label for="rudder-control">تحكم الانعراج (Yaw): <span
-                                    id="rudder-control-value">0.00</span></label>
+                            <label for="rudder-control">تحكم الانعراج (Yaw): <span id="rudder-control-value">0.00</span>
+                                <button type="button" class="help-btn" data-tooltip="محاكاة حركة الدفة للتحكم في انحراف مقدمة الطائرة يمينًا أو يسارًا.">?</button>
+                            </label>
                             <input type="range" id="rudder-control" min="-1" max="1" value="0" step="0.05">
                         </div>
                         <div class="input-group">
-                            <label for="reset-controls-btn">إعادة تعيين وضعية الطائرة</label>
+                            <label for="reset-controls-btn">إعادة تعيين وضعية الطائرة
+                                <button type="button" class="help-btn" data-tooltip="إعادة تعيين جميع أسطح التحكم ووضعية دوران الطائرة إلى الصفر.">?</button>
+                            </label>
                             <button type="button" id="reset-controls-btn" class="sim-control-button">إعادة
                                 تعيين</button>
                         </div>
                         <!-- نهاية أشرطة التحكم الجديدة -->
                         <div class="input-group">
-                            <label for="show-ambient-wind">إظهار تدفق الهواء العام</label>
+                            <label for="show-ambient-wind">إظهار تدفق الهواء العام
+                                <button type="button" class="help-btn" data-tooltip="إظهار أو إخفاء تأثير الجسيمات الذي يمثل تدفق الهواء العام حول الطائرة.">?</button>
+                            </label>
                             <input type="checkbox" id="show-ambient-wind" checked
                                 style="flex-basis: auto; margin-left: auto;">
                         </div>
                         <div class="input-group">
-                            <label for="show-vortices">إظهار الدوامات الهوائية (من الأسطح)</label>
+                            <label for="show-vortices">إظهار الدوامات الهوائية (من الأسطح)
+                                <button type="button" class="help-btn" data-tooltip="إظهار أو إخفاء الدوامات الهوائية التي تتشكل عند أطراف الجناح والأسطح الأخرى.">?</button>
+                            </label>
                             <input type="checkbox" id="show-vortices" style="flex-basis: auto; margin-left: auto;">
                         </div>
                         <div class="input-group">
-                            <label for="show-smoke">إظهار الدخان (للمحرك الميكانيكي)</label>
+                            <label for="show-smoke">إظهار الدخان (للمحرك الميكانيكي)
+                                <button type="button" class="help-btn" data-tooltip="إظهار أو إخفاء تأثير الدخان المنبعث من محركات الاحتراق الداخلي.">?</button>
+                            </label>
                             <input type="checkbox" id="show-smoke" checked style="flex-basis: auto; margin-left: auto;">
                         </div>
                         <div class="input-group">
-                            <label for="show-heat-haze">إظهار تأثير حرارة المحرك (للميكانيكي)</label>
+                            <label for="show-heat-haze">إظهار تأثير حرارة المحرك (للميكانيكي)
+                                <button type="button" class="help-btn" data-tooltip="إظهار أو إخفاء تأثير تشوه الهواء الناتج عن حرارة المحرك.">?</button>
+                            </label>
                             <input type="checkbox" id="show-heat-haze" checked
                                 style="flex-basis: auto; margin-left: auto;">
                         </div>
                         <div class="input-group">
-                            <label for="particle-density">كثافة جسيمات الهواء: <span
-                                    id="particle-density-value">30</span>%</label>
+                            <label for="particle-density">كثافة جسيمات الهواء: <span id="particle-density-value">30</span>%
+                                <button type="button" class="help-btn" data-tooltip="التحكم في عدد جسيمات الهواء الظاهرة في المحاكاة. قد يؤثر على الأداء.">?</button>
+                            </label>
                             <input type="range" id="particle-density" min="0" max="1" value="0.3" step="0.05">
                         </div>
                         <div class="input-group">
-                            <label for="particle-size">حجم جسيمات الهواء: <span
-                                    id="particle-size-value">15</span>%</label>
+                            <label for="particle-size">حجم جسيمات الهواء: <span id="particle-size-value">15</span>%
+                                <button type="button" class="help-btn" data-tooltip="التحكم في حجم جسيمات الهواء الظاهرة في المحاكاة.">?</button>
+                            </label>
                             <input type="range" id="particle-size" min="0" max="1" value="0.15" step="0.05">
                         </div>
                         <div class="input-group">
-                            <label for="airflow-transparency">شفافية تدفق الهواء: <span
-                                    id="airflow-transparency-value">100</span>%</label>
+                            <label for="airflow-transparency">شفافية تدفق الهواء: <span id="airflow-transparency-value">100</span>%
+                                <button type="button" class="help-btn" data-tooltip="التحكم في شفافية جميع تأثيرات الجسيمات (الهواء، الدوامات، الدخان).">?</button>
+                            </label>
                             <input type="range" id="airflow-transparency" min="0" max="1" value="1" step="0.01">
                         </div>
                         <div class="input-group">
-                            <label for="vibration-intensity">شدة اهتزاز المحرك: <span
-                                    id="vibration-value">100</span>%</label>
+                            <label for="vibration-intensity">شدة اهتزاز المحرك: <span id="vibration-value">100</span>%
+                                <button type="button" class="help-btn" data-tooltip="التحكم في شدة تأثير الاهتزاز البصري للطائرة الناتج عن المحرك.">?</button>
+                            </label>
                             <input type="range" id="vibration-intensity" min="0" max="1" value="1" step="0.1">
                         </div>
                         <div class="input-group">
-                            <label for="p-factor-intensity"
-                                title="يتحكم في شدة عزم الانعراج (Yaw) الناتج عن الدفع غير المتماثل للمروحة عند زوايا الهجوم العالية.">شدة
-                                تأثير العامل P: <span id="p-factor-value">100</span>%</label>
+                            <label for="p-factor-intensity" title="يتحكم في شدة عزم الانعراج (Yaw) الناتج عن الدفع غير المتماثل للمروحة عند زوايا الهجوم العالية.">شدة تأثير العامل P: <span id="p-factor-value">100</span>%
+                                <button type="button" class="help-btn" data-tooltip="يتحكم في شدة عزم الانعراج (Yaw) الناتج عن الدفع غير المتماثل للمروحة عند زوايا الهجوم العالية.">?</button>
+                            </label>
                             <input type="range" id="p-factor-intensity" min="0" max="2" value="1" step="0.1">
                         </div>
                         <div class="input-group">
-                            <label for="flutter-intensity">شدة اهتزاز الجناح: <span id="flutter-value">0</span>%</label>
+                            <label for="flutter-intensity">شدة اهتزاز الجناح: <span id="flutter-value">0</span>%
+                                <button type="button" class="help-btn" data-tooltip="محاكاة تأثير الرفرفة (Flutter) على الأجنحة والذيل عند السرعات العالية. للاستخدام البصري فقط.">?</button>
+                            </label>
                             <input type="range" id="flutter-intensity" min="0" max="1" value="0" step="0.1">
                         </div>
                         <!-- تم نقله هنا - يظهر فقط عند اختيار محركات الجناح -->
                         <div class="input-group" id="wing-prop-rotation-group" style="display: none;">
-                            <label for="wing-prop-rotation">اتجاه دوران المراوح (للجناح)</label>
+                            <label for="wing-prop-rotation">اتجاه دوران المراوح (للجناح)
+                                <button type="button" class="help-btn" data-tooltip="'المتعاكس' يلغي عزم الدوران. 'نفس الاتجاه' يضاعفه.">?</button>
+                            </label>
                             <select id="wing-prop-rotation">
                                 <option value="counter" selected>متعاكس (Counter-rotating)</option>
                                 <option value="same">نفس الاتجاه (Same Direction)</option>
@@ -2037,22 +2288,28 @@
                         <!-- New Streamline Controls Section -->
                         <div style="border-top: 1px dashed #ccc; margin-top: 15px; padding-top: 15px;">
                             <div class="input-group">
-                                <label for="show-streamlines">إظهار خطوط التدفق الانسيابي</label>
+                                <label for="show-streamlines">إظهار خطوط التدفق الانسيابي
+                                    <button type="button" class="help-btn" data-tooltip="إظهار خطوط تتبع مسار الهواء حول الطائرة. قد يؤثر على الأداء.">?</button>
+                                </label>
                                 <input type="checkbox" id="show-streamlines"
                                     style="flex-basis: auto; margin-left: auto;">
                             </div>
                             <div class="input-group">
-                                <label for="streamline-density">كثافة خطوط التدفق: <span
-                                        id="streamline-density-value">50</span></label>
+                                <label for="streamline-density">كثافة خطوط التدفق: <span id="streamline-density-value">50</span>
+                                    <button type="button" class="help-btn" data-tooltip="التحكم في عدد خطوط التدفق التي يتم عرضها.">?</button>
+                                </label>
                                 <input type="range" id="streamline-density" min="10" max="200" value="50" step="5">
                             </div>
                             <div class="input-group">
-                                <label for="streamline-points">طول/دقة خطوط التدفق: <span
-                                        id="streamline-points-value">40</span></label>
+                                <label for="streamline-points">طول/دقة خطوط التدفق: <span id="streamline-points-value">40</span>
+                                    <button type="button" class="help-btn" data-tooltip="التحكم في عدد النقاط التي يتكون منها كل خط، مما يؤثر على طوله ودقته.">?</button>
+                                </label>
                                 <input type="range" id="streamline-points" min="20" max="100" value="40" step="2">
                             </div>
                             <div class="input-group">
-                                <label for="show-pressure-map">إظهار خريطة الضغط على الجناح</label>
+                                <label for="show-pressure-map">إظهار خريطة الضغط على الجناح
+                                    <button type="button" class="help-btn" data-tooltip="تلوين سطح الجناح لإظهار مناطق الضغط المنخفض (الشفط) والمرتفع.">?</button>
+                                </label>
                                 <input type="checkbox" id="show-pressure-map" checked
                                     style="flex-basis: auto; margin-left: auto;">
                             </div>
@@ -2216,11 +2473,15 @@
                     </legend>
                     <div class="collapsible-content">
                         <div class="input-group">
-                            <label for="show-cg">إظهار مركز الجاذبية (CG)</label>
+                            <label for="show-cg">إظهار مركز الجاذبية (CG)
+                                <button type="button" class="help-btn" data-tooltip="إظهار أو إخفاء الكرة الحمراء التي تمثل مركز الجاذبية الكلي للطائرة.">?</button>
+                            </label>
                             <input type="checkbox" id="show-cg" checked style="flex-basis: auto; margin-left: auto;">
                         </div>
                         <div class="input-group">
-                            <label for="show-ac">إظهار المركز الهوائي (AC)</label>
+                            <label for="show-ac">إظهار المركز الهوائي (AC)
+                                <button type="button" class="help-btn" data-tooltip="إظهار أو إخفاء الكرة الزرقاء التي تمثل المركز الهوائي (النقطة المحايدة) للطائرة.">?</button>
+                            </label>
                             <input type="checkbox" id="show-ac" checked style="flex-basis: auto; margin-left: auto;">
                         </div>
                     </div>
