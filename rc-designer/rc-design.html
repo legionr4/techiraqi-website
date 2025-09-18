@@ -340,53 +340,49 @@
         }
 
         @media (max-width: 992px) {
-            /* FIX: Prevent the main body from scrolling on mobile to isolate scrolling to the container */
+            /* FIX: Revert body overflow to default to allow natural page scrolling */
             body {
-                overflow: hidden;
+                overflow: auto;
             }
 
             .charts-container {
                 flex-direction: column;
                 /* Stack charts vertically on smaller screens */
                 /* FIX: Add padding to align with other content */
-                padding: 0 15px 50px 15px;
+                padding: 0; /* Padding is handled by the main container */
             }
 
             .container {
                 flex-direction: column; /* Stack items vertically */
-                /* FIX: Make the container the main scrollable area below the fixed viewer */
-                position: fixed;
-                top: 40vh; /* Position it below the fixed viewer */
-                left: 0;
-                right: 0;
-                bottom: 0;
-                overflow-y: auto; /* Enable vertical scrolling for this container only */
-                padding: 0; /* Remove padding to prevent side gaps. Padding is added to children instead. */
+                padding: 10px; /* Add some space around the edges */
             }
 
             .controls {
+                order: 2; /* Place controls after the viewer */
                 margin-left: 0;
                 margin-bottom: 20px;
                 padding: 15px;
                 min-width: 100%;
-                /* FIX: Let controls grow naturally, as the parent container now handles scrolling */
-                max-height: none;
-                overflow-y: visible;
+                /* FIX: Re-enable independent scrolling for the control panel on mobile */
+                max-height: 60vh; /* Give it a max height */
+                overflow-y: auto; /* Add scrollbar when needed */
             }
 
             .viewer {
+                order: 1; /* Place viewer first */
                 z-index: 10;
-                position: fixed;
-                /* FIX: Ensure the viewer is fixed at the top with a defined height */
-                top: 0;
-                left: 0;
+                /* FIX: Use 'sticky' for robust pinning to the top on scroll */
+                position: sticky;
+                top: 10px; /* Small gap from the top of the viewport */
                 width: 100%;
-                height: 40vh;
+                height: 50vh; /* Define a clear height for the viewer */
+                margin-bottom: 20px; /* Add space between viewer and controls */
             }
 
             .results {
+                order: 3; /* Place results after controls */
                 margin-top: 0;
-                padding: 0 15px 20px 15px; /* Add padding to align with controls */
+                /* Padding is handled by the main container */
             }
 
             h1 {
