@@ -340,7 +340,7 @@
         }
 
         @media (max-width: 992px) {
-            /* FIX: Prevent the whole page from scrolling on mobile */
+            /* FIX: Prevent the main body from scrolling on mobile to isolate scrolling to the container */
             body {
                 overflow: hidden;
             }
@@ -348,18 +348,20 @@
             .charts-container {
                 flex-direction: column;
                 /* Stack charts vertically on smaller screens */
+                /* FIX: Add padding to align with other content */
+                padding: 0 15px 50px 15px;
             }
 
             .container {
                 flex-direction: column; /* Stack items vertically */
-                /* FIX: Make the container the scrollable area below the fixed viewer */
+                /* FIX: Make the container the main scrollable area below the fixed viewer */
                 position: fixed;
-                top: 40vh; /* Position it below the viewer */
+                top: 40vh; /* Position it below the fixed viewer */
                 left: 0;
                 right: 0;
                 bottom: 0;
                 overflow-y: auto; /* Enable vertical scrolling for this container only */
-                padding: 0; /* Remove padding to prevent side gaps. Padding is added to children. */
+                padding: 0; /* Remove padding to prevent side gaps. Padding is added to children instead. */
             }
 
             .controls {
@@ -367,29 +369,24 @@
                 margin-bottom: 20px;
                 padding: 15px;
                 min-width: 100%;
-                /* FIX: Let controls grow naturally, as the parent container now handles scrolling. */
+                /* FIX: Let controls grow naturally, as the parent container now handles scrolling */
                 max-height: none;
                 overflow-y: visible;
             }
 
             .viewer {
                 z-index: 10;
-                width: 100%;
-                left: 0;
                 position: fixed;
-                /* FIX: Re-add top and height to make the viewer visible and fixed at the top */
+                /* FIX: Ensure the viewer is fixed at the top with a defined height */
                 top: 0;
+                left: 0;
+                width: 100%;
                 height: 40vh;
             }
 
             .results {
                 margin-top: 0;
-                padding: 0 15px 20px 15px; /* Add padding to align with controls and add space at the bottom */
-            }
-
-            /* FIX: Ensure charts container doesn't cause horizontal overflow */
-            .charts-container {
-                padding: 0 15px 50px 15px; /* Add padding and significant bottom space */
+                padding: 0 15px 20px 15px; /* Add padding to align with controls */
             }
 
             h1 {
