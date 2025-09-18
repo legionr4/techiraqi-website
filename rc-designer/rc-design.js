@@ -14,6 +14,10 @@ renderer.setSize(viewerDiv.clientWidth, viewerDiv.clientHeight);
 // --- إضافة عناصر التحكم بالكاميرا ---
 const controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true; // يضيف تأثير القصور الذاتي للحركة
+// FIX: Prevent OrbitControls from capturing vertical touch scroll on mobile.
+// This allows the page to scroll normally when the user swipes up/down on the 3D viewer.
+controls.touches.UP = 0; // Set vertical pan to 0 (disabled)
+controls.touches.BOTTOM = 0; // Set vertical pan to 0 (disabled)
 controls.dampingFactor = 0.1;
 
 // --- إضافة إضاءة ---
@@ -7510,6 +7514,48 @@ function initPdfExport() {
     });
 }
 
+/**
+ * Initializes the help tooltip functionality for buttons with data-tooltip attributes.
+ */
+function initHelpTooltips() {
+    // Create a single tooltip element to be reused for performance
+    const tooltip = document.createElement('div');
+    tooltip.className = 'tooltip-text';
+    document.body.appendChild(tooltip);
+
+    // Use event delegation on the document to handle all clicks
+    document.addEventListener('click', function (e) {
+        const helpBtn = e.target.closest('.help-btn');
+
+        // If we clicked a help button
+        if (helpBtn) {
+            e.stopPropagation(); // Prevent this click from immediately closing the tooltip
+            const tooltipText = helpBtn.dataset.tooltip;
+            if (!tooltipText) return;
+
+            // If the tooltip is already shown for this exact button, hide it
+            if (tooltip.classList.contains('show') && tooltip.currentBtn === helpBtn) {
+                tooltip.classList.remove('show');
+                tooltip.currentBtn = null;
+            } else {
+                // Otherwise, update and show the tooltip
+                tooltip.innerHTML = tooltipText;
+                tooltip.classList.add('show'); // Show it first to calculate its dimensions
+
+                const btnRect = helpBtn.getBoundingClientRect();
+                // Position the tooltip above the button
+                tooltip.style.top = `${window.scrollY + btnRect.top - tooltip.offsetHeight - 10}px`;
+                tooltip.style.left = `${window.scrollX + btnRect.left + (btnRect.width / 2) - (tooltip.offsetWidth / 2)}px`;
+
+                tooltip.currentBtn = helpBtn; // Keep track of the currently active button
+            }
+        } else if (tooltip.classList.contains('show')) {
+            // If we clicked anywhere else on the page, hide the active tooltip
+            tooltip.classList.remove('show');
+            tooltip.currentBtn = null;
+        }
+    });
+}
 // --- التشغيل الأولي ---
 initPropAirflowParticles();
 initWingAirflowParticles();
@@ -7527,6 +7573,7 @@ initHelpersToggle(); // تهيئة زر تبديل العناصر المساعد
 initCameraReset(); // تهيئة زر إعادة تعيين الكاميرا
 initResetButton(); // تهيئة زر إعادة التعيين الجديد
 initRpmSlider(); // تهيئة شريط التحكم الجديد عند التحميل
+initHelpTooltips(); // تهيئة أزرار المساعدة الجديدة
 updateUnitLabels();
 // استدعاء updateEngineUI أولاً لملء حقول المحرك بالقيم الافتراضية.
 // هذه الدالة ستقوم بدورها باستدعاء updateAll() لضمان تحديث كل شيء.

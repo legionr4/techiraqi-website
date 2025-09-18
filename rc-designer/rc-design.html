@@ -743,6 +743,51 @@
             color: #000;
             border-color: #ffc107;
         }
+
+        /* New styles for help buttons and tooltips */
+        .help-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 1px solid #aaa;
+            background-color: #f0f0f0;
+            color: #555;
+            font-weight: bold;
+            cursor: pointer;
+            margin-right: 8px;
+            /* RTL */
+            font-size: 12px;
+            line-height: 1;
+            vertical-align: middle;
+            transition: background-color 0.2s;
+        }
+
+        .help-btn:hover {
+            background-color: #e0e0e0;
+        }
+
+        .tooltip-text {
+            visibility: hidden;
+            position: absolute;
+            width: 240px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            padding: 10px;
+            border-radius: 6px;
+            z-index: 1001;
+            opacity: 0;
+            transition: opacity 0.3s, visibility 0.3s;
+            pointer-events: none; /* Prevent the tooltip from capturing clicks */
+        }
+
+        .tooltip-text.show {
+            visibility: visible;
+            opacity: 1;
+        }
     </style>
 </head>
 
@@ -807,19 +852,27 @@
                     </legend>
                     <div class="collapsible-content">
                         <div class="input-group">
-                            <label for="wing-span">طول الجناح (<span class="unit-label">سم</span>)</label>
+                            <label for="wing-span">طول الجناح (<span class="unit-label">سم</span>)
+                                <button type="button" class="help-btn" data-tooltip="الطول الكلي للجناح من طرف إلى طرف. يؤثر بشكل كبير على قوة الرفع والاستقرار.">?</button>
+                            </label>
                             <input type="number" id="wing-span" value="150" step="1" min="1">
                         </div>
                         <div class="input-group">
-                            <label for="wing-chord">عرض الجناح عند الجذع (<span class="unit-label">سم</span>)</label>
+                            <label for="wing-chord">عرض الجناح عند الجذع (<span class="unit-label">سم</span>)
+                                <button type="button" class="help-btn" data-tooltip="عرض الجناح عند نقطة اتصاله بالجسم. يحدد مساحة الجناح وشكله.">?</button>
+                            </label>
                             <input type="number" id="wing-chord" value="25" step="1">
                         </div>
                         <div class="input-group">
-                            <label for="wing-thickness">سماكة الجناح (<span class="unit-label">سم</span>)</label>
+                            <label for="wing-thickness">سماكة الجناح (<span class="unit-label">سم</span>)
+                                <button type="button" class="help-btn" data-tooltip="أقصى سماكة للمقطع الهوائي للجناح. يؤثر على السحب وقوة الهيكل.">?</button>
+                            </label>
                             <input type="number" id="wing-thickness" value="3" step="0.5">
                         </div>
                         <div class="input-group">
-                            <label for="wing-position">موضع الجناح</label>
+                            <label for="wing-position">موضع الجناح
+                                <button type="button" class="help-btn" data-tooltip="موضع تركيب الجناح على الجسم. الجناح العلوي يوفر استقرارًا أكبر، بينما السفلي يوفر قدرة أعلى على المناورة.">?</button>
+                            </label>
                             <select id="wing-position">
                                 <option value="high" selected>علوي (High)</option>
                                 <option value="mid">متوسط (Mid)</option>
@@ -827,7 +880,9 @@
                             </select>
                         </div>
                         <div class="input-group">
-                            <label for="airfoil-type">شكل المقطع (Airfoil)</label>
+                            <label for="airfoil-type">شكل المقطع (Airfoil)
+                                <button type="button" class="help-btn" data-tooltip="شكل المقطع العرضي للجناح. 'المسطح' سهل الصنع ومستقر، 'المتماثل' جيد للاستعراضات الجوية، و'شبه المتماثل' هو حل وسط شائع.">?</button>
+                            </label>
                             <select id="airfoil-type">
                                 <option value="semi-symmetrical" selected>شبه متماثل (انسيابي)</option>
                                 <option value="flat-bottom">مسطح القاع (للتدريب)</option>
@@ -836,21 +891,27 @@
                             </select>
                         </div>
                         <div class="input-group">
-                            <label for="sweep-angle">زاوية الميلان (Sweep): <span id="sweep-value">0</span>°</label>
+                            <label for="sweep-angle">زاوية الميلان (Sweep): <span id="sweep-value">0</span>°
+                                <button type="button" class="help-btn" data-tooltip="زاوية ميلان الجناح للخلف أو للأمام. الميلان للخلف يزيد من الاستقرار عند السرعات العالية.">?</button>
+                            </label>
                             <input type="range" id="sweep-angle" min="-20" max="45" value="0" step="1">
                         </div>
                         <div class="input-group">
-                            <label for="taper-ratio">نسبة الاستدقاق (Taper): <span id="taper-value">1.00</span></label>
+                            <label for="taper-ratio">نسبة الاستدقاق (Taper): <span id="taper-value">1.00</span>
+                                <button type="button" class="help-btn" data-tooltip="نسبة عرض طرف الجناح إلى عرض جذره. القيمة 1.0 تعني جناح مستطيل، والقيم الأقل تعني جناح مستدق.">?</button>
+                            </label>
                             <input type="range" id="taper-ratio" min="0.2" max="1.0" value="1.0" step="0.05">
                         </div>
                         <div class="input-group">
-                            <label for="dihedral-angle">زاوية الديhedral/Anhedral: <span
-                                    id="dihedral-value">0</span>°</label>
+                            <label for="dihedral-angle">زاوية الديhedral/Anhedral: <span id="dihedral-value">0</span>°
+                                <button type="button" class="help-btn" data-tooltip="الزاوية الرأسية لأعلى (Dihedral) أو لأسفل (Anhedral) للجناحين. الديhedral يزيد من استقرار الدوران (Roll Stability).">?</button>
+                            </label>
                             <input type="range" id="dihedral-angle" min="-15" max="15" value="0" step="1">
                         </div>
                         <div class="input-group">
-                            <label for="wing-incidence-angle">زاوية ميلان الجناح (Incidence): <span
-                                    id="wing-incidence-value">0.0</span>°</label>
+                            <label for="wing-incidence-angle">زاوية ميلان الجناح (Incidence): <span id="wing-incidence-value">0.0</span>°
+                                <button type="button" class="help-btn" data-tooltip="الزاوية الثابتة التي يتم بها تركيب الجناح على الجسم. تؤثر على خصائص الطيران والرفع في الوضع الأفقي.">?</button>
+                            </label>
                             <input type="range" id="wing-incidence-angle" min="-5" max="5" value="0" step="0.5">
                         </div>
                         <div class="input-group">
