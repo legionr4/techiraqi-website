@@ -200,17 +200,19 @@
 
         /* Mobile-first styles for the results container */
         .results-columns-container {
-            display: flex; /* Use flexbox for stacking on mobile */
-            flex-direction: column; /* Stack columns vertically by default */
-            gap: 1rem; /* Space between columns when stacked on mobile */
+            display: grid;
+            /* FIX: Use grid on mobile as well for consistency */
+            grid-template-columns: 1fr;
+            /* Stack columns on mobile */
+            gap: 1rem;
             margin-top: 15px;
         }
 
         .results-column {
             display: flex;
             flex-direction: column;
-            gap: 0; /* No gap inside columns, borders will handle separation */
-            border: 1px solid var(--border-color); /* Border for mobile view */
+            gap: 0;
+            border: 1px solid var(--border-color);
             border-radius: 5px;
             overflow: hidden;
         }
@@ -219,9 +221,11 @@
         @media (min-width: 768px) {
             .results-columns-container {
                 display: grid; /* Use grid for the classic table look */
-                grid-template-columns: repeat(3, 1fr); /* Three columns for the table */
+                grid-template-columns: repeat(3, 1fr);
+                /* Three columns for the table */
                 gap: 0;
-                border: 2px solid #000; /* Inner table border */
+                border: 2px solid #000;
+                /* Inner table border */
                 border-radius: 5px;
                 overflow: hidden;
                 /* To clip the inner borders at the edges */
@@ -332,50 +336,55 @@
         }
 
         @media (max-width: 992px) {
+            /* FIX: Prevent the main body from scrolling on mobile to isolate scrolling to the container */
+            body {
+                overflow: hidden;
+            }
+
             .charts-container {
                 flex-direction: column;
                 /* Stack charts vertically on smaller screens */
             }
 
             .container {
-                flex-direction: column;
-                  /* FIX: إزالة الحشوة على الهاتف لمنع الفراغات الجانبية */
-                padding: 0;
+                flex-direction: column; /* Stack items vertically */
+                padding: 0; /* Remove padding to prevent side gaps */
+                /* FIX: Make the container the main scrollable area below the fixed viewer */
+                position: fixed;
+                top: 55vh; /* Position it below the viewer */
+                left: 0;
+                right: 0;
+                bottom: 0;
+                overflow-y: auto; /* Enable vertical scrolling for this container only */
+                padding-bottom: 50px; /* Add some space at the very bottom */
             }
 
             .controls {
-                order: 2;
-                /* وضع لوحة التحكم بعد العارض */
                 margin-left: 0;
                 margin-bottom: 20px;
                 padding: 15px;
-                /* تقليل الحشوة على الهاتف */
                 min-width: 100%;
-                /* FIX: إعادة تفعيل شريط التمرير المستقل للوحة التحكم على الهاتف */
-                max-height: 50vh; /* تحديد ارتفاع أقصى للوحة التحكم */
-                overflow-y: auto; /* إضافة شريط تمرير عند الحاجة */
-                margin-top: 60vh; /* FIX: إزاحة لوحة التحكم لأسفل لتظهر تحت واجهة العرض المثبتة */
+                /* FIX: Let the controls grow naturally, as the parent container now handles scrolling */
+                max-height: none;
+                overflow-y: visible;
             }
 
             .viewer {
-                order: 1;
-                /* وضع العارض أولاً */
-                /* FIX: Explicitly set mobile-only styles to override desktop sticky behavior */
-                position: sticky;
-                /* تثبيت الواجهة في مكانها عند التمرير على الهاتف */
-                top: 10px;
-                /* مسافة من الأعلى للتثبيت */
-                /* FIX: Explicitly set height for mobile to override desktop's 80vh */
-                height: 60vh;
                 z-index: 10;
                 /* ضمان بقاء الواجهة في الأعلى */
-                width: 100%; /* FIX: استخدام width بدلاً من min-width لضمان التثبيت الصحيح */
-                left: 0; /* FIX: محاذاة لليسار عند التثبيت */
-                position: fixed; /* FIX: تغيير إلى fixed لتثبيت الواجهة بشكل دائم في الأعلى */
+                width: 100%;
+                left: 0;
+                position: fixed;
+                /* FIX: Use 'fixed' to ensure it's always on top */
             }
 
             .results {
                 margin-top: 0;
+            }
+
+            /* FIX: Ensure charts container doesn't cause horizontal overflow */
+            .charts-container {
+                padding: 0 10px;
             }
 
             h1 {
