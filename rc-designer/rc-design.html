@@ -24,6 +24,10 @@
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/OBJExporter.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js"></script>
     <style>
+        /* FIX: Add box-sizing to prevent padding from causing overflow issues */
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
@@ -336,7 +340,7 @@
         }
 
         @media (max-width: 992px) {
-            /* FIX: Prevent the main body from scrolling on mobile to isolate scrolling to the container */
+            /* FIX: Prevent the whole page from scrolling on mobile */
             body {
                 overflow: hidden;
             }
@@ -348,15 +352,14 @@
 
             .container {
                 flex-direction: column; /* Stack items vertically */
-                padding: 0; /* Remove padding to prevent side gaps */
-                /* FIX: Make the container the main scrollable area below the fixed viewer */
+                /* FIX: Make the container the scrollable area below the fixed viewer */
                 position: fixed;
-                top: 55vh; /* Position it below the viewer */
+                top: 45vh; /* Position it below the viewer */
                 left: 0;
                 right: 0;
                 bottom: 0;
                 overflow-y: auto; /* Enable vertical scrolling for this container only */
-                padding-bottom: 50px; /* Add some space at the very bottom */
+                padding: 0; /* Remove padding to prevent side gaps */
             }
 
             .controls {
@@ -364,22 +367,24 @@
                 margin-bottom: 20px;
                 padding: 15px;
                 min-width: 100%;
-                /* FIX: Let the controls grow naturally, as the parent container now handles scrolling */
+                /* FIX: Let controls grow naturally, as the parent container now handles scrolling */
                 max-height: none;
                 overflow-y: visible;
             }
 
             .viewer {
                 z-index: 10;
-                /* ضمان بقاء الواجهة في الأعلى */
                 width: 100%;
                 left: 0;
                 position: fixed;
-                /* FIX: Use 'fixed' to ensure it's always on top */
+                /* FIX: Re-add top and height to make the viewer visible and fixed */
+                top: 0;
+                height: 45vh;
             }
 
             .results {
                 margin-top: 0;
+                padding: 0 15px; /* Add padding to align with controls */
             }
 
             /* FIX: Ensure charts container doesn't cause horizontal overflow */
