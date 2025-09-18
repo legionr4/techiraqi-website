@@ -222,19 +222,19 @@
         }
 
         /* On larger screens (desktop), switch to a grid layout */
-        @media (min-width: 768px) {
+        @media (min-width: 992px) {
             .results-columns-container {
                 display: grid; /* Use grid for the classic table look */
                 grid-template-columns: repeat(3, 1fr);
                 /* Three columns for the table */
                 gap: 0;
-                border: 2px solid #000;
+                border: 2px solid var(--border-color);
                 /* Inner table border */
                 border-radius: 5px;
                 overflow: hidden;
                 /* To clip the inner borders at the edges */
             }
-
+ 
             .results-column {
                 border: none;
                 border-radius: 0;
@@ -242,10 +242,10 @@
 
             /* إضافة خط فاصل على يمين العمود الأول والثاني فقط */
             .results-column:nth-child(1) {
-                border-left: 3px solid #000; /* FIX: Use border-left for RTL grid context */
+                border-left: 2px solid var(--border-color); /* FIX: Use border-left for RTL grid context */
             }
             .results-column:nth-child(2) {
-                border-left: 3px solid #000; /* FIX: Use border-left for RTL grid context */
+                border-left: 2px solid var(--border-color); /* FIX: Use border-left for RTL grid context */
             }
         }
 
@@ -333,7 +333,7 @@
             width: 100%;
         }
 
-        @media (max-width: 992px) {
+        @media (max-width: 768px) {
             .results-grid {
                 grid-template-columns: 1fr;
             }
@@ -341,7 +341,7 @@
 
         @media (max-width: 992px) {
             /* FIX: Revert body overflow to default to allow natural page scrolling */
-            body {
+            html, body {
                 overflow: auto;
             }
 
@@ -579,7 +579,7 @@
         }
 
         /* FIX: Responsive styles for the header on mobile devices */
-        @media (max-width: 768px) {
+        @media (max-width: 992px) {
             .navigation-header {
                 flex-direction: column;
                 /* Stack items vertically */
