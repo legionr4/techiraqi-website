@@ -33,7 +33,7 @@
 
     <!-- إضافة مكتبة AOS للتحريك عند التمرير -->
     <link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
 
@@ -51,7 +51,7 @@
             <a href="index.html" class="active"><i class="fas fa-home nav-icon" aria-hidden="true"></i> الرئيسية</a>
             <a href="rc-designer/rc-design.html"><i class="fas fa-drafting-compass nav-icon" aria-hidden="true"></i> التصميم</a>
             <a href="blog.html"><i class="fas fa-blog nav-icon" aria-hidden="true"></i> المدونة</a>
-            <a href="blogs/contact.html"><i class="fas fa-envelope nav-icon" aria-hidden="true"></i> اتصل بنا</a>
+            <a href="contact.html"><i class="fas fa-envelope nav-icon" aria-hidden="true"></i> اتصل بنا</a>
             <div class="login-container-mobile" data-netlify-identity-button></div>
         </nav>
         <div class="header-actions">
@@ -128,14 +128,17 @@
         <section class="faq-section" data-aos="fade-up" role="region" aria-labelledby="faq-title">
             <h2 class="section-title" id="faq-title">مقالات قد تهمك</h2>
             <div class="featured-articles-list">
-                <a href=">هل البرامج المعروضة على الموقع مجانية وآمنة؟</span>
+                <a href="blogs/article-program-safety.html" class="featured-article-link" data-aos="fade-left" data-aos-delay="100">
+                    <span>هل البرامج المعروضة على الموقع مجانية وآمنة؟</span>
                     <i class="fas fa-chevron-left" aria-hidden="true"></i>
                 </a>
-                <a
+                <a href="blogs/article-virus-protection.html" class="featured-article-link" data-aos="fade-left" data-aos-delay="200">
+                    <span>كيف يمكنني حماية نفسي من الفيروسات عند التحميل؟</span>
                     <i class="fas fa-chevron-left" aria-hidden="true"></i>
                 </a>
                 <a href="blogs/article-login-benefits.html" class="featured-article-link" data-aos="fade-left" data-aos-delay="300">
-                  a
+                    <span>ما هي فوائد تسجيل الدخول في الموقع؟</span>
+                    <i class="fas fa-chevron-left" aria-hidden="true"></i>
                 </a>
                 <a href="terms-of-use.html" class="featured-article-link" data-aos="fade-left" data-aos-delay="400">
                     <span>اطلع على سياسة الاستخدام واسترداد الأموال</span>
@@ -163,10 +166,10 @@
     <!-- إضافة Netlify Identity Widget -->
     <script type="text/javascript" src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 
-    <script src="auth.js" defer></script>
+    <script src="assets/js/auth.js" defer></script>
     <!-- إضافة مكتبة AOS للتحريك -->
     <script src="https://unpkg.com/aos@next/dist/aos.js" defer></script>
-    <script src="script.js" defer></script>
+    <script src="assets/js/script.js" defer></script>
 
     <!-- SEO: JSON-LD Structured Data -->
     <script type="application/ld+json">
