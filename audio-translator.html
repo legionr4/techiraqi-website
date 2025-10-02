@@ -38,71 +38,138 @@
     <link rel="preload" href="https://unpkg.com/aos@next/dist/aos.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css"></noscript>
 
-    <link rel="stylesheet" href="style.css">
-
+    <link rel="stylesheet" href="assets/css/style.css">
+    <!-- FIX: Replaced old styles with new, more organized styles inspired by rc-design.html -->
     <style>
+        /* --- Main Layout --- */
         .custom-translator {
             background-color: var(--card-bg-color);
             padding: 2rem;
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
             position: relative;
+            max-width: 1200px; /* Set a max-width for better readability on large screens */
+            margin: 0 auto; /* Center the translator component */
         }
+
         .translator-layout {
-            /* This will become a flex container on larger screens */
             display: flex;
-            flex-direction: column;
+            flex-direction: column; /* Default for mobile */
+            gap: 2rem;
         }
+
         .translator-controls {
             display: flex;
             flex-direction: column;
             gap: 1.5rem;
-            margin-bottom: 2rem;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 2rem;
         }
+
+        .translator-results {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        /* --- Fieldset & Legend Styling (from rc-design.html) --- */
+        fieldset {
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            margin-bottom: 0; /* Reset margin */
+            padding: 10px;
+            box-shadow: var(--container-shadow);
+        }
+
+        legend {
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            background-color: var(--primary-color-faded);
+            border-radius: 5px;
+            color: var(--primary-hover);
+            font-weight: 700;
+            transition: background-color 0.3s ease;
+            width: 100%;
+            user-select: none;
+        }
+
+        .legend-icon {
+            margin-left: 10px; /* RTL */
+            font-size: 1.1em;
+        }
+
+        .toggle-icon {
+            transition: transform 0.3s ease;
+        }
+
+        legend.collapsed .toggle-icon {
+            transform: rotate(-90deg); /* RTL */
+        }
+
+        .collapsible-content {
+            max-height: 1000px;
+            overflow: hidden;
+            transition: max-height 0.5s ease-in-out, padding 0.5s ease-in-out, margin 0.5s ease-in-out;
+            padding: 15px 5px 5px 5px;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .collapsible-content.collapsed {
+            max-height: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+            margin-top: 0;
+        }
+
+        /* --- Input & Button Styling --- */
         .input-group {
             display: flex;
             flex-direction: column;
             gap: 0.5rem;
         }
+
         .input-group label {
             font-weight: bold;
             color: var(--text-color);
         }
+
         .input-group input[type="file"], .input-group select, .input-group button {
             width: 100%;
             padding: 0.75rem;
             border-radius: 4px;
             border: 1px solid var(--border-color);
-            background-color: var(--background-color);
+            background-color: var(--body-bg); /* Use a slightly different background for inputs */
             color: var(--text-color);
             font-size: 1rem;
         }
+
         .or-separator {
             text-align: center;
             margin: 0.5rem 0;
             color: var(--text-secondary-color);
         }
+
         .primary-btn {
             background-color: var(--primary-color);
             color: white;
             border: none;
             padding: 0.8rem 1.5rem;
             border-radius: 5px;
-            cursor: pointer;
             font-size: 1.1rem;
-            transition: background-color 0.3s;
-            text-align: center;
-            text-decoration: none;
-            display: inline-block;
         }
+
         .primary-btn:hover:not(:disabled) { background-color: #0056b3; }
         .primary-btn:disabled { background-color: #ccc; cursor: not-allowed; }
-        .translator-results { display: flex; flex-direction: column; gap: 1.5rem; }
+
+        /* --- Results Section --- */
         .result-box textarea { width: 100%; min-height: 120px; resize: vertical; padding: 0.75rem; border-radius: 4px; border: 1px solid var(--border-color); background-color: var(--background-color); color: var(--text-color); }
         #tts-output-container { display: flex; flex-direction: column; gap: 1rem; align-items: flex-start; }
         #tts-audio-player { width: 100%; }
+
+        /* --- Loader & Messages --- */
         .translator-loader {
             position: absolute;
             inset: 0;
@@ -114,12 +181,14 @@
             align-items: center;
             border-radius: 8px;
             transition: background-color 0.3s;
+            backdrop-filter: blur(4px); /* Add a blur effect */
         }
+
         body.dark-mode .translator-loader {
-            background-color: rgba(17, 24, 39, 0.8); /* Dark mode equivalent */
+            background-color: rgba(17, 24, 39, 0.8);
         }
+
         .error-box {
-            background-color: #ffdddd;
             border-left: 6px solid #f44336;
             color: #b71c1c;
             padding: 1rem;
@@ -127,11 +196,13 @@
             border-radius: 4px;
             transition: background-color 0.3s, color 0.3s;
         }
+
         body.dark-mode .error-box {
             background-color: #5d1a1a;
             border-left-color: #ef5350;
             color: #ffcdd2;
         }
+
         .result-header {
             display: flex;
             justify-content: space-between;
@@ -142,7 +213,7 @@
         .result-header label {
             margin-bottom: 0; /* Override any default margins */
         }
-
+        
         .icon-btn {
             background-color: transparent;
             border: none;
@@ -158,14 +229,13 @@
             color: var(--primary-color);
         }
 
-        /* --- Responsive Design for Larger Screens (Desktop) --- */
+        /* --- Responsive Layout (Desktop) --- */
         @media (min-width: 992px) {
             .translator-layout {
                 flex-direction: row;
-                gap: 2rem;
                 align-items: flex-start;
             }
-
+            
             .translator-controls {
                 flex: 1;
                 min-width: 320px; /* Prevent controls from becoming too narrow */
@@ -175,21 +245,23 @@
                 border-right: 1px solid var(--border-color);
                 padding-right: 2rem;
             }
-
+            
             .translator-results {
                 flex: 2;
             }
         }
 
-        /* --- Responsive Design for Smaller Screens (Mobile) --- */
+        /* --- Mobile Adjustments --- */
         @media (max-width: 480px) {
             .custom-translator {
                 padding: 1rem; /* Reduce padding on very small screens */
             }
             .primary-btn {
                 font-size: 1rem; /* Adjust button font size for smaller screens */
+                padding: 0.7rem 1.2rem;
             }
         }
+
         /* Utility class to hide elements accessibly */
         .hidden {
             display: none !important;
@@ -208,6 +280,7 @@
             background-color: var(--primary-color);
             border-radius: 5px;
             transition: width 0.2s ease-in-out;
+            height: 12px; /* Make it a bit thicker */
         }
         .action-buttons {
             display: flex;
@@ -216,6 +289,7 @@
         .action-buttons .primary-btn {
             flex-grow: 1; /* Make the main button take up more space */
         }
+
         .secondary-btn {
             background-color: #6c757d;
             color: white;
@@ -229,25 +303,10 @@
             line-height: 1; /* Align icon properly */
         }
         .secondary-btn:hover { background-color: #5a6268; }
+
         .record-btn-style { background-color: #5c677d; }
         .record-btn-style:hover:not(:disabled) { background-color: #4a5467; }
 
-        /* --- Darker Night Mode Overrides --- */
-        body.dark-mode {
-            --background-color: #121212; /* Near-black background */
-            --card-bg-color: #1E1E1E;    /* Dark gray for cards and inputs */
-            --border-color: #383838;     /* A subtle border color */
-            --text-color: #EAEAEA;       /* A softer, off-white text color */
-            --text-secondary-color: #9E9E9E; /* Dimmer secondary text */
-        }
-        body.dark-mode .primary-btn { background-color: #0d6efd; }
-        body.dark-mode .primary-btn:hover:not(:disabled) { background-color: #0b5ed7; }
-        body.dark-mode .secondary-btn { background-color: #343a40; }
-        body.dark-mode .secondary-btn:hover { background-color: #495057; }
-        body.dark-mode .record-btn-style { background-color: #495057; }
-        body.dark-mode .record-btn-style:hover:not(:disabled) { background-color: #5a6268; }
-    </style>
-    <style>
         .audio-preview-container {
             display: flex;
             align-items: center;
@@ -259,8 +318,7 @@
             flex-grow: 1;
             width: 0; /* Let flex-grow control the width */
         }
-    </style>
-    <style>
+
         .recording-status-container {
             display: flex;
             align-items: center;
@@ -271,6 +329,7 @@
             font-weight: bold;
             font-size: 1.1rem;
         }
+
         .recording-indicator {
             width: 10px;
             height: 10px;
@@ -278,18 +337,20 @@
             border-radius: 50%;
             animation: pulse-animation 1.5s infinite ease-in-out;
         }
+
         @keyframes pulse-animation {
             0%, 100% { transform: scale(1); opacity: 1; }
             50% { transform: scale(1.25); opacity: 0.7; }
         }
+
         body.dark-mode .recording-status-container {
             color: #ef5350; /* A slightly brighter red for dark mode */
         }
+
         body.dark-mode .recording-indicator {
             background-color: #ef5350;
         }
-    </style>
-    <style>
+
         .audio-time-display {
             color: var(--text-secondary-color);
             font-size: 0.9rem;
@@ -304,6 +365,7 @@
             margin-top: 0.5rem;
             min-height: 24px; /* Reserve space to prevent layout shift */
         }
+
         .audio-error-container {
             display: flex;
             align-items: center;
@@ -316,7 +378,8 @@
         .audio-error-text {
             font-size: 0.9rem;
             font-weight: 500;
-        }</style>
+        }
+    </style>
 
 </head>
 <body>
@@ -370,58 +433,103 @@
             <!-- New layout wrapper for responsive design -->
             <div class="translator-layout">
                 <div class="translator-controls">
-                    <div class="input-group">
-                        <label for="audio-file-input">1. اختر ملف صوتي:</label>
-                        <input type="file" id="audio-file-input" accept="audio/*">
-                        <p class="or-separator">أو</p>
-                        <button id="record-btn" class="primary-btn record-btn-style">سجل من المايكروفون <i class="fas fa-microphone"></i></button>
-                        <div id="recording-status" class="recording-status-container hidden">
-                            <span class="recording-indicator"></span>
-                            <span id="recording-timer">00:00</span>
+                    <fieldset>
+                        <legend>
+                            <div><i class="fas fa-microphone-alt legend-icon"></i><span>الخطوة 1: أدخل الصوت</span></div>
+                            <i class="fas fa-chevron-down toggle-icon"></i>
+                        </legend>
+                        <div class="collapsible-content">
+                            <div class="input-group">
+                                <label for="audio-file-input">اختر ملف صوتي أو فيديو:</label>
+                                <input type="file" id="audio-file-input" accept="audio/*,video/*">
+                            </div>
+                            <p class="or-separator">أو</p>
+                            <button id="record-btn" class="primary-btn record-btn-style">سجل من المايكروفون <i class="fas fa-microphone"></i></button>
+                            <div id="recording-status" class="recording-status-container hidden">
+                                <span class="recording-indicator"></span>
+                                <span id="recording-timer">00:00</span>
+                            </div>
+                            <div id="audio-preview-container" class="audio-preview-container hidden">
+                                <audio id="recorded-audio-player" controls></audio>
+                                <button id="clear-audio-btn" class="icon-btn" title="مسح المقطع">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
                         </div>
-                        <div id="audio-preview-container" class="audio-preview-container hidden">
-                            <audio id="recorded-audio-player" controls></audio>
-                            <button id="clear-audio-btn" class="icon-btn" title="مسح المقطع">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
+                    </fieldset>
+
+                    <fieldset>
+                        <legend>
+                            <div><i class="fas fa-cogs legend-icon"></i><span>الخطوة 2: إعدادات الترجمة</span></div>
+                            <i class="fas fa-chevron-down toggle-icon"></i>
+                        </legend>
+                        <div class="collapsible-content">
+                            <div class="input-group">
+                                <label for="language-select">اختر لغة الترجمة:</label>
+                                <select id="language-select">
+                                    <option value="Modern Standard Arabic">Arabic (Modern Standard)</option>
+                                    <option value="English">English</option>
+                                    <option value="French">French</option>
+                                    <option value="German">German</option>
+                                    <option value="Spanish">Spanish</option>
+                                    <option value="Russian">Russian</option>
+                                    <option value="Mandarin Chinese">Chinese (Mandarin)</option>
+                                    <option value="Japanese">Japanese</option>
+                                    <option value="Italian">Italian</option>
+                                    <option value="Hindi">Hindi</option>
+                                    <option value="Bengali">Bengali</option>
+                                    <option value="Catalan">Catalan</option>
+                                    <option value="Czech">Czech</option>
+                                    <option value="Danish">Danish</option>
+                                    <option value="Dutch">Dutch</option>
+                                    <option value="Estonian">Estonian</option>
+                                    <option value="Finnish">Finnish</option>
+                                    <option value="Indonesian">Indonesian</option>
+                                    <option value="Korean">Korean</option>
+                                    <option value="Maltese">Maltese</option>
+                                    <option value="Western Persian">Persian (Western)</option>
+                                    <option value="Polish">Polish</option>
+                                    <option value="Portuguese">Portuguese</option>
+                                    <option value="Romanian">Romanian</option>
+                                    <option value="Slovak">Slovak</option>
+                                    <option value="Swedish">Swedish</option>
+                                    <option value="Swahili">Swahili</option>
+                                    <option value="Tagalog">Tagalog</option>
+                                    <option value="Telugu">Telugu</option>
+                                    <option value="Thai">Thai</option>
+                                    <option value="Turkish">Turkish</option>
+                                    <option value="Ukrainian">Ukrainian</option>
+                                    <option value="Urdu">Urdu</option>
+                                    <option value="Northern Uzbek">Uzbek (Northern)</option>
+                                    <option value="Vietnamese">Vietnamese</option>
+                                    <option value="Welsh">Welsh</option>
+                                </select>
+                            </div>
+                            <div id="voice-selection-group" class="input-group">
+                                <label for="voice-select">اختر صوت الترجمة:</label>
+                                <select id="voice-select">
+                                    <option value="female" selected>صوت امرأة</option>
+                                    <option value="male">صوت رجل</option>
+                                    <option value="child">صوت طفل</option>
+                                </select>
+                            </div>
+                            <div id="arabic-tts-note" class="input-group hidden" style="color: var(--text-secondary-color); font-size: 0.9rem; margin-top: -1rem;">
+                                ملاحظة: اختيار الصوت غير متاح حاليًا للغة العربية.
+                            </div>
+                            <div class="input-group">
+                                <label for="speed-select">سرعة صوت الترجمة:</label>
+                                <select id="speed-select">
+                                    <option value="0.75">بطيء</option>
+                                    <option value="1.0" selected>عادي</option>
+                                    <option value="1.25">سريع</option>
+                                    <option value="1.5">سريع جداً</option>
+                                </select>
+                            </div>
                         </div>
-                    </div>
-                    <div class="input-group">
-                        <label for="language-select">2. اختر لغة الترجمة:</label>
-                        <select id="language-select">
-                            <option value="Arabic">Arabic</option>
-                            <option value="English">English</option>
-                            <option value="French">French</option>
-                            <option value="German">German</option>
-                            <option value="Spanish">Spanish</option>
-                            <option value="Russian">Russian</option>
-                            <option value="Chinese">Chinese</option>
-                            <option value="Japanese">Japanese</option>
-                            <option value="Italian">Italian</option>
-                        </select>
-                    </div>
-                    <div id="voice-selection-group" class="input-group">
-                        <label for="voice-select">اختر صوت الترجمة:</label>
-                        <select id="voice-select">
-                            <option value="female" selected>صوت امرأة</option>
-                            <option value="male">صوت رجل</option>
-                            <option value="child">صوت طفل</option>
-                        </select>
-                    </div>
-                    <div id="arabic-tts-note" class="input-group hidden" style="color: var(--text-secondary-color); font-size: 0.9rem; margin-top: -1rem; margin-bottom: 1rem;">
-                        ملاحظة: اختيار الصوت غير متاح حاليًا للغة العربية.
-                    </div>
-                    <div class="input-group">
-                        <label for="speed-select">سرعة صوت الترجمة:</label>
-                        <select id="speed-select">
-                            <option value="0.75">بطيء</option>
-                            <option value="1.0" selected>عادي</option>
-                            <option value="1.25">سريع</option>
-                            <option value="1.5">سريع جداً</option>
-                        </select>
-                    </div>
+                    </fieldset>
+
                     <div class="action-buttons">
-                        <button id="translate-btn" class="primary-btn" disabled>3. ترجم الآن</button>
+                        <button id="translate-btn" class="primary-btn" disabled>الخطوة 3: ترجم الآن <i class="fas fa-language"></i></button>
                         <button id="reset-btn" class="secondary-btn hidden" title="إعادة تعيين"><i class="fas fa-sync-alt"></i></button>
                     </div>
                 </div>
@@ -429,7 +537,12 @@
                 <div class="translator-results">
                     <div id="error-display" class="error-box hidden"></div>
                     <div class="result-box">
-                        <label>النص الأصلي (من الصوت):</label>
+                        <div class="result-header">
+                            <label for="transcribed-text">النص الأصلي (من الصوت):</label>
+                            <button id="copy-transcribed-btn" class="icon-btn" title="نسخ النص الأصلي" disabled>
+                                <i class="fas fa-clipboard"></i>
+                            </button>
+                        </div>
                         <textarea id="transcribed-text" readonly placeholder="سيظهر النص المأخوذ من الصوت هنا..."></textarea>
                     </div>
                     <div class="result-box">
@@ -477,464 +590,10 @@
         <p class="copyright">جميع الحقوق محفوظة &copy; <span id="copyright-year">2025</span></p>
     </footer>
 
-    <script src="auth.js" defer></script>
+    <script src="assets/js/auth.js" defer></script>
     <script src="https://unpkg.com/aos@next/dist/aos.js" defer></script>
-    <script src="script.js" defer></script>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // --- DOM Elements ---
-            const audioFileInput = document.getElementById('audio-file-input');
-            const recordBtn = document.getElementById('record-btn');
-            const recordedAudioPlayer = document.getElementById('recorded-audio-player');
-            const languageSelect = document.getElementById('language-select');
-            const voiceSelect = document.getElementById('voice-select');
-            const speedSelect = document.getElementById('speed-select');
-            const translateBtn = document.getElementById('translate-btn');
-            const loader = document.getElementById('translator-loader');
-            const errorDisplay = document.getElementById('error-display');
-            const transcribedText = document.getElementById('transcribed-text');
-            const copyBtn = document.getElementById('copy-btn');
-            const translatedText = document.getElementById('translated-text');
-            const ttsOutputContainer = document.getElementById('tts-output-container');
-            const ttsAudioPlayer = document.getElementById('tts-audio-player');
-            const downloadTtsLink = document.getElementById('download-tts-link');
-            const loaderText = document.getElementById('loader-text');
-            const progressContainer = document.getElementById('progress-container');
-            const progressBar = document.getElementById('progress-bar');
-            const spinner = document.querySelector('#translator-loader .spinner');
-            const resetBtn = document.getElementById('reset-btn');
-            const currentTimeEl = document.getElementById('current-time');
-            const totalDurationEl = document.getElementById('total-duration');
-            const recordingStatus = document.getElementById('recording-status');
-            const recordingTimer = document.getElementById('recording-timer');
-            const audioErrorContainer = document.getElementById('audio-error-container');
-            const retryAudioBtn = document.getElementById('retry-audio-btn');
-            const audioTimeDisplay = document.querySelector('.audio-time-display');
-            const audioPreviewContainer = document.getElementById('audio-preview-container');
-            const clearAudioBtn = document.getElementById('clear-audio-btn');
-            const voiceSelectionGroup = document.getElementById('voice-selection-group');
-            const arabicTtsNote = document.getElementById('arabic-tts-note');
-
-            // --- State Variables ---
-            let mediaRecorder;
-            let audioChunks = [];
-            let audioBlob = null;
-            let isRecording = false;
-            const HUGGING_FACE_API_URL = "https://toprn-voiceaudiotranslato.hf.space/run/translate_audio_file";
-            const HUGGING_FACE_FILE_URL = "https://toprn-voiceaudiotranslato.hf.space/file=";
-            let recordingInterval;
-
-            // --- Functions ---
-            const fileToBase64 = (file) => new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = error => reject(error);
-            });
-
-            const formatTime = (seconds) => {
-                if (isNaN(seconds) || seconds < 0) return '00:00';
-                const minutes = Math.floor(seconds / 60);
-                const remainingSeconds = Math.floor(seconds % 60);
-                return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
-            };
-
-            const updateTranslateButtonState = () => {
-                const hasAudio = !!audioBlob;
-                translateBtn.disabled = !hasAudio;
-
-                if (hasAudio) {
-                    resetBtn.classList.remove('hidden');
-                } else {
-                    resetBtn.classList.add('hidden');
-                }
-            };
-
-            const resetProcessingState = () => {
-                loader.classList.add('hidden');
-                translateBtn.disabled = false;
-                translateBtn.textContent = '3. ترجم الآن';
-                spinner.classList.remove('hidden');
-                progressContainer.classList.add('hidden');
-                loaderText.textContent = 'جاري المعالجة...';
-                progressBar.style.width = '0%';
-            };
-
-            const clearResults = () => {
-                errorDisplay.classList.add('hidden');
-                transcribedText.value = '';
-                copyBtn.disabled = true;
-                translatedText.value = '';
-                ttsOutputContainer.classList.add('hidden');
-                ttsAudioPlayer.src = '';
-                downloadTtsLink.href = '#';
-                downloadTtsLink.classList.add('hidden');
-                currentTimeEl.textContent = '00:00';
-                totalDurationEl.textContent = '00:00';
-                audioErrorContainer.classList.add('hidden');
-                audioTimeDisplay.classList.remove('hidden');
-            };
-
-            const resetUI = (isProcessing = false) => {
-                if (!isProcessing) {
-                    resetProcessingState();
-                }
-                clearResults();
-            };
-
-            const fetchWithProgress = (url, opts = {}, onProgress) => {
-                return new Promise((resolve, reject) => {
-                    const xhr = new XMLHttpRequest();
-                    xhr.open(opts.method || 'get', url);
-
-                    for (const k in opts.headers || {}) {
-                        xhr.setRequestHeader(k, opts.headers[k]);
-                    }
-
-                    xhr.onload = e => {
-                        if (xhr.status >= 200 && xhr.status < 300) {
-                            try {
-                                resolve({
-                                    ok: true,
-                                    status: xhr.status,
-                                    json: () => Promise.resolve(JSON.parse(e.target.responseText))
-                                });
-                            } catch (parseError) {
-                                reject(new Error("Failed to parse JSON response."));
-                            }
-                        } else {
-                            resolve({
-                                ok: false,
-                                status: xhr.status,
-                                statusText: xhr.statusText,
-                                json: () => {
-                                    try { return Promise.resolve(JSON.parse(e.target.responseText)); } 
-                                    catch { return Promise.resolve({}); }
-                                }
-                            });
-                        }
-                    };
-
-                    xhr.onerror = () => reject(new TypeError('Network request failed'));
-                    if (xhr.upload && onProgress) xhr.upload.onprogress = onProgress;
-
-                    xhr.send(opts.body);
-                });
-            };
-
-            const handleApiError = async (error, response = null) => {
-                console.error('API Error:', error);
-                let message = 'حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.';
-
-                if (response) {
-                    if (response.status === 429) {
-                        message = 'لقد وصلت إلى الحد الأقصى للطلبات. يرجى الانتظار قليلاً قبل المحاولة مرة أخرى.';
-                    } else if (response.status === 503) {
-                        message = 'الخدمة غير متاحة حاليًا أو قيد التحميل. يرجى المحاولة مرة أخرى بعد لحظات.';
-                    } else {
-                        try {
-                            const errorData = await response.json();
-                            if (errorData.error) {
-                                message = `خطأ من الخادم: ${errorData.error}`;
-                            } else {
-                                message = `حدث خطأ في الخادم (الحالة: ${response.status}).`;
-                            }
-                        } catch (e) {
-                            message = `حدث خطأ في الخادم (الحالة: ${response.status}). لا يمكن قراءة تفاصيل الخطأ.`;
-                        }
-                    }
-                } else if (error.name === 'TypeError') {
-                    message = 'فشل الاتصال بالخادم. يرجى التحقق من اتصالك بالإنترنت والمحاولة مرة أخرى.';
-                }
-
-                errorDisplay.textContent = message;
-                errorDisplay.classList.remove('hidden');
-                resetUI();
-            };
-
-            const fullReset = () => {
-                // Stop recording if it's active
-                if (isRecording && mediaRecorder) {
-                    // The onstop handler will manage resetting the record button UI
-                    clearInterval(recordingInterval);
-                    recordingStatus.classList.add('hidden');
-                    mediaRecorder.stop();
-                }
-
-                // Clear audio state
-                audioBlob = null;
-                audioFileInput.value = ''; // This is crucial for file input
-                recordedAudioPlayer.src = '';
-                audioPreviewContainer.classList.add('hidden'); // Hide the entire preview container
-
-                // Clear results and loader state
-                resetUI();
-                // Update buttons state (this will disable translate and hide reset)
-                updateTranslateButtonState();
-            };
-
-            const clearAudioSelection = () => {
-                audioBlob = null;
-                audioFileInput.value = ''; // Reset file input
-                recordedAudioPlayer.src = ''; // Clear the player source
-                audioPreviewContainer.classList.add('hidden'); // Hide the container
-                updateTranslateButtonState();
-            };
-
-            const handleLanguageChange = () => {
-                if (languageSelect.value === 'Arabic') {
-                    voiceSelectionGroup.classList.add('hidden');
-                    arabicTtsNote.classList.remove('hidden');
-                } else {
-                    voiceSelectionGroup.classList.remove('hidden');
-                    arabicTtsNote.classList.add('hidden');
-                }
-                savePreferences();
-            };
-
-            // --- User Preferences ---
-            const loadPreferences = () => {
-                const savedLanguage = localStorage.getItem('translator_last_language');
-                // Ensure the saved language is a valid option before setting it
-                if (savedLanguage && [...languageSelect.options].some(opt => opt.value === savedLanguage)) {
-                    languageSelect.value = savedLanguage;
-                }
-                const savedVoice = localStorage.getItem('translator_last_voice');
-                if (savedVoice && [...voiceSelect.options].some(opt => opt.value === savedVoice)) {
-                    voiceSelect.value = savedVoice;
-                }
-                const savedSpeed = localStorage.getItem('translator_last_speed');
-                if (savedSpeed && [...speedSelect.options].some(opt => opt.value === savedSpeed)) {
-                    speedSelect.value = savedSpeed;
-                }
-                // Set the initial playback rate from the current selection
-                ttsAudioPlayer.playbackRate = parseFloat(speedSelect.value);
-                // Set initial visibility of voice selection
-                handleLanguageChange();
-            };
-
-            const savePreferences = () => {
-                localStorage.setItem('translator_last_language', languageSelect.value);
-                localStorage.setItem('translator_last_voice', voiceSelect.value);
-                localStorage.setItem('translator_last_speed', speedSelect.value);
-            };
-
-            const handleAudioReady = () => {
-                // Show download link only when audio is ready to be played
-                downloadTtsLink.classList.remove('hidden');
-                // Ensure error state is cleared and time is visible
-                audioErrorContainer.classList.add('hidden');
-                audioTimeDisplay.classList.remove('hidden');
-            };
-
-            const handleAudioLoadError = () => {
-                console.error("Audio player error:", ttsAudioPlayer.error);
-                audioTimeDisplay.classList.add('hidden');
-                downloadTtsLink.classList.add('hidden');
-                audioErrorContainer.classList.remove('hidden');
-            };
-
-            const retryAudioLoad = () => {
-                audioErrorContainer.classList.add('hidden');
-                ttsAudioPlayer.load(); // This will re-trigger the loading process
-            };
-
-            // --- Initial Setup ---
-            loadPreferences();
-
-            // --- Event Listeners ---
-            resetBtn.addEventListener('click', fullReset);
-
-            retryAudioBtn.addEventListener('click', retryAudioLoad);
-
-            clearAudioBtn.addEventListener('click', clearAudioSelection);
-
-            audioFileInput.addEventListener('change', async (event) => {
-                const file = event.target.files[0];
-                if (file) {
-                    audioBlob = file;
-                    const audioUrl = URL.createObjectURL(file);
-                    recordedAudioPlayer.src = audioUrl;
-                    audioPreviewContainer.classList.remove('hidden');
-                    updateTranslateButtonState();
-                }
-            });
-
-            languageSelect.addEventListener('change', handleLanguageChange);
-
-            voiceSelect.addEventListener('change', savePreferences);
-
-            speedSelect.addEventListener('change', () => {
-                const newSpeed = parseFloat(speedSelect.value);
-                ttsAudioPlayer.playbackRate = newSpeed;
-                savePreferences();
-            });
-
-            ttsAudioPlayer.addEventListener('canplay', handleAudioReady);
-
-            ttsAudioPlayer.addEventListener('error', handleAudioLoadError);
-
-            ttsAudioPlayer.addEventListener('loadedmetadata', () => {
-                totalDurationEl.textContent = formatTime(ttsAudioPlayer.duration);
-            });
-
-            ttsAudioPlayer.addEventListener('timeupdate', () => {
-                currentTimeEl.textContent = formatTime(ttsAudioPlayer.currentTime);
-            });
-
-
-            recordBtn.addEventListener('click', async () => {
-                if (isRecording) {
-                    clearInterval(recordingInterval);
-                    recordingStatus.classList.add('hidden');
-                    mediaRecorder.stop();
-                    // The onstop handler will manage the rest of the UI update
-                } else {
-                    // Start recording
-                    try {
-                        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                        mediaRecorder = new MediaRecorder(stream);
-                        audioChunks = [];
-
-                        mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-
-                        mediaRecorder.onstop = () => {
-                            audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-                            recordedAudioPlayer.src = URL.createObjectURL(audioBlob);
-                            audioPreviewContainer.classList.remove('hidden');
-                            updateTranslateButtonState();
-                            stream.getTracks().forEach(track => track.stop());
-
-                            // Reset recording state and UI
-                            isRecording = false;
-                            recordBtn.innerHTML = 'سجل من المايكروفون <i class="fas fa-microphone"></i>';
-                            recordBtn.style.backgroundColor = ''; // Revert to stylesheet color
-                        };
-
-                        mediaRecorder.start();
-
-                        // Update recording state and UI
-                        isRecording = true;
-                        recordBtn.innerHTML = 'أوقف التسجيل <i class="fas fa-stop"></i>';
-                        recordBtn.style.backgroundColor = '#d9534f'; // A red color for "stop"
-                        audioBlob = null;
-                        updateTranslateButtonState();
-                        audioPreviewContainer.classList.add('hidden'); // Hide old recording preview
-                        errorDisplay.classList.add('hidden'); // Hide any previous errors
-
-                        // Reset and show timer
-                        recordingTimer.textContent = '00:00';
-                        recordingStatus.classList.remove('hidden');
-                        let recordingSeconds = 0;
-                        recordingInterval = setInterval(() => {
-                            recordingSeconds++;
-                            recordingTimer.textContent = formatTime(recordingSeconds);
-                        }, 1000);
-
-                    } catch (err) {
-                        console.error("Error accessing microphone:", err);
-                        errorDisplay.textContent = "لم نتمكن من الوصول إلى المايكروفون. يرجى التأكد من منح الإذن اللازم في متصفحك.";
-                        errorDisplay.classList.remove('hidden');
-                        recordBtn.disabled = true;
-                        recordingStatus.classList.add('hidden');
-                        clearInterval(recordingInterval);
-                    }
-                }
-            });
-
-            translateBtn.addEventListener('click', async () => {
-                if (!audioBlob) { return alert('الرجاء اختيار ملف صوتي أو تسجيل مقطع أولاً.'); }
-                try {
-                    // The Gradio API endpoint expects a JSON payload with base64 encoded file data.
-                    const base64Audio = await fileToBase64(audioBlob);
-                    const targetLanguage = languageSelect.value;
-                    const voice = voiceSelect.value; // Get the selected voice
-                    const payload = {
-                        "data": [
-                            { "name": audioBlob.name || "recording.wav", "data": base64Audio },
-                            targetLanguage,
-                            voice // Pass the selected voice to the backend
-                        ]
-                    };
-
-                    // --- UI Update for Upload ---
-                    clearResults(); // Reset previous results
-                    loader.classList.remove('hidden');
-                    translateBtn.disabled = true;
-                    translateBtn.textContent = 'جاري الرفع...';
-                    spinner.classList.add('hidden');
-                    progressContainer.classList.remove('hidden');
-                    progressBar.style.width = '0%';
-                    loaderText.textContent = 'جاري الرفع... 0%';
-
-                    const onUploadProgress = (event) => {
-                        if (event.lengthComputable) {
-                            const percentComplete = Math.round((event.loaded / event.total) * 100);
-                            progressBar.style.width = `${percentComplete}%`;
-                            loaderText.textContent = `جاري الرفع... ${percentComplete}%`;
-                        }
-                    };
-
-                    const response = await fetchWithProgress(HUGGING_FACE_API_URL, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(payload)
-                    }, onUploadProgress);
-
-                    // --- UI Update for Processing ---
-                    progressContainer.classList.add('hidden');
-                    spinner.classList.remove('hidden');
-                    loaderText.textContent = 'جاري المعالجة...';
-                    if (!response.ok) {
-                        await handleApiError(new Error('Server responded with an error'), response);
-                        return;
-                    }
-
-                    const result = await response.json();
-                    const [transcription, translation, ttsFile] = result.data;
-                    transcribedText.value = transcription || "لم يتم التعرف على كلام.";                    
-                    if (translation) {
-                        translatedText.value = translation;
-                        copyBtn.disabled = false; // Enable copy button
-                    } else {
-                        translatedText.value = "فشلت الترجمة.";
-                        copyBtn.disabled = true; // Ensure it's disabled
-                    }
-
-                    if (ttsFile && ttsFile.name) {
-                        const ttsUrl = HUGGING_FACE_FILE_URL + ttsFile.name;
-                        ttsAudioPlayer.src = ttsUrl;
-                        downloadTtsLink.href = ttsUrl;
-                        // The 'canplay' event listener will unhide the download button once ready.
-                        ttsOutputContainer.classList.remove('hidden');
-                    }
-                } catch (error) {
-                    await handleApiError(error);
-                } finally {
-                    resetProcessingState();
-                }
-            });
-
-            copyBtn.addEventListener('click', () => {
-                const textToCopy = translatedText.value;
-                if (!textToCopy || copyBtn.disabled) return;
-
-                navigator.clipboard.writeText(textToCopy).then(() => {
-                    const originalIcon = copyBtn.innerHTML;
-                    copyBtn.innerHTML = '<i class="fas fa-check"></i>';
-                    copyBtn.title = 'تم النسخ!';
-                    
-                    setTimeout(() => {
-                        copyBtn.innerHTML = originalIcon;
-                        copyBtn.title = 'نسخ النص';
-                    }, 2000);
-                }).catch(err => {
-                    console.error('Failed to copy text: ', err);
-                });
-            });
-        });
-    </script>
+    <script src="assets/js/script.js" defer></script>
+    <script src="assets/js/audio-translator.js" defer></script>
 </body>
 
 </html>
