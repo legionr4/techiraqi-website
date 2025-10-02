@@ -34,8 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let mediaRecorder;
     let audioChunks = [];
     let audioBlob = null;
-    let isRecording = false;
-    const HUGGING_FACE_API_URL = "https://toprn-audiotranslator.hf.space/run/translate_audio_file"; // The correct URL for your backend
+    let isRecording = false;    const HUGGING_FACE_API_URL = "https://toprn-audiotranslator.hf.space/run/translate_audio_file";
     const API_TIMEOUT = 300000; // 5 minutes in milliseconds
     const HUGGING_FACE_FILE_URL = "https://toprn-audiotranslator.hf.space/file="; // The correct URL for serving files
     let recordingInterval;
@@ -391,7 +390,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const payload = {
                 "data": [
                     { "name": audioBlob.name || "recording.wav", "data": base64Audio },
-                    targetLanguage
+                    targetLanguage // Second input: api_lang_input (Dropdown)
                 ]
             };
 
@@ -409,8 +408,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const onUploadProgress = (event) => {
                 if (event.lengthComputable) {
                     const percentComplete = Math.round((event.loaded / event.total) * 100);
-                    progressBar.style.width = `%`;
-                    loaderText.textContent = `جاري الرفع... %`;
+                    progressBar.style.width = `${percentComplete}%`;
+                    loaderText.textContent = `جاري الرفع... ${percentComplete}%`;
                 }
             };
 
@@ -421,10 +420,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 signal: abortController.signal
             }, onUploadProgress);
 
-            // --- UI Update for Processing ---
+            // --- UI Update for Upload Success & Start of Processing ---
+            // Hide the progress bar and show the spinner again.
             progressContainer.classList.add('hidden');
-            spinner.classList.remove('hidden');
-            loaderText.textContent = 'جاري المعالجة...';
+            spinner.classList.remove('hidden'); // Show the spinner for the processing phase
+            // Inform the user that the upload was successful and processing has now begun.
+            loaderText.textContent = 'تم الرفع بنجاح! الملف قيد المعالجة الآن...';
+
             if (!response.ok) {
                 await handleApiError(new Error('Server responded with an error'), response);
                 return;
