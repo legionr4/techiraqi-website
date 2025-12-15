@@ -1,54 +1,86 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // --- DOM Elements ---
-    const audioFileInput = document.getElementById('audio-file-input');
-    const recordBtn = document.getElementById('record-btn');
-    const recordedAudioPlayer = document.getElementById('recorded-audio-player');
-    const languageSelect = document.getElementById('language-select');
-    const speedSelect = document.getElementById('speed-select');
-    const translateBtn = document.getElementById('translate-btn');
-    const loader = document.getElementById('translator-loader');
-    const errorDisplay = document.getElementById('error-display');
-    const transcribedText = document.getElementById('transcribed-text');
-    const copyBtn = document.getElementById('copy-btn');
-    const copyTranscribedBtn = document.getElementById('copy-transcribed-btn');
-    const translatedText = document.getElementById('translated-text');
-    const ttsOutputContainer = document.getElementById('tts-output-container');
-    const ttsAudioPlayer = document.getElementById('tts-audio-player');
-    const downloadTtsLink = document.getElementById('download-tts-link');
-    const loaderText = document.getElementById('loader-text');
-    const progressContainer = document.getElementById('progress-container');
-    const progressBar = document.getElementById('progress-bar');
-    const spinner = document.querySelector('#translator-loader .spinner');
-    const resetBtn = document.getElementById('reset-btn');
-    const currentTimeEl = document.getElementById('current-time');
-    const totalDurationEl = document.getElementById('total-duration');
-    const recordingStatus = document.getElementById('recording-status');
-    const recordingTimer = document.getElementById('recording-timer');
-    const audioErrorContainer = document.getElementById('audio-error-container');
-    const retryAudioBtn = document.getElementById('retry-audio-btn');
-    const audioTimeDisplay = document.querySelector('.audio-time-display');
-    const audioPreviewContainer = document.getElementById('audio-preview-container');
-    const clearAudioBtn = document.getElementById('clear-audio-btn');
+    // --- Constants ---
+    const API_CONFIG = {
+        URL: "https://toprn-audiotranslator.hf.space/translate",
+        FILE_URL: "https://toprn-audiotranslator.hf.space/file=",
+        TIMEOUT: 300000 // 5 minutes
+    };
+    const UI_STRINGS = {
+        TRANSLATE_NOW: 'الخطوة 3: ترجم الآن <i class="fas fa-language"></i>',
+        UPLOADING: 'جاري الرفع...',
+        PROCESSING: 'جاري المعالجة الآن...',
+        UPLOAD_SUCCESS: 'تم الرفع بنجاح!',
+        CANCEL_ICON: '<i class="fas fa-times"></i>',
+        RESET_ICON: '<i class="fas fa-sync-alt"></i>',
+        RECORD_NOW: 'سجل من المايكروفون <i class="fas fa-microphone"></i>',
+        STOP_RECORDING: 'أوقف التسجيل <i class="fas fa-stop"></i>',
+        COPY_SUCCESS_ICON: '<i class="fas fa-check"></i>',
+        COPY_SUCCESS_TITLE: 'تم النسخ!',
+    };
+    const HIDDEN_CLASS = 'hidden';
+
+    // --- DOM Element Cache ---
+    const ui = {
+        audioFileInput: document.getElementById('audio-file-input'),
+        recordBtn: document.getElementById('record-btn'),
+        sourceLanguageSelect: document.getElementById('source-language-select'),
+        recordedAudioPlayer: document.getElementById('recorded-audio-player'),
+        languageSelect: document.getElementById('language-select'),
+        speedSelect: document.getElementById('speed-select'),
+        translateBtn: document.getElementById('translate-btn'),
+        loader: document.getElementById('translator-loader'),
+        errorDisplay: document.getElementById('error-display'),
+        transcribedText: document.getElementById('transcribed-text'),
+        copyBtn: document.getElementById('copy-btn'),
+        copyTranscribedBtn: document.getElementById('copy-transcribed-btn'),
+        translatedText: document.getElementById('translated-text'),
+        ttsOutputContainer: document.getElementById('tts-output-container'),
+        ttsAudioPlayer: document.getElementById('tts-audio-player'),
+        downloadTtsLink: document.getElementById('download-tts-link'),
+        loaderText: document.getElementById('loader-text'),
+        progressContainer: document.getElementById('progress-container'),
+        progressText: document.getElementById('progress-text'),
+        progressBar: document.getElementById('progress-bar'),
+        processingSpinner: document.getElementById('processing-spinner'),
+        resetBtn: document.getElementById('reset-btn'),
+        currentTimeEl: document.getElementById('current-time'),
+        totalDurationEl: document.getElementById('total-duration'),
+        recordingStatus: document.getElementById('recording-status'),
+        recordingTimer: document.getElementById('recording-timer'),
+        audioErrorContainer: document.getElementById('audio-error-container'),
+        retryAudioBtn: document.getElementById('retry-audio-btn'),
+        audioTimeDisplay: document.querySelector('.audio-time-display'),
+        audioPreviewContainer: document.getElementById('audio-preview-container'),
+        clearAudioBtn: document.getElementById('clear-audio-btn'),
+        transcriptionNote: document.getElementById('transcription-note'),
+        voiceSelect: document.getElementById('voice-select'),
+    };
 
     // --- State Variables ---
     let mediaRecorder;
     let audioChunks = [];
     let audioBlob = null;
-    let isRecording = false;    const HUGGING_FACE_API_URL = "https://toprn-audiotranslator.hf.space/run/translate_audio_file";
-    const API_TIMEOUT = 300000; // 5 minutes in milliseconds
-    const HUGGING_FACE_FILE_URL = "https://toprn-audiotranslator.hf.space/file="; // The correct URL for serving files
+    let isRecording = false;
+    let processingInterval = null;
     let recordingInterval;
 
     // --- Collapsible Fieldsets ---
-    document.querySelectorAll('legend').forEach(legend => {
+    document.querySelectorAll('.translator-controls fieldset').forEach(fieldset => {
+        const legend = fieldset.querySelector('legend');
+        const content = fieldset.querySelector('.collapsible-content');
+
+        if (!legend || !content) { return; }
+
+        // Keep the first fieldset ("أدخل الصوت") open by default.
+        const isFirstFieldset = fieldset.querySelector('#audio-file-input') !== null;
+        if (!isFirstFieldset) {
+            legend.classList.add('collapsed');
+            content.classList.add('collapsed');
+        }
+
         legend.addEventListener('click', () => {
-            // Toggle the 'collapsed' class on the legend itself
             legend.classList.toggle('collapsed');
-            // Find the next sibling element which is the content
-            const content = legend.nextElementSibling;
-            if (content && content.classList.contains('collapsible-content')) {
-                content.classList.toggle('collapsed');
-            }
+            content.classList.toggle('collapsed');
         });
     });
 
@@ -72,44 +104,51 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const updateTranslateButtonState = () => {
         const hasAudio = !!audioBlob;
-        translateBtn.disabled = !hasAudio;
+        ui.translateBtn.disabled = !hasAudio;
 
         if (hasAudio) {
-            resetBtn.classList.remove('hidden');
+            ui.resetBtn.classList.remove(HIDDEN_CLASS);
         } else {
-            resetBtn.classList.add('hidden');
+            ui.resetBtn.classList.add(HIDDEN_CLASS);
         }
     };
 
     const resetProcessingState = () => {
-        loader.classList.add('hidden');
+        ui.loader.classList.add(HIDDEN_CLASS);
         // Re-enable the translate button only if there's audio
         updateTranslateButtonState();
-        translateBtn.innerHTML = 'الخطوة 3: ترجم الآن <i class="fas fa-language"></i>';
-        spinner.classList.remove('hidden');
-        progressContainer.classList.add('hidden');
-        loaderText.textContent = 'جاري المعالجة...';
-        progressBar.style.width = '0%';
-        resetBtn.innerHTML = '<i class="fas fa-sync-alt"></i>'; // Change back to reset icon
+        ui.translateBtn.innerHTML = UI_STRINGS.TRANSLATE_NOW;
+        ui.processingSpinner.classList.add(HIDDEN_CLASS);
+        ui.progressContainer.classList.add(HIDDEN_CLASS);
+        ui.loaderText.textContent = UI_STRINGS.PROCESSING;
+        ui.progressBar.style.width = '0%';
+        ui.progressBar.classList.remove('processing'); // Remove processing class
+        ui.progressText.classList.add(HIDDEN_CLASS);
+        ui.resetBtn.innerHTML = UI_STRINGS.RESET_ICON; // Change back to reset icon
+    };
+    const stopProcessingSimulation = () => {
+        if (processingInterval) clearInterval(processingInterval);
     };
 
     const clearResults = () => {
-        errorDisplay.classList.add('hidden');
-        transcribedText.value = '';
-        copyTranscribedBtn.disabled = true;
-        copyBtn.disabled = true;
-        translatedText.value = '';
-        ttsOutputContainer.classList.add('hidden');
-        ttsAudioPlayer.src = '';
-        downloadTtsLink.href = '#';
-        downloadTtsLink.classList.add('hidden');
-        currentTimeEl.textContent = '00:00';
-        totalDurationEl.textContent = '00:00';
-        audioErrorContainer.classList.add('hidden');
-        audioTimeDisplay.classList.remove('hidden');
+        ui.errorDisplay.classList.add(HIDDEN_CLASS);
+        ui.transcribedText.value = '';
+        ui.copyTranscribedBtn.disabled = true;
+        ui.copyBtn.disabled = true;
+        ui.translatedText.value = '';
+        ui.ttsOutputContainer.classList.add(HIDDEN_CLASS);
+        ui.ttsAudioPlayer.src = '';
+        ui.downloadTtsLink.href = '#';
+        ui.downloadTtsLink.classList.add(HIDDEN_CLASS);
+        ui.currentTimeEl.textContent = '00:00';
+        ui.totalDurationEl.textContent = '00:00';
+        ui.audioErrorContainer.classList.add(HIDDEN_CLASS);
+        ui.audioTimeDisplay.classList.remove(HIDDEN_CLASS);
+        ui.transcriptionNote.classList.add(HIDDEN_CLASS);
     };
 
     const resetUI = () => {
+        stopProcessingSimulation();
         resetProcessingState();
         clearResults();
     };
@@ -157,7 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
             xhr.onerror = () => reject(new TypeError('فشل طلب الشبكة.'));
             xhr.onabort = () => reject({ name: 'AbortError', message: 'تم إلغاء الطلب.' });
             xhr.ontimeout = () => reject(new Error('انتهت مهلة الطلب.'));
-            xhr.timeout = API_TIMEOUT;
+            xhr.timeout = API_CONFIG.TIMEOUT;
             if (xhr.upload && onProgress) xhr.upload.onprogress = onProgress;
 
             xhr.send(opts.body);
@@ -193,13 +232,14 @@ document.addEventListener('DOMContentLoaded', () => {
             message = 'حدث خطأ غير متوقع. يرجى التحقق من اتصالك بالإنترنت والمحاولة مرة أخرى.';
         }
 
-        errorDisplay.textContent = message;
-        errorDisplay.classList.remove('hidden');
+        ui.errorDisplay.textContent = message;
+        ui.errorDisplay.classList.remove(HIDDEN_CLASS);
         resetUI();
     };
 
     const cancelTranslation = () => {
         if (abortController) {
+            stopProcessingSimulation();
             abortController.abort();
             console.log("Translation cancelled by user.");
         }
@@ -210,15 +250,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isRecording && mediaRecorder) {
             // The onstop handler will manage resetting the record button UI
             clearInterval(recordingInterval);
-            recordingStatus.classList.add('hidden'); 
+            ui.recordingStatus.classList.add(HIDDEN_CLASS);
             mediaRecorder.stop();
         }
 
         // Clear audio state
         audioBlob = null;
-        audioFileInput.value = ''; // This is crucial for file input
-        recordedAudioPlayer.src = '';
-        audioPreviewContainer.classList.add('hidden'); // Hide the entire preview container
+        ui.audioFileInput.value = ''; // This is crucial for file input
+        ui.recordedAudioPlayer.src = '';
+        ui.audioPreviewContainer.classList.add(HIDDEN_CLASS); // Hide the entire preview container
 
         // Clear results and loader state
         resetUI(); 
@@ -229,14 +269,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const handleResetOrCancel = () => {
         // If the loader is visible, it means we are in a processing state, so we cancel.
         // Otherwise, we perform a full reset.
-        loader.classList.contains('hidden') ? fullReset() : cancelTranslation();
+        ui.loader.classList.contains(HIDDEN_CLASS) ? fullReset() : cancelTranslation();
     };
 
     const clearAudioSelection = () => {
         audioBlob = null;
-        audioFileInput.value = ''; // Reset file input
-        recordedAudioPlayer.src = ''; // Clear the player source
-        audioPreviewContainer.classList.add('hidden'); // Hide the container
+        ui.audioFileInput.value = ''; // Reset file input
+        ui.recordedAudioPlayer.src = ''; // Clear the player source
+        ui.audioPreviewContainer.classList.add(HIDDEN_CLASS); // Hide the container
         updateTranslateButtonState();
     };
 
@@ -244,87 +284,87 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadPreferences = () => {
         const savedLanguage = localStorage.getItem('translator_last_language');
         // Ensure the saved language is a valid option before setting it
-        if (savedLanguage && [...languageSelect.options].some(opt => opt.value === savedLanguage)) {
-            languageSelect.value = savedLanguage;
+        if (savedLanguage && [...ui.languageSelect.options].some(opt => opt.value === savedLanguage)) {
+            ui.languageSelect.value = savedLanguage;
         }
         const savedSpeed = localStorage.getItem('translator_last_speed');
-        if (savedSpeed && [...speedSelect.options].some(opt => opt.value === savedSpeed)) {
-            speedSelect.value = savedSpeed;
+        if (savedSpeed && [...ui.speedSelect.options].some(opt => opt.value === savedSpeed)) {
+            ui.speedSelect.value = savedSpeed;
         }
         // Set the initial playback rate from the current selection
-        ttsAudioPlayer.playbackRate = parseFloat(speedSelect.value);
+        ui.ttsAudioPlayer.playbackRate = parseFloat(ui.speedSelect.value);
     };
 
     const savePreferences = () => {
-        localStorage.setItem('translator_last_language', languageSelect.value);
-        localStorage.setItem('translator_last_speed', speedSelect.value);
+        localStorage.setItem('translator_last_language', ui.languageSelect.value);
+        localStorage.setItem('translator_last_speed', ui.speedSelect.value);
     };
 
     const handleAudioReady = () => {
-        downloadTtsLink.classList.remove('hidden');
+        ui.downloadTtsLink.classList.remove(HIDDEN_CLASS);
         // Ensure error state is cleared and time is visible
-        audioErrorContainer.classList.add('hidden');
-        audioTimeDisplay.classList.remove('hidden');
+        ui.audioErrorContainer.classList.add(HIDDEN_CLASS);
+        ui.audioTimeDisplay.classList.remove(HIDDEN_CLASS);
     };
 
     const handleAudioLoadError = () => {
-        console.error("Audio player error:", ttsAudioPlayer.error);
-        audioTimeDisplay.classList.add('hidden');
-        downloadTtsLink.classList.add('hidden');
-        audioErrorContainer.classList.remove('hidden');
+        console.error("Audio player error:", ui.ttsAudioPlayer.error);
+        ui.audioTimeDisplay.classList.add(HIDDEN_CLASS);
+        ui.downloadTtsLink.classList.add(HIDDEN_CLASS);
+        ui.audioErrorContainer.classList.remove(HIDDEN_CLASS);
     };
 
     const retryAudioLoad = () => {
-        audioErrorContainer.classList.add('hidden');
-        ttsAudioPlayer.load(); // This will re-trigger the loading process
+        ui.audioErrorContainer.classList.add(HIDDEN_CLASS);
+        ui.ttsAudioPlayer.load(); // This will re-trigger the loading process
     };
 
     // --- Initial Setup ---
     loadPreferences();
 
     // --- Event Listeners ---
-    resetBtn.addEventListener('click', handleResetOrCancel);
+    ui.resetBtn.addEventListener('click', handleResetOrCancel);
 
-    retryAudioBtn.addEventListener('click', retryAudioLoad);
+    ui.retryAudioBtn.addEventListener('click', retryAudioLoad);
 
-    clearAudioBtn.addEventListener('click', clearAudioSelection);
+    ui.clearAudioBtn.addEventListener('click', clearAudioSelection);
 
-    audioFileInput.addEventListener('change', async (event) => {
+    ui.audioFileInput.addEventListener('change', (event) => {
         const file = event.target.files[0];
         if (file && (file.type.startsWith('audio/') || file.type.startsWith('video/'))) {
             audioBlob = file;
             const audioUrl = URL.createObjectURL(file);
-            recordedAudioPlayer.src = audioUrl;
-            audioPreviewContainer.classList.remove('hidden');
+            ui.recordedAudioPlayer.src = audioUrl;
+            ui.audioPreviewContainer.classList.remove(HIDDEN_CLASS);
             updateTranslateButtonState();
         }
     });
 
-    languageSelect.addEventListener('change', savePreferences);
+    ui.languageSelect.addEventListener('change', savePreferences);
 
-    speedSelect.addEventListener('change', () => {
-        const newSpeed = parseFloat(speedSelect.value);
-        ttsAudioPlayer.playbackRate = newSpeed;
+    ui.speedSelect.addEventListener('change', () => {
+        const newSpeed = parseFloat(ui.speedSelect.value);
+        ui.ttsAudioPlayer.playbackRate = newSpeed;
         savePreferences();
     });
 
-    ttsAudioPlayer.addEventListener('canplay', handleAudioReady);
+    ui.ttsAudioPlayer.addEventListener('canplay', handleAudioReady);
 
-    ttsAudioPlayer.addEventListener('error', handleAudioLoadError);
+    ui.ttsAudioPlayer.addEventListener('error', handleAudioLoadError);
 
-    ttsAudioPlayer.addEventListener('loadedmetadata', () => {
-        totalDurationEl.textContent = formatTime(ttsAudioPlayer.duration);
+    ui.ttsAudioPlayer.addEventListener('loadedmetadata', () => {
+        ui.totalDurationEl.textContent = formatTime(ui.ttsAudioPlayer.duration);
     });
 
-    ttsAudioPlayer.addEventListener('timeupdate', () => {
-        currentTimeEl.textContent = formatTime(ttsAudioPlayer.currentTime);
+    ui.ttsAudioPlayer.addEventListener('timeupdate', () => {
+        ui.currentTimeEl.textContent = formatTime(ui.ttsAudioPlayer.currentTime);
     });
 
 
-    recordBtn.addEventListener('click', async () => {
+    ui.recordBtn.addEventListener('click', async () => {
         if (isRecording) {
             clearInterval(recordingInterval);
-            recordingStatus.classList.add('hidden');
+            ui.recordingStatus.classList.add(HIDDEN_CLASS);
             mediaRecorder.stop();
             // The onstop handler will manage the rest of the UI update
         } else {
@@ -338,94 +378,117 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 mediaRecorder.onstop = () => {
                     audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-                    recordedAudioPlayer.src = URL.createObjectURL(audioBlob);
-                    audioPreviewContainer.classList.remove('hidden');
+                    ui.recordedAudioPlayer.src = URL.createObjectURL(audioBlob);
+                    ui.audioPreviewContainer.classList.remove(HIDDEN_CLASS);
                     updateTranslateButtonState();
                     stream.getTracks().forEach(track => track.stop());
 
                     // Reset recording state and UI
                     isRecording = false;
-                    recordBtn.innerHTML = 'سجل من المايكروفون <i class="fas fa-microphone"></i>';
-                    recordBtn.style.backgroundColor = ''; // Revert to stylesheet color
+                    ui.recordBtn.innerHTML = UI_STRINGS.RECORD_NOW;
+                    ui.recordBtn.style.backgroundColor = ''; // Revert to stylesheet color
                 };
 
                 mediaRecorder.start();
 
                 // Update recording state and UI
                 isRecording = true;
-                recordBtn.innerHTML = 'أوقف التسجيل <i class="fas fa-stop"></i>';
-                recordBtn.style.backgroundColor = '#d9534f'; // A red color for "stop"
+                ui.recordBtn.innerHTML = UI_STRINGS.STOP_RECORDING;
+                ui.recordBtn.style.backgroundColor = '#d9534f'; // A red color for "stop"
                 updateTranslateButtonState();
-                audioPreviewContainer.classList.add('hidden'); // Hide old recording preview
-                errorDisplay.classList.add('hidden'); // Hide any previous errors
+                ui.audioPreviewContainer.classList.add(HIDDEN_CLASS); // Hide old recording preview
+                ui.errorDisplay.classList.add(HIDDEN_CLASS); // Hide any previous errors
 
                 // Reset and show timer
-                recordingTimer.textContent = '00:00';
-                recordingStatus.classList.remove('hidden');
+                ui.recordingTimer.textContent = '00:00';
+                ui.recordingStatus.classList.remove(HIDDEN_CLASS);
                 let recordingSeconds = 0;
                 recordingInterval = setInterval(() => {
                     recordingSeconds++;
-                    recordingTimer.textContent = formatTime(recordingSeconds);
+                    ui.recordingTimer.textContent = formatTime(recordingSeconds);
                 }, 1000);
 
             } catch (err) {
                 console.error("Error accessing microphone:", err);
-                errorDisplay.textContent = "لم نتمكن من الوصول إلى المايكروفون. يرجى التأكد من منح الإذن اللازم في متصفحك.";
-                errorDisplay.classList.remove('hidden');
-                recordBtn.disabled = true;
-                recordingStatus.classList.add('hidden');
+                ui.errorDisplay.textContent = "لم نتمكن من الوصول إلى المايكروفون. يرجى التأكد من منح الإذن اللازم في متصفحك.";
+                ui.errorDisplay.classList.remove(HIDDEN_CLASS);
+                ui.recordBtn.disabled = true;
+                ui.recordingStatus.classList.add(HIDDEN_CLASS);
                 clearInterval(recordingInterval);
             }
         }
     });
 
-    translateBtn.addEventListener('click', async () => {
+    ui.translateBtn.addEventListener('click', async () => {
         if (!audioBlob) { return alert('الرجاء اختيار ملف صوتي أو تسجيل مقطع أولاً.'); }
         
         abortController = new AbortController();
 
         try {
             const base64Audio = await fileToBase64(audioBlob);
-            const targetLanguage = languageSelect.value;
+            const sourceLanguage = ui.sourceLanguageSelect.value;
+            const targetLanguage = ui.languageSelect.value;
+            const voice = ui.voiceSelect.value;
+            // New payload structure for FastAPI
             const payload = {
-                "data": [
-                    { "name": audioBlob.name || "recording.wav", "data": base64Audio },
-                    targetLanguage // Second input: api_lang_input (Dropdown)
-                ]
+                "audio_data": base64Audio,
+                "source_language": sourceLanguage,
+                "target_language": targetLanguage,
+                "voice": voice
             };
 
             // --- UI Update for Upload ---
             clearResults(); // Reset previous results
-            loader.classList.remove('hidden');
-            translateBtn.disabled = true;
-            translateBtn.textContent = 'جاري الرفع...';
-            resetBtn.innerHTML = '<i class="fas fa-times"></i>';
-            spinner.classList.add('hidden');
-            progressContainer.classList.remove('hidden');
-            progressBar.style.width = '0%';
-            loaderText.textContent = 'جاري الرفع... 0%';
+            ui.loader.classList.remove(HIDDEN_CLASS);
+            ui.translateBtn.disabled = true;
+            ui.translateBtn.textContent = UI_STRINGS.UPLOADING;
+            ui.resetBtn.innerHTML = UI_STRINGS.CANCEL_ICON;
+            ui.processingSpinner.classList.add(HIDDEN_CLASS); // Keep spinner hidden during upload
+            ui.progressContainer.classList.remove(HIDDEN_CLASS);
+            ui.progressText.classList.remove(HIDDEN_CLASS);
+            ui.progressBar.style.width = '0%';
+            ui.progressText.textContent = '0%';
 
             const onUploadProgress = (event) => {
                 if (event.lengthComputable) {
                     const percentComplete = Math.round((event.loaded / event.total) * 100);
-                    progressBar.style.width = `${percentComplete}%`;
-                    loaderText.textContent = `جاري الرفع... ${percentComplete}%`;
+                    ui.progressText.textContent = `${percentComplete}%`;
+                    ui.progressBar.style.width = `${percentComplete}%`;
+                    ui.loaderText.textContent = `${UI_STRINGS.UPLOADING} ${percentComplete}%`;
                 }
             };
 
-            const response = await fetchWithProgress(HUGGING_FACE_API_URL, {
+            const response = await fetchWithProgress(API_CONFIG.URL, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
                 signal: abortController.signal
             }, onUploadProgress);
 
-            // --- UI Update for Upload Success & Start of Processing ---
-            // Hide the progress bar and show the spinner again.
-            progressContainer.classList.add('hidden');
-            spinner.classList.remove('hidden'); // Show the spinner for the processing phase
-            // Inform the user that the upload was successful and processing has now begun.
-            loaderText.textContent = 'تم الرفع بنجاح! الملف قيد المعالجة الآن...';
+            // --- UI Update for Upload Success ---
+            ui.loaderText.textContent = UI_STRINGS.UPLOAD_SUCCESS;
+            ui.progressBar.classList.add('processing'); // Change color to orange
+
+            // Short delay to show the "Upload successful" message before starting processing simulation
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            // --- UI Update for Processing Phase ---
+            ui.loaderText.textContent = UI_STRINGS.PROCESSING;
+            ui.processingSpinner.classList.remove(HIDDEN_CLASS); // Show the spinning arrow
+            
+            // Simulate processing progress from 0%
+            let processingProgress = 0;
+            ui.progressBar.style.width = '0%';
+            ui.progressText.textContent = '0%';
+
+            stopProcessingSimulation();
+            processingInterval = setInterval(() => {
+                if (processingProgress < 95) {
+                    processingProgress += 1;
+                    ui.progressText.textContent = `${processingProgress}%`;
+                    ui.progressBar.style.width = `${processingProgress}%`;
+                }
+            }, 1500);
 
             if (!response.ok) {
                 await handleApiError(new Error('Server responded with an error'), response);
@@ -433,30 +496,41 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const result = await response.json();
-            const [transcription, translation, ttsFile] = result.data;
-            transcribedText.value = transcription || "لم يتم التعرف على كلام.";
-            if (transcription) {
-                copyTranscribedBtn.disabled = false;
-            }
+
+            // New response structure from FastAPI
+            const translation = result.translation;
+            const ttsFile = result.tts_file;
+
+            // --- UI Update for Completion ---
+            stopProcessingSimulation(); // Stop the simulation
+            ui.progressText.textContent = '100%';
+            ui.progressBar.style.width = '100%'; // Show 100% on completion
+            
+            // The new API does not provide transcription, so we hide it.
+            ui.transcribedText.value = "النص الأصلي غير متوفر من هذه الواجهة البرمجية.";
+            ui.transcriptionNote.classList.remove(HIDDEN_CLASS);
+            ui.copyTranscribedBtn.disabled = true;
+
             if (translation) {
-                translatedText.value = translation;
-                copyBtn.disabled = false; // Enable copy button
+                ui.translatedText.value = translation;
+                ui.copyBtn.disabled = false; // Enable copy button
             } else {
-                translatedText.value = "فشلت الترجمة.";
-                copyBtn.disabled = true; // Ensure it's disabled
+                ui.translatedText.value = "فشلت الترجمة.";
+                ui.copyBtn.disabled = true; // Ensure it's disabled
             }
 
             if (ttsFile && ttsFile.name) {
-                const ttsUrl = HUGGING_FACE_FILE_URL + ttsFile.name;
-                ttsAudioPlayer.src = ttsUrl;
-                downloadTtsLink.href = ttsUrl;
-                downloadTtsLink.download = "translated_audio.wav";
-                ttsOutputContainer.classList.remove('hidden');
+                const ttsUrl = API_CONFIG.FILE_URL + ttsFile.name;
+                ui.ttsAudioPlayer.src = ttsUrl;
+                ui.downloadTtsLink.href = ttsUrl;
+                ui.downloadTtsLink.download = "translated_audio.wav";
+                ui.ttsOutputContainer.classList.remove(HIDDEN_CLASS);
             }
         } catch (error) {
             await handleApiError(error);
         } finally {
             abortController = null;
+            stopProcessingSimulation();
             resetProcessingState();
         }
     });
@@ -469,8 +543,8 @@ document.addEventListener('DOMContentLoaded', () => {
             navigator.clipboard.writeText(textToCopy).then(() => {
                 const originalIcon = button.innerHTML;
                 const originalTitle = button.title;
-                button.innerHTML = '<i class="fas fa-check"></i>';
-                button.title = 'تم النسخ!';
+                button.innerHTML = UI_STRINGS.COPY_SUCCESS_ICON;
+                button.title = UI_STRINGS.COPY_SUCCESS_TITLE;
                 setTimeout(() => {
                     button.innerHTML = originalIcon;
                     button.title = originalTitle;
@@ -478,6 +552,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }).catch(err => { console.error('Failed to copy text: ', err); });
         });
     };
-    setupCopyButton(copyBtn, translatedText);
-    setupCopyButton(copyTranscribedBtn, transcribedText);
+    setupCopyButton(ui.copyBtn, ui.translatedText);
+    setupCopyButton(ui.copyTranscribedBtn, ui.transcribedText);
 });

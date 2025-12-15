@@ -279,9 +279,28 @@
             height: 10px;
             background-color: var(--primary-color);
             border-radius: 5px;
-            transition: width 0.2s ease-in-out;
+            transition: width 0.2s ease-in-out, background-color 0.5s ease;
             height: 12px; /* Make it a bit thicker */
         }
+        .progress-bar.processing {
+            background-color: #fd7e14; /* Orange color for processing state */
+        }
+
+        .progress-text-style {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: var(--primary-hover);
+            margin-top: 1rem;
+            margin-bottom: -0.5rem; /* Pull the spinner/bar closer */
+        }
+
+        /* New styles for the processing icon */
+        .processing-icon {
+            font-size: 2rem;
+            color: var(--primary-color);
+            margin-top: 1rem;
+        }
+
         .action-buttons {
             display: flex;
             gap: 0.5rem;
@@ -423,8 +442,9 @@
         <!-- New Custom Translator UI -->
         <div class="custom-translator" data-aos="fade-up" data-aos-delay="100">
             <div id="translator-loader" class="translator-loader hidden">
-                <p id="loader-text">جاري المعالجة...</p>
-                <div class="spinner"></div>
+                <p id="progress-text" class="progress-text-style hidden"></p>
+                <p id="loader-text">جاري المعالجة...</p> 
+                <i id="processing-spinner" class="fas fa-sync-alt fa-spin processing-icon hidden"></i>
                 <div id="progress-container" class="progress-container hidden">
                     <div id="progress-bar" class="progress-bar"></div>
                 </div>
@@ -465,52 +485,47 @@
                         </legend>
                         <div class="collapsible-content">
                             <div class="input-group">
+                                <label for="source-language-select">اختر لغة المصدر (لغة الصوت الأصلي):</label>
+                                <select id="source-language-select">
+                                    <option value="English" selected>English</option>
+                                    <option value="Assamese">Assamese</option>
+                                    <option value="Bengali">Bengali</option>
+                                    <option value="Gujarati">Gujarati</option>
+                                    <option value="Hindi">Hindi</option>
+                                    <option value="Kannada">Kannada</option>
+                                    <option value="Malayalam">Malayalam</option>
+                                    <option value="Marathi">Marathi</option>
+                                    <option value="Odia">Odia</option>
+                                    <option value="Punjabi">Punjabi</option>
+                                    <option value="Tamil">Tamil</option>
+                                    <option value="Telugu">Telugu</option>
+                                    <option value="Urdu">Urdu</option>
+                                </select>
+                            </div>
+                            <div class="input-group">
                                 <label for="language-select">اختر لغة الترجمة:</label>
                                 <select id="language-select">
-                                    <option value="Modern Standard Arabic">Arabic (Modern Standard)</option>
-                                    <option value="English">English</option>
-                                    <option value="French">French</option>
-                                    <option value="German">German</option>
-                                    <option value="Spanish">Spanish</option>
-                                    <option value="Russian">Russian</option>
-                                    <option value="Mandarin Chinese">Chinese (Mandarin)</option>
-                                    <option value="Japanese">Japanese</option>
-                                    <option value="Italian">Italian</option>
+                                    <option value="English" selected>English</option>
                                     <option value="Hindi">Hindi</option>
+                                    <option value="Assamese">Assamese</option>
                                     <option value="Bengali">Bengali</option>
-                                    <option value="Catalan">Catalan</option>
-                                    <option value="Czech">Czech</option>
-                                    <option value="Danish">Danish</option>
-                                    <option value="Dutch">Dutch</option>
-                                    <option value="Estonian">Estonian</option>
-                                    <option value="Finnish">Finnish</option>
-                                    <option value="Indonesian">Indonesian</option>
-                                    <option value="Korean">Korean</option>
-                                    <option value="Maltese">Maltese</option>
-                                    <option value="Western Persian">Persian (Western)</option>
-                                    <option value="Polish">Polish</option>
-                                    <option value="Portuguese">Portuguese</option>
-                                    <option value="Romanian">Romanian</option>
-                                    <option value="Slovak">Slovak</option>
-                                    <option value="Swedish">Swedish</option>
-                                    <option value="Swahili">Swahili</option>
-                                    <option value="Tagalog">Tagalog</option>
+                                    <option value="Gujarati">Gujarati</option>
+                                    <option value="Kannada">Kannada</option>
+                                    <option value="Malayalam">Malayalam</option>
+                                    <option value="Marathi">Marathi</option>
+                                    <option value="Odia">Odia</option>
+                                    <option value="Punjabi">Punjabi</option>
+                                    <option value="Tamil">Tamil</option>
                                     <option value="Telugu">Telugu</option>
-                                    <option value="Thai">Thai</option>
-                                    <option value="Turkish">Turkish</option>
-                                    <option value="Ukrainian">Ukrainian</option>
                                     <option value="Urdu">Urdu</option>
-                                    <option value="Northern Uzbek">Uzbek (Northern)</option>
-                                    <option value="Vietnamese">Vietnamese</option>
-                                    <option value="Welsh">Welsh</option>
                                 </select>
                             </div>
                             <div id="voice-selection-group" class="input-group">
                                 <label for="voice-select">اختر صوت الترجمة:</label>
                                 <select id="voice-select">
-                                    <option value="female" selected>صوت امرأة</option>
-                                    <option value="male">صوت رجل</option>
-                                    <option value="child">صوت طفل</option>
+                                    <option value="Sunita" selected>Sunita (Female)</option>
+                                    <option value="Suresh">Suresh (Male)</option>
+                                    <option value="Aditi">Aditi (Female)</option>
                                 </select>
                             </div>
                             <div id="arabic-tts-note" class="input-group hidden" style="color: var(--text-secondary-color); font-size: 0.9rem; margin-top: -1rem;">
@@ -543,7 +558,10 @@
                                 <i class="fas fa-clipboard"></i>
                             </button>
                         </div>
-                        <textarea id="transcribed-text" readonly placeholder="سيظهر النص المأخوذ من الصوت هنا..."></textarea>
+                        <div id="transcription-note" class="input-group hidden" style="color: var(--text-secondary-color); font-size: 0.9rem; margin-top: -0.5rem; margin-bottom: 0.5rem;">
+                            ملاحظة: الواجهة البرمجية الحالية لا توفر النص الأصلي، فقط الترجمة النهائية.
+                        </div>
+                        <textarea id="transcribed-text" readonly placeholder="سيظهر النص المأخوذ من الصوت هنا..." ></textarea>
                     </div>
                     <div class="result-box">
                         <div class="result-header">

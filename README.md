@@ -1,3 +1,9 @@
+---
+title: Tech Iraqi
+emoji: IQ
+colorFrom: green
+colorTo: blue
+---
 # موقع Tech_Iraqi
 
 مرحبًا بك في مستودع الكود المصدري لموقع Tech_Iraqi. هذا المشروع هو موقع ويب ثابت تم تطويره باستخدام HTML, CSS, و JavaScript.
@@ -27,3 +33,4 @@
 *   `/assets`: يحتوي على ملفات CSS, JavaScript, الصور، والأصوات.
 *   `/blogs`: يحتوي على جميع صفحات المقالات.
 *   `/rc-designer`: يحتوي على أداة تصميم الطائرات وملحقاتها.
+*   `/AudioTranslator`: يحتوي على أداة مترجم الصوت وملحقاتها.

@@ -14,15 +14,9 @@ renderer.setSize(viewerDiv.clientWidth, viewerDiv.clientHeight);
 // --- إضافة عناصر التحكم بالكاميرا ---
 const controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true; // يضيف تأثير القصور الذاتي للحركة
-// FIX: Prevent OrbitControls from capturing vertical touch scroll on mobile.
-// This allows the page to scroll normally when the user swipes up/down on the 3D viewer.
-controls.touches.UP = 0; // Set vertical pan to 0 (disabled)
-controls.touches.BOTTOM = 0; // Set vertical pan to 0 (disabled)
-controls.dampingFactor = 0.1;
-// FIX: Explicitly prevent OrbitControls from capturing touchmove events on the document.
-// This is a more robust fix to ensure that scrolling on other page elements (like the control panel)
-// works reliably on all mobile devices.
-controls.domElement.addEventListener('touchmove', event => event.stopPropagation(), { passive: true });
+controls.dampingFactor = 0.1; // FIX: Prevent OrbitControls from capturing vertical touch scroll on mobile. This allows the page to scroll normally when the user swipes up/down on the 3D viewer.
+controls.touches.UP = 0;
+controls.touches.BOTTOM = 0;
 
 // --- إضافة إضاءة ---
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
@@ -6926,7 +6920,8 @@ function initCollapsibleFieldsets() {
 
         // قائمة بالأقسام التي ستبقى مفتوحة بشكل افتراضي
         // على الهاتف، فقط قسم "الوحدات" يبقى مفتوحًا
-        const sectionsToKeepOpen = isMobile ? ['الوحدات'] : [
+        // FIX: Keep the first section "أدخل الصوت" open on mobile as well for the audio-translator page.
+        const sectionsToKeepOpen = isMobile ? ['الوحدات', 'أدخل الصوت'] : [
             'الوحدات',
             'تصميم الجناح'
         ];

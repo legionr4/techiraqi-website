@@ -179,12 +179,12 @@
             position: sticky;
             top: 0; /* Stick to the top of the viewport when scrolling */
             z-index: 990; /* Ensure it's above content but below other fixed elements like the 'back-to-top' button */
-            background-color: var(--card-bg-color); /* Use theme variable for background */
+            background-color: var(--card-bg-color);
             border: 1px solid var(--border-color);
             border-radius: 8px;
-            padding: 1rem; /* FIX: Reduce padding to make it more compact */
+            padding: 1rem;
             margin-bottom: 2.5rem;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08); /* Add shadow for depth when sticky */
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
         }
         .toc-container h3 {
             margin-top: 0;
@@ -199,11 +199,11 @@
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
-            gap: 0.5rem; /* FIX: Reduce gap between items */
+            gap: 0.5rem;
         }
         .toc-container li a {
             text-decoration: none;
-            color: var(--primary-hover); /* Use theme variable */
+            color: var(--primary-hover);
             font-weight: 500;
             padding: 0.4rem 0.8rem; /* FIX: Reduce padding on links */
             display: inline-block; /* ضروري لعمل تأثير الحركة بشكل صحيح */
@@ -211,7 +211,7 @@
             transition: background-color 0.3s, color 0.3s, transform 0.2s ease;
         }
         .toc-container li a:hover {
-            background-color: var(--primary-hover); /* Use theme variable */
+            background-color: var(--primary-hover);
             color: #fff;
             transform: translateY(-2px); /* تأثير الحركة عند التمرير */
         }
@@ -223,16 +223,13 @@
         }
         /* Mobile view for Table of Contents */
         @media (max-width: 768px) {
-            .toc-container {
-                padding: 0.5rem 1rem; /* FIX: Further reduce vertical padding */
-            }
             .toc-container h3 {
                 display: none; /* FIX: Hide title on mobile to save space */
             }
             .toc-container ul {
                 /* FIX: Allow items to wrap to the next line instead of horizontal scrolling */
                 flex-wrap: wrap;
-                justify-content: center; /* Center the wrapped items */
+                justify-content: center;
             }
         }
         /* New styles for the image lightbox */
@@ -331,6 +328,8 @@
 
             <h2 id="concepts"><i class="fas fa-drafting-compass"></i> مفاهيم التصميم الأساسية</h2>
             <p>لفهم النتائج التي يعرضها البرنامج، من المهم معرفة بعض المفاهيم الأساسية في تصميم الطائرات:</p>
+            <p>لفهم النتائج التي يعرضها البرنامج، من المهم معرفة بعض المفاهيم الأساسية في تصميم الطائرات:</p> 
+            <p>لفهم النتائج التي يعرضها البرنامج، من المهم معرفة بعض المفاهيم الأساسية في تصميم الطائرات:</p>
             <h3>مركز الجاذبية (CG) والاستقرار</h3>
             <!-- FIX: Replaced placeholder image with inline SVG for reliability -->
             <svg class="help-image" width="700" height="350" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="موضع مركز الجاذبية والمركز الهوائي" focusable="false">
@@ -360,6 +359,7 @@
 
             <h2 id="calculations"><i class="fas fa-calculator"></i> كيف تعمل الحسابات؟</h2>
             <p>يقوم البرنامج بإجراء حسابات فيزيائية معقدة في الخلفية لتقدير أداء تصميمك:</p>
+            <p>يقوم البرنامج بإجراء حسابات فيزيائية معقدة في الخلفية لتقدير أداء تصميمك:</p>
             <!-- FIX: Replaced placeholder image with inline SVG for reliability -->
             <svg class="help-image" width="700" height="300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="مثال على خريطة الضغط" focusable="false">
                 <title>مثال على خريطة الضغط</title>
@@ -379,6 +379,7 @@
             </ul>
 
             <h2 id="guide"><i class="fas fa-tasks"></i> دليل التصميم خطوة بخطوة</h2>
+            <p>اتبع هذه الخطوات لإنشاء تصميم متوازن:</p>
             <p>اتبع هذه الخطوات لإنشاء تصميم متوازن:</p>
             <!-- FIX: Replaced placeholder image with inline SVG for reliability -->
             <svg class="help-image" width="700" height="350" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ضبط هامش الاستقرار" focusable="false">
@@ -406,6 +407,7 @@
             </ol>
 
             <h2 id="export"><i class="fas fa-file-export"></i> حفظ، تحميل، وتصدير التصاميم</h2>
+            <p>يمكنك حفظ عملك والعودة إليه لاحقًا أو مشاركته مع الآخرين:</p>
             <p>يمكنك حفظ عملك والعودة إليه لاحقًا أو مشاركته مع الآخرين:</p>
             <!-- FIX: Replaced placeholder image with inline SVG for reliability -->
             <svg class="help-image" width="700" height="250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="خيارات الحفظ والتصدير" focusable="false">
